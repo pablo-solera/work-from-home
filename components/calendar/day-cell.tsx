@@ -1,6 +1,7 @@
 import { toggleWorkFromHomeDayAction } from "@/app/(dashboard)/calendar/actions";
 
 type DayCellProps = {
+  canEdit: boolean;
   date: string;
   dayNumber: number;
   holidayName: string | null;
@@ -9,15 +10,27 @@ type DayCellProps = {
   isWeekend: boolean;
   month: number;
   selected: boolean;
+  targetUserId: string;
   year: number;
 };
 
-export function DayCell({ date, dayNumber, holidayName, isHoliday, isToday, isWeekend, month, selected, year }: DayCellProps) {
+export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isToday, isWeekend, month, selected, targetUserId, year }: DayCellProps) {
   if (isWeekend || isHoliday) {
     return (
       <div className={`min-h-24 rounded-xl border p-3 text-zinc-400 ${isToday ? "border-zinc-950 bg-zinc-100 ring-2 ring-zinc-950/10" : "border-zinc-200 bg-zinc-50"}`}>
         <span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold"}>{dayNumber}</span>
         <p className="mt-4 text-xs">{holidayName ?? "Fin de semana"}</p>
+      </div>
+    );
+  }
+
+  if (!canEdit) {
+    return (
+      <div className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-300 bg-emerald-50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}>
+        <div className="flex h-full flex-col justify-between gap-4">
+          <span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>
+          <p className={selected ? "text-xs font-medium text-emerald-700" : "text-xs text-zinc-500"}>{selected ? "Teletrabajo" : "Sin asignar"}</p>
+        </div>
       </div>
     );
   }
@@ -29,6 +42,7 @@ export function DayCell({ date, dayNumber, holidayName, isHoliday, isToday, isWe
     >
       <input name="date" type="hidden" value={date} />
       <input name="enabled" type="hidden" value={selected ? "false" : "true"} />
+      <input name="targetUserId" type="hidden" value={targetUserId} />
       <input name="year" type="hidden" value={year} />
       <input name="month" type="hidden" value={month} />
       <div className="flex h-full flex-col justify-between gap-4">

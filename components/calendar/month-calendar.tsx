@@ -3,6 +3,7 @@ import type { CalendarCell } from "@/lib/calendar/dates";
 import { DayCell } from "./day-cell";
 
 type MonthCalendarProps = {
+  canEdit: boolean;
   cells: CalendarCell[];
   monthName: string;
   selectedDates: string[];
@@ -10,6 +11,7 @@ type MonthCalendarProps = {
   currentMonthHref: string;
   nextMonthHref: string;
   showCurrentMonthLink: boolean;
+  targetUserId: string;
   year: number;
   month: number;
 };
@@ -17,6 +19,7 @@ type MonthCalendarProps = {
 const weekDays = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
 export function MonthCalendar({
+  canEdit,
   cells,
   monthName,
   selectedDates,
@@ -24,6 +27,7 @@ export function MonthCalendar({
   currentMonthHref,
   nextMonthHref,
   showCurrentMonthLink,
+  targetUserId,
   year,
   month,
 }: MonthCalendarProps) {
@@ -57,6 +61,7 @@ export function MonthCalendar({
           cell ? (
             <DayCell
               key={cell.date}
+              canEdit={canEdit}
               date={cell.date}
               dayNumber={cell.dayNumber}
               holidayName={cell.holidayName}
@@ -65,6 +70,7 @@ export function MonthCalendar({
               isWeekend={cell.isWeekend}
               month={month}
               selected={selected.has(cell.date)}
+              targetUserId={targetUserId}
               year={year}
             />
           ) : (

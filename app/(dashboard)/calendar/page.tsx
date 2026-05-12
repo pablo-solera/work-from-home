@@ -12,8 +12,10 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   const params = await searchParams;
   const { year, month } = parseCalendarMonth(params?.year, params?.month);
   const currentMonth = getCurrentCalendarMonth();
-  const calendar = await getUserCalendar(user.id, year, month);
   const showCurrentMonthLink = year !== currentMonth.year || month !== currentMonth.month;
+
+  const calendar = await getUserCalendar(user.id, year, month);
+  const canEdit = user.role === "admin" || user.role === "coordinator";
 
   return (
     <section className="space-y-6">
@@ -22,6 +24,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Días de teletrabajo</h1>
       </div>
       <MonthCalendar
+        canEdit={canEdit}
         cells={calendar.cells}
         currentMonthHref={createMonthHref("/calendar", currentMonth)}
         month={month}
@@ -30,6 +33,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         previousMonthHref={createMonthHref("/calendar", getPreviousMonth(year, month))}
         selectedDates={calendar.selectedDates}
         showCurrentMonthLink={showCurrentMonthLink}
+        targetUserId={user.id}
         year={year}
       />
     </section>

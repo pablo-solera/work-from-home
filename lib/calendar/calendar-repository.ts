@@ -1,4 +1,4 @@
-import { and, asc, between, eq } from "drizzle-orm";
+import { and, asc, between, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users, workFromHomeDays } from "@/db/schema";
 
@@ -23,6 +23,24 @@ export function findAllWorkFromHomeDays(start: string, end: string) {
     .from(workFromHomeDays)
     .innerJoin(users, eq(workFromHomeDays.userId, users.id))
     .where(between(workFromHomeDays.date, start, end))
+    .orderBy(asc(workFromHomeDays.date), asc(users.name));
+}
+
+export function findWorkFromHomeDaysByUserIds(userIds: string[], start: string, end: string) {
+  if (userIds.length === 0) {
+    return Promise.resolve([]);
+  }
+
+  return getDb()
+    .select({
+      date: workFromHomeDays.date,
+      userId: users.id,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(workFromHomeDays)
+    .innerJoin(users, eq(workFromHomeDays.userId, users.id))
+    .where(and(inArray(workFromHomeDays.userId, userIds), between(workFromHomeDays.date, start, end)))
     .orderBy(asc(workFromHomeDays.date), asc(users.name));
 }
 

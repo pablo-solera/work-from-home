@@ -3,6 +3,12 @@ import { logoutAction } from "@/app/(dashboard)/actions";
 import { GeneratedAvatar } from "@/components/common/generated-avatar";
 import type { SessionUser } from "@/lib/auth/session";
 
+const roleLabels: Record<SessionUser["role"], string> = {
+  admin: "Admin",
+  coordinator: "Coordinador",
+  employee: "Employee",
+};
+
 export function AppHeader({ user }: { user: SessionUser }) {
   return (
     <header className="border-b border-zinc-200 bg-white">
@@ -13,12 +19,13 @@ export function AppHeader({ user }: { user: SessionUser }) {
         </div>
         <nav className="flex items-center gap-4 text-sm">
           <Link className="text-zinc-700 hover:text-zinc-950" href="/calendar">Mi calendario</Link>
+          {user.role === "coordinator" ? <Link className="text-zinc-700 hover:text-zinc-950" href="/team">Mi equipo</Link> : null}
           {user.role === "admin" ? <Link className="text-zinc-700 hover:text-zinc-950" href="/admin">Admin</Link> : null}
           <div className="flex items-center gap-3 border-l border-zinc-200 pl-4">
             <GeneratedAvatar name={user.name} />
             <div>
               <p className="text-sm font-medium text-zinc-950">{user.name}</p>
-              <p className="text-xs capitalize text-zinc-500">{user.role}</p>
+              <p className="text-xs text-zinc-500">{roleLabels[user.role]}</p>
             </div>
           </div>
           <form action={logoutAction}>
