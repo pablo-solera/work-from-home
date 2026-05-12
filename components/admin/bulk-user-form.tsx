@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { createUsersBulkAction, initialBulkUserFormState } from "@/app/(dashboard)/admin/users/actions";
+import { createUsersBulkAction } from "@/app/(dashboard)/admin/users/actions";
+import { initialBulkUserFormState } from "@/lib/users/bulk-user-form-state";
 import { UserCreationResult } from "./user-creation-result";
 
 export function BulkUserForm() {

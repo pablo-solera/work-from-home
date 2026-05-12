@@ -1,18 +1,9 @@
 "use server";
 
 import { requireAdmin } from "@/lib/auth/guards";
-import { createUsersFromEmails, type BulkUserCreationResult } from "@/lib/users/user-service";
+import { initialBulkUserFormState, type BulkUserFormState } from "@/lib/users/bulk-user-form-state";
+import { createUsersFromEmails } from "@/lib/users/user-service";
 import { bulkUsersSchema, isUserRole } from "@/lib/users/user-validation";
-
-export type BulkUserFormState = BulkUserCreationResult & {
-  error?: string;
-};
-
-export const initialBulkUserFormState: BulkUserFormState = {
-  created: [],
-  skipped: [],
-  invalid: [],
-};
 
 export async function createUsersBulkAction(_state: BulkUserFormState, formData: FormData): Promise<BulkUserFormState> {
   await requireAdmin();
