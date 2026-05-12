@@ -1,6 +1,7 @@
 export type CalendarDay = {
   date: string;
   dayNumber: number;
+  isToday: boolean;
   isWeekend: boolean;
 };
 
@@ -13,6 +14,15 @@ export type CalendarMonthParams = {
 
 export function toDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+export function getTodayDateKey() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 export function getCurrentCalendarMonth(): CalendarMonthParams {
@@ -84,6 +94,7 @@ export function getCalendarDays(year: number, month: number) {
   const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0));
   const firstWeekday = firstDay.getUTCDay() === 0 ? 6 : firstDay.getUTCDay() - 1;
   const cells: CalendarCell[] = Array.from({ length: firstWeekday }, () => null);
+  const today = getTodayDateKey();
 
   for (let day = 1; day <= lastDay.getUTCDate(); day += 1) {
     const date = toDateKey(new Date(Date.UTC(year, monthIndex, day)));
@@ -91,6 +102,7 @@ export function getCalendarDays(year: number, month: number) {
     cells.push({
       date,
       dayNumber: day,
+      isToday: date === today,
       isWeekend: isWeekendDateKey(date),
     });
   }

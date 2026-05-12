@@ -17,14 +17,14 @@ export function AdminDayCell({ day, onSelect }: AdminDayCellProps) {
   return (
     <button
       className={`min-h-32 rounded-xl border p-3 text-left transition ${day.isWeekend ? "border-zinc-200 bg-zinc-50" : "border-zinc-200 bg-white hover:border-zinc-400"
-        } ${canOpenDetails ? "cursor-pointer" : "cursor-default"}`}
+        } ${day.isToday ? "ring-2 ring-zinc-950/20" : ""} ${canOpenDetails ? "cursor-pointer" : "cursor-default"}`}
       disabled={!canOpenDetails}
       onClick={() => onSelect(day)}
       type="button"
     >
       <div className="flex h-full flex-col justify-between gap-4">
         <div>
-          <p className={day.isWeekend ? "font-semibold text-zinc-400" : "font-semibold text-zinc-950"}>{day.dayNumber}</p>
+          <p className={day.isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : day.isWeekend ? "font-semibold text-zinc-400" : "font-semibold text-zinc-950"}>{day.dayNumber}</p>
           {total > 0 ? (
             <div className="mt-4 flex -space-x-2">
               {visibleEntries.map((entry) => (
