@@ -1,5 +1,5 @@
 import { createWorkFromHomeDay, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays } from "./calendar-repository";
-import { getCalendarDays, getMonthRange, isValidDateKey, isWeekendDateKey } from "./dates";
+import { getCalendarDays, getMonthRange, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
 
 export async function getUserCalendar(userId: string, year: number, month: number) {
   const range = getMonthRange(year, month);
@@ -35,6 +35,10 @@ export async function setWorkFromHomeDay(userId: string, date: string, enabled: 
 
   if (isWeekendDateKey(date)) {
     throw new Error("Weekend dates cannot be selected");
+  }
+
+  if (isHoliday(date)) {
+    throw new Error("Holidays cannot be selected");
   }
 
   if (enabled) {

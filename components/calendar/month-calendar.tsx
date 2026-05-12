@@ -59,6 +59,8 @@ export function MonthCalendar({
               key={cell.date}
               date={cell.date}
               dayNumber={cell.dayNumber}
+              holidayName={cell.holidayName}
+              isHoliday={cell.isHoliday}
               isToday={cell.isToday}
               isWeekend={cell.isWeekend}
               month={month}

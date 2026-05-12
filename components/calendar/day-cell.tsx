@@ -3,6 +3,8 @@ import { toggleWorkFromHomeDayAction } from "@/app/(dashboard)/calendar/actions"
 type DayCellProps = {
   date: string;
   dayNumber: number;
+  holidayName: string | null;
+  isHoliday: boolean;
   isToday: boolean;
   isWeekend: boolean;
   month: number;
@@ -10,12 +12,12 @@ type DayCellProps = {
   year: number;
 };
 
-export function DayCell({ date, dayNumber, isToday, isWeekend, month, selected, year }: DayCellProps) {
-  if (isWeekend) {
+export function DayCell({ date, dayNumber, holidayName, isHoliday, isToday, isWeekend, month, selected, year }: DayCellProps) {
+  if (isWeekend || isHoliday) {
     return (
       <div className={`min-h-24 rounded-xl border p-3 text-zinc-400 ${isToday ? "border-zinc-950 bg-zinc-100 ring-2 ring-zinc-950/10" : "border-zinc-200 bg-zinc-50"}`}>
         <span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold"}>{dayNumber}</span>
-
+        <p className="mt-4 text-xs">{holidayName ?? "Fin de semana"}</p>
       </div>
     );
   }
