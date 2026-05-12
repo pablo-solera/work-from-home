@@ -36,7 +36,7 @@ export function verifySessionToken(token: string): SessionUser | null {
       typeof payload.id !== "string" ||
       typeof payload.name !== "string" ||
       typeof payload.email !== "string" ||
-      (payload.role !== "admin" && payload.role !== "user")
+      (payload.role !== "admin" && payload.role !== "coordinator" && payload.role !== "employee")
     ) {
       return null;
     }

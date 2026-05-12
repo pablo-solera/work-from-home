@@ -8,7 +8,8 @@ export const loginSchema = z.object({
 
 export const bulkUsersSchema = z.object({
   emails: z.string().min(1),
-  role: z.enum(["admin", "user"]).default("user"),
+  role: z.enum(["admin", "coordinator", "employee"]).default("employee"),
+  coordinatorEmail: z.string().optional(),
 });
 
 export function parseBulkEmails(input: string) {
@@ -25,5 +26,5 @@ export function isValidEmail(email: string) {
 }
 
 export function isUserRole(role: string): role is UserRole {
-  return role === "admin" || role === "user";
+  return role === "admin" || role === "coordinator" || role === "employee";
 }

@@ -32,10 +32,11 @@ export async function authenticateUser(email: string, password: string): Promise
   };
 }
 
-export async function createUsersFromEmails(input: string, role: UserRole): Promise<BulkUserCreationResult> {
+export async function createUsersFromEmails(input: string, role: UserRole, coordinatorEmail?: string): Promise<BulkUserCreationResult> {
   const emails = parseBulkEmails(input);
   const invalid = emails.filter((email) => !isValidEmail(email));
   const validEmails = emails.filter((email) => isValidEmail(email));
+  const coordinator = coordinatorEmail && role === "employee" ? await findUserByEmail(coordinatorEmail.toLowerCase()) : null;
   const existingUsers = await findUsersByEmails(validEmails);
   const existingEmails = new Set(existingUsers.map((user) => user.email));
   const usersToCreate = validEmails.filter((email) => !existingEmails.has(email));
@@ -49,12 +50,13 @@ export async function createUsersFromEmails(input: string, role: UserRole): Prom
         name: email.split("@")[0] || email,
         passwordHash: await hashPassword(password),
         role,
+        coordinatorId: coordinator?.role === "coordinator" ? coordinator.id : null,
       };
     })
   );
 
   const createdUsers = await createUsers(
-    generatedUsers.map(({ name, email, passwordHash, role }) => ({ name, email, passwordHash, role }))
+    generatedUsers.map(({ name, email, passwordHash, role, coordinatorId }) => ({ name, email, passwordHash, role, coordinatorId }))
   );
   const createdEmails = new Set(createdUsers.map((user) => user.email));
 

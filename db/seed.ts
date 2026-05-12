@@ -9,11 +9,24 @@ async function main() {
       passwordHash: await hashPassword("admin123"),
       role: "admin",
     },
+  ]);
+
+  const [coordinator] = await createUsers([
     {
-      name: "User",
-      email: "user@example.com",
-      passwordHash: await hashPassword("user123"),
-      role: "user",
+      name: "Coordinador",
+      email: "coordinator@example.com",
+      passwordHash: await hashPassword("coordinator123"),
+      role: "coordinator",
+    },
+  ]);
+
+  await createUsers([
+    {
+      name: "Employee",
+      email: "employee@example.com",
+      passwordHash: await hashPassword("employee123"),
+      role: "employee",
+      coordinatorId: coordinator?.id,
     },
   ]);
 }

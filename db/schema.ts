@@ -1,14 +1,15 @@
 import { relations } from "drizzle-orm";
-import { date, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { type AnyPgColumn, date, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
-export const userRole = pgEnum("user_role", ["admin", "user"]);
+export const userRole = pgEnum("user_role", ["admin", "coordinator", "employee"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  role: userRole("role").notNull().default("user"),
+  role: userRole("role").notNull().default("employee"),
+  coordinatorId: uuid("coordinator_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -25,7 +26,13 @@ export const workFromHomeDays = pgTable(
   (table) => [uniqueIndex("work_from_home_days_user_date_idx").on(table.userId, table.date)]
 );
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
+  coordinator: one(users, {
+    fields: [users.coordinatorId],
+    references: [users.id],
+    relationName: "coordinatorEmployees",
+  }),
+  employees: many(users, { relationName: "coordinatorEmployees" }),
   workFromHomeDays: many(workFromHomeDays),
 }));
 

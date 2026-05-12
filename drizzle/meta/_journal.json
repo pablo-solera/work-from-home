@@ -8,6 +8,13 @@
       "when": 1778572549989,
       "tag": "0000_ancient_pixie",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778591098867,
+      "tag": "0001_nervous_silk_fever",
+      "breakpoints": true
     }
   ]
 }

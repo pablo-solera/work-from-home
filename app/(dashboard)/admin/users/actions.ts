@@ -18,6 +18,7 @@ export async function createUsersBulkAction(_state: BulkUserFormState, formData:
   await requireAdmin();
 
   const parsed = bulkUsersSchema.safeParse({
+    coordinatorEmail: formData.get("coordinatorEmail") || undefined,
     emails: formData.get("emails"),
     role: formData.get("role"),
   });
@@ -26,5 +27,5 @@ export async function createUsersBulkAction(_state: BulkUserFormState, formData:
     return { ...initialBulkUserFormState, error: "Revisa los datos del formulario." };
   }
 
-  return createUsersFromEmails(parsed.data.emails, parsed.data.role);
+  return createUsersFromEmails(parsed.data.emails, parsed.data.role, parsed.data.coordinatorEmail);
 }
