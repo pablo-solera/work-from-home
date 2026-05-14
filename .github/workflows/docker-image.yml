@@ -16,11 +16,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Read package version
-        id: package
-        run: echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+      - name: Get project version from package.json
+        run: echo "VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -38,8 +37,6 @@ jobs:
           push: true
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/work-from-home-web:latest
-            ${{ vars.DOCKERHUB_USERNAME }}/work-from-home-web:${{ steps.package.outputs.version }}
-          build-args: |
-            DEPLOYMENT_VERSION=${{ steps.package.outputs.version }}
+            ${{ vars.DOCKERHUB_USERNAME }}/work-from-home-web:v${{ env.VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
