@@ -1,16 +1,44 @@
 services:
+  web:
+    image: ${WEB_IMAGE:-work-from-home-web:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DEPLOYMENT_VERSION: ${DEPLOYMENT_VERSION:-local}
+    container_name: work-from-home-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      DATABASE_URL: ${APP_DATABASE_URL:-postgres://work_from_home:work_from_home_password@postgres:5432/work_from_home}
+      SESSION_SECRET: ${SESSION_SECRET:-change-me-with-a-long-random-secret}
+      DEPLOYMENT_VERSION: ${DEPLOYMENT_VERSION:-local}
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   postgres:
     image: postgres:18.3
     container_name: work-from-home-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: work_from_home
-      POSTGRES_USER: work_from_home
-      POSTGRES_PASSWORD: work_from_home_password
+      POSTGRES_DB: ${POSTGRES_DB:-work_from_home}
+      POSTGRES_USER: ${POSTGRES_USER:-work_from_home}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-work_from_home_password}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
