@@ -31,10 +31,17 @@ Stop the stack:
 bun run docker:down
 ```
 
-Run database migrations when needed:
+Create the database tables and a test admin after the stack is running:
 
 ```bash
-DATABASE_URL="postgres://work_from_home:work_from_home_password@localhost:5432/work_from_home" bun run db:migrate
+bun run docker:setup-db
+```
+
+The admin credentials can be configured with `ADMIN_EMAIL`, `ADMIN_NAME`, and `ADMIN_PASSWORD` in `.env`. Defaults are:
+
+```text
+admin@example.com
+admin123
 ```
 
 ## DockerHub

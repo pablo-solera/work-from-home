@@ -13,7 +13,8 @@
     "db:seed": "bun run db/seed.ts",
     "docker:build": "docker build -t work-from-home-web:latest .",
     "docker:up": "docker compose up -d --build",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "docker:setup-db": "docker compose exec web node scripts/setup-database.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
