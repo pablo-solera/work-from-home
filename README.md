@@ -37,7 +37,19 @@ Create the database tables and a test admin after the stack is running:
 bun run docker:setup-db
 ```
 
-The admin credentials can be configured with `ADMIN_EMAIL`, `ADMIN_NAME`, and `ADMIN_PASSWORD` in `.env`. Defaults are:
+You can also run the SQL directly:
+
+```bash
+docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f -' < scripts/setup-database.sql
+```
+
+To override the default admin credentials, pass `psql` variables:
+
+```bash
+docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v admin_email="admin@example.com" -v admin_name="Admin" -v admin_password="admin123" -f -' < scripts/setup-database.sql
+```
+
+Default credentials are:
 
 ```text
 admin@example.com

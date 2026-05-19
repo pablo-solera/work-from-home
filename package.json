@@ -14,7 +14,7 @@
     "docker:build": "docker build -t work-from-home-web:latest .",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
-    "docker:setup-db": "docker compose exec web node scripts/setup-database.mjs"
+    "docker:setup-db": "docker compose exec -T postgres sh -c 'psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -f -' < scripts/setup-database.sql"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
