@@ -7,9 +7,7 @@ RUN bun install --frozen-lockfile
 
 FROM oven/bun:1.3 AS builder
 WORKDIR /app
-ARG DEPLOYMENT_VERSION=local
-ENV NEXT_TELEMETRY_DISABLED=1 \
-    DEPLOYMENT_VERSION=$DEPLOYMENT_VERSION
+ENV NEXT_TELEMETRY_DISABLED=1 
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -19,10 +17,7 @@ FROM node:lts-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
-    DEPLOYMENT_VERSION=local \
-    HOSTNAME=0.0.0.0 \
-    PORT=3000
+    NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 -G nodejs nextjs

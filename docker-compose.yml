@@ -1,11 +1,9 @@
 services:
   web:
-    image: work-from-home-web:latest
+    image: prueba-wfh:latest
     container_name: work-from-home-web
     restart: unless-stopped
     environment:
-      NODE_ENV: production
-      NEXT_TELEMETRY_DISABLED: "1"
       DATABASE_URL: ${DATABASE_URL}
       SESSION_SECRET: ${SESSION_SECRET}
     ports:
