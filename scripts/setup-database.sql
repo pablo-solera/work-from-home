@@ -77,7 +77,7 @@ END
 $$;
 
 INSERT INTO users (name, email, password_hash, role)
-VALUES ('Admin', lower('admin@example.com'), crypt('admin', gen_salt('bf')), 'admin')
+VALUES ('Admin', lower('admin@example.com'), crypt('admin123', gen_salt('bf')), 'admin')
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   password_hash = EXCLUDED.password_hash,
@@ -85,4 +85,4 @@ ON CONFLICT (email) DO UPDATE SET
   coordinator_id = NULL;
 
 SELECT 'Database setup completed.' AS message;
-SELECT lower(:'admin_email') AS admin_email;
+SELECT lower('admin@example.com') AS admin_email;
