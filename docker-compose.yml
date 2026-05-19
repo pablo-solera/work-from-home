@@ -6,7 +6,7 @@ services:
     environment:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
-      DATABASE_URL: ${APP_DATABASE_URL}
+      DATABASE_URL: ${DATABASE_URL}
       SESSION_SECRET: ${SESSION_SECRET}
     ports:
       - "3000:3000"
