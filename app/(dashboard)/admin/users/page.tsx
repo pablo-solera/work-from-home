@@ -1,8 +1,10 @@
 import { BulkUserForm } from "@/components/admin/bulk-user-form";
 import { requireAdmin } from "@/lib/auth/guards";
+import { findCoordinators } from "@/lib/users/user-repository";
 
 export default async function AdminUsersPage() {
   await requireAdmin();
+  const coordinators = await findCoordinators();
 
   return (
     <section className="space-y-6">
@@ -13,7 +15,7 @@ export default async function AdminUsersPage() {
           Pega correos separados por saltos de línea, comas o espacios. Se generará una contraseña temporal para cada usuario creado.
         </p>
       </div>
-      <BulkUserForm />
+      <BulkUserForm coordinators={coordinators} />
     </section>
   );
 }

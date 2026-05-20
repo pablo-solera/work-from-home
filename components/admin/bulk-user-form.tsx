@@ -5,7 +5,15 @@ import { createUsersBulkAction } from "@/app/(dashboard)/admin/users/actions";
 import { initialBulkUserFormState } from "@/lib/users/bulk-user-form-state";
 import { UserCreationResult } from "./user-creation-result";
 
-export function BulkUserForm() {
+type BulkUserFormProps = {
+  coordinators: Array<{
+    email: string;
+    id: string;
+    name: string;
+  }>;
+};
+
+export function BulkUserForm({ coordinators }: BulkUserFormProps) {
   const [state, action, pending] = useActionState(createUsersBulkAction, initialBulkUserFormState);
 
   return (
@@ -24,8 +32,15 @@ export function BulkUserForm() {
           </select>
         </label>
         <label className="block space-y-2">
-          <span className="text-sm font-medium text-zinc-700">Email del coordinador</span>
-          <input className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950" name="coordinatorEmail" placeholder="coordinador@empresa.com" type="email" />
+          <span className="text-sm font-medium text-zinc-700">Coordinador</span>
+          <select className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950 disabled:bg-zinc-100 disabled:text-zinc-500" disabled={coordinators.length === 0} name="coordinatorEmail" defaultValue="">
+            <option value="">{coordinators.length === 0 ? "No hay coordinadores disponibles" : "Sin coordinador"}</option>
+            {coordinators.map((coordinator) => (
+              <option key={coordinator.id} value={coordinator.email}>
+                {coordinator.name} ({coordinator.email})
+              </option>
+            ))}
+          </select>
           <span className="text-xs text-zinc-500">Opcional. Solo se aplica al crear employees.</span>
         </label>
         <button className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
