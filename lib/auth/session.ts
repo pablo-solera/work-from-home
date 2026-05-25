@@ -20,6 +20,14 @@ function getSessionSecret() {
   return process.env.SESSION_SECRET;
 }
 
+function shouldUseSecureSessionCookie() {
+  if (process.env.SESSION_COOKIE_SECURE) {
+    return process.env.SESSION_COOKIE_SECURE === "true";
+  }
+
+  return process.env.NODE_ENV === "production";
+}
+
 export function createSessionToken(user: SessionUser) {
   return jwt.sign(user, getSessionSecret(), { expiresIn: "7d" });
 }
@@ -68,7 +76,7 @@ export async function setSessionCookie(user: SessionUser) {
     maxAge: SESSION_MAX_AGE_SECONDS,
     path: "/",
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureSessionCookie(),
   });
 }
 

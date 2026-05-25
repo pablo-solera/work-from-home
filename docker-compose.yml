@@ -1,11 +1,12 @@
 services:
   web:
-    image: prueba-wfh:latest
+    image: pablosla/work-from-home-web:latest
     container_name: work-from-home-web
     restart: unless-stopped
     environment:
       DATABASE_URL: ${DATABASE_URL}
       SESSION_SECRET: ${SESSION_SECRET}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE}
     ports:
       - "3000:3000"
     depends_on:
