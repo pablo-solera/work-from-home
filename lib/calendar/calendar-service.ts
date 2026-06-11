@@ -1,5 +1,5 @@
 import type { SessionUser } from "@/lib/auth/session";
-import { findEmployeeByCoordinatorId, findEmployeesByCoordinatorId } from "@/lib/users/user-repository";
+import { findAllUsers, findEmployeeByCoordinatorId, findEmployeesByCoordinatorId, findUserById } from "@/lib/users/user-repository";
 import { createWorkFromHomeDay, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds } from "./calendar-repository";
 import { getCalendarDays, getMonthRange, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
 
@@ -17,16 +17,32 @@ export async function getUserCalendar(userId: string, year: number, month: numbe
 
 export async function getAdminCalendarOverview(year: number, month: number) {
   const range = getMonthRange(year, month);
-  const entries = await findAllWorkFromHomeDays(range.start, range.end);
+  const [entries, users] = await Promise.all([findAllWorkFromHomeDays(range.start, range.end), findAllUsers()]);
   const calendar = getCalendarDays(year, month);
 
   return {
     ...calendar,
+    users: users.map((user) => ({ id: user.id, name: user.name, email: user.email })),
     entriesByDate: entries.reduce<Record<string, (typeof entries)[number][]>>((accumulator, entry) => {
       accumulator[entry.date] = accumulator[entry.date] ?? [];
       accumulator[entry.date].push(entry);
       return accumulator;
     }, {}),
+  };
+}
+
+export async function getAdminUserCalendar(userId: string, year: number, month: number) {
+  const user = await findUserById(userId);
+
+  if (!user) {
+    return null;
+  }
+
+  const calendar = await getUserCalendar(user.id, year, month);
+
+  return {
+    ...calendar,
+    user: { id: user.id, name: user.name, email: user.email },
   };
 }
 

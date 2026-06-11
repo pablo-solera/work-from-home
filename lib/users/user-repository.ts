@@ -43,6 +43,17 @@ export function findCoordinators() {
   });
 }
 
+export function findAllUsers() {
+  return getDb().query.users.findMany({
+    columns: {
+      email: true,
+      id: true,
+      name: true,
+    },
+    orderBy: (users, { asc }) => [asc(users.name)],
+  });
+}
+
 export function findEmployeeByCoordinatorId(employeeId: string, coordinatorId: string) {
   return getDb().query.users.findFirst({
     where: (users, { and, eq }) => and(eq(users.id, employeeId), eq(users.coordinatorId, coordinatorId)),
