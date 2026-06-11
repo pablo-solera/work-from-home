@@ -26,10 +26,10 @@ export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isTo
 
   if (!canEdit) {
     return (
-      <div className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-300 bg-emerald-50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}>
+      <div className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}>
         <div className="flex h-full flex-col justify-between gap-4">
           <span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>
-          <p className={selected ? "text-xs font-medium text-emerald-700" : "text-xs text-zinc-500"}>{selected ? "Teletrabajo" : "Sin asignar"}</p>
+          <p className={selected ? "text-xs font-medium text-emerald-800" : "text-xs text-zinc-500"}>{selected ? "Teletrabajo" : "Sin asignar"}</p>
         </div>
       </div>
     );
@@ -38,7 +38,7 @@ export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isTo
   return (
     <form
       action={toggleWorkFromHomeDayAction}
-      className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-300 bg-emerald-50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}
+      className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}
     >
       <input name="date" type="hidden" value={date} />
       <input name="enabled" type="hidden" value={selected ? "false" : "true"} />
@@ -47,7 +47,7 @@ export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isTo
       <input name="month" type="hidden" value={month} />
       <div className="flex h-full flex-col justify-between gap-4">
         <span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>
-        <button className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 cursor-pointer">
+        <button className={`rounded-lg border px-2 py-1 text-xs font-medium cursor-pointer ${selected ? "border-emerald-400 bg-white text-emerald-800 hover:bg-emerald-50" : "border-zinc-300 text-zinc-700 hover:bg-zinc-100"}`}>
           {selected ? "Quitar" : "Marcar"}
         </button>
       </div>
