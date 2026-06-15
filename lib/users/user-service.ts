@@ -2,8 +2,31 @@ import type { UserRole } from "@/db/schema";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import type { SessionUser } from "@/lib/auth/session";
 import { generateTemporaryPassword } from "./password-generator";
-import { createUsers, findUserByEmail, findUsersByEmails } from "./user-repository";
+import { createUser, createUsers, deleteUser, findUserByEmail, findUserById, findUsersByEmails, updateUser, updateUserPassword } from "./user-repository";
 import { isValidEmail, parseBulkEmails } from "./user-validation";
+
+type CreateSingleUserInput = {
+  coordinatorId?: string;
+  email: string;
+  name: string;
+  password?: string;
+  passwordMode: "generate" | "manual";
+  role: UserRole;
+};
+
+type UpdateUserInput = {
+  coordinatorId?: string;
+  email: string;
+  id: string;
+  name: string;
+  role: UserRole;
+};
+
+type ChangePasswordInput = {
+  id: string;
+  password?: string;
+  passwordMode: "generate" | "manual";
+};
 
 export type BulkUserCreationResult = {
   created: Array<{ email: string; password: string }>;
@@ -69,4 +92,138 @@ export async function createUsersFromEmails(input: string, role: UserRole, coord
       .map((email) => ({ email, reason: existingEmails.has(email) ? "Ya existe" : "No se pudo crear" })),
     invalid,
   };
+}
+
+async function resolveCoordinatorId(role: UserRole, coordinatorId?: string) {
+  if (role !== "employee") {
+    return null;
+  }
+
+  if (!coordinatorId) {
+    return null;
+  }
+
+  const coordinator = await findUserById(coordinatorId);
+
+  if (!coordinator || coordinator.role !== "coordinator") {
+    throw new Error("El coordinador seleccionado no es válido.");
+  }
+
+  return coordinator.id;
+}
+
+export async function createSingleUser(input: CreateSingleUserInput) {
+  const existingUser = await findUserByEmail(input.email);
+
+  if (existingUser) {
+    return { error: "Ya existe un usuario con ese email." };
+  }
+
+  if (input.passwordMode === "manual" && !input.password) {
+    return { error: "Escribe una contraseña de al menos 8 caracteres o elige generar una temporal." };
+  }
+
+  try {
+    const coordinatorId = await resolveCoordinatorId(input.role, input.coordinatorId);
+    const generatedPassword = input.passwordMode === "generate" ? generateTemporaryPassword() : undefined;
+    const password = generatedPassword ?? input.password;
+
+    if (!password) {
+      return { error: "No se pudo determinar la contraseña del usuario." };
+    }
+
+    await createUser({
+      coordinatorId,
+      email: input.email,
+      name: input.name,
+      passwordHash: await hashPassword(password),
+      role: input.role,
+    });
+
+    return {
+      generatedPassword,
+      message: "Usuario creado correctamente.",
+      ok: true,
+    };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No se pudo crear el usuario." };
+  }
+}
+
+export async function updateUserById(actor: SessionUser, input: UpdateUserInput) {
+  const user = await findUserById(input.id);
+
+  if (!user) {
+    return { error: "El usuario no existe." };
+  }
+
+  if (actor.id === input.id && input.role !== "admin") {
+    return { error: "No puedes quitarte a ti mismo el rol admin." };
+  }
+
+  const existingEmailUser = await findUserByEmail(input.email);
+
+  if (existingEmailUser && existingEmailUser.id !== input.id) {
+    return { error: "Ya existe otro usuario con ese email." };
+  }
+
+  if (input.coordinatorId === input.id) {
+    return { error: "Un usuario no puede ser su propio coordinador." };
+  }
+
+  try {
+    await updateUser(input.id, {
+      coordinatorId: await resolveCoordinatorId(input.role, input.coordinatorId),
+      email: input.email,
+      name: input.name,
+      role: input.role,
+    });
+
+    return { message: "Usuario actualizado correctamente.", ok: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No se pudo actualizar el usuario." };
+  }
+}
+
+export async function changeUserPassword(input: ChangePasswordInput) {
+  const user = await findUserById(input.id);
+
+  if (!user) {
+    return { error: "El usuario no existe." };
+  }
+
+  if (input.passwordMode === "manual" && !input.password) {
+    return { error: "Escribe una contraseña de al menos 8 caracteres o elige generar una temporal." };
+  }
+
+  const generatedPassword = input.passwordMode === "generate" ? generateTemporaryPassword() : undefined;
+  const password = generatedPassword ?? input.password;
+
+  if (!password) {
+    return { error: "No se pudo determinar la nueva contraseña." };
+  }
+
+  await updateUserPassword(input.id, await hashPassword(password));
+
+  return {
+    generatedPassword,
+    message: generatedPassword ? "Contraseña temporal generada correctamente." : "Contraseña actualizada correctamente.",
+    ok: true,
+  };
+}
+
+export async function deleteUserById(actor: SessionUser, id: string) {
+  if (actor.id === id) {
+    return { error: "No puedes eliminar tu propia cuenta." };
+  }
+
+  const user = await findUserById(id);
+
+  if (!user) {
+    return { error: "El usuario no existe." };
+  }
+
+  await deleteUser(id);
+
+  return { message: "Usuario eliminado correctamente.", ok: true };
 }

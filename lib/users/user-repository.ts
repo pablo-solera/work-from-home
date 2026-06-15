@@ -2,6 +2,8 @@ import { eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { type NewUser, users } from "@/db/schema";
 
+export type AdminUserRow = Awaited<ReturnType<typeof findUsersForAdmin>>[number];
+
 export function findUserByEmail(email: string) {
   return getDb().query.users.findFirst({
     where: eq(users.email, email),
@@ -54,6 +56,29 @@ export function findAllUsers() {
   });
 }
 
+export function findUsersForAdmin() {
+  return getDb().query.users.findMany({
+    columns: {
+      coordinatorId: true,
+      createdAt: true,
+      email: true,
+      id: true,
+      name: true,
+      role: true,
+    },
+    orderBy: (users, { asc }) => [asc(users.name)],
+    with: {
+      coordinator: {
+        columns: {
+          email: true,
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+}
+
 export function findEmployeeByCoordinatorId(employeeId: string, coordinatorId: string) {
   return getDb().query.users.findFirst({
     where: (users, { and, eq }) => and(eq(users.id, employeeId), eq(users.coordinatorId, coordinatorId)),
@@ -66,4 +91,20 @@ export async function createUsers(values: NewUser[]) {
   }
 
   return getDb().insert(users).values(values).onConflictDoNothing({ target: users.email }).returning();
+}
+
+export function createUser(value: NewUser) {
+  return getDb().insert(users).values(value).returning();
+}
+
+export function updateUser(id: string, values: Partial<Pick<NewUser, "coordinatorId" | "email" | "name" | "role">>) {
+  return getDb().update(users).set(values).where(eq(users.id, id)).returning();
+}
+
+export function updateUserPassword(id: string, passwordHash: string) {
+  return getDb().update(users).set({ passwordHash }).where(eq(users.id, id)).returning();
+}
+
+export function deleteUser(id: string) {
+  return getDb().delete(users).where(eq(users.id, id)).returning();
 }
