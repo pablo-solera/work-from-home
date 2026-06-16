@@ -17,9 +17,11 @@ type CreateSingleUserInput = {
 type UpdateUserInput = {
   coordinatorId?: string;
   email: string;
+  hasWfh: boolean;
   id: string;
   name: string;
   role: UserRole;
+  wdNumber: string | null;
 };
 
 type ChangePasswordInput = {
@@ -175,8 +177,10 @@ export async function updateUserById(actor: SessionUser, input: UpdateUserInput)
     await updateUser(input.id, {
       coordinatorId: await resolveCoordinatorId(input.role, input.coordinatorId),
       email: input.email,
+      hasWfh: input.hasWfh,
       name: input.name,
       role: input.role,
+      wdNumber: input.wdNumber,
     });
 
     return { message: "Usuario actualizado correctamente.", ok: true };

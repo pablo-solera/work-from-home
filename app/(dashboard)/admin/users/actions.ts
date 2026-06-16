@@ -54,9 +54,11 @@ export async function updateUserAction(_state: UserManagementState, formData: Fo
   const parsed = updateUserSchema.safeParse({
     coordinatorId: formData.get("coordinatorId"),
     email: formData.get("email"),
+    hasWfh: formData.get("hasWfh"),
     id: formData.get("id"),
     name: formData.get("name"),
     role: formData.get("role"),
+    wdNumber: formData.get("wdNumber"),
   });
 
   if (!parsed.success || !isUserRole(parsed.data.role)) {

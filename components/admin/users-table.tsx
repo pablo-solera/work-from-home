@@ -14,11 +14,12 @@ export type UserCoordinatorOption = {
 export type ManagedUser = {
   coordinator: UserCoordinatorOption | null;
   coordinatorId: string | null;
-  createdAtLabel: string;
   email: string;
+  hasWfh: boolean | null;
   id: string;
   name: string;
   role: "admin" | "coordinator" | "employee";
+  wdNumber: string | null;
 };
 
 type UsersTableProps = {
@@ -91,13 +92,14 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
       </label>
 
       <div className="mt-6 overflow-x-auto">
-        <table className="w-full min-w-[56rem] text-left text-sm">
+        <table className="w-full min-w-[68rem] text-left text-sm">
           <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500">
             <tr>
+              <th className="py-3 pr-4 font-semibold">WD</th>
               <th className="py-3 pr-4 font-semibold">Usuario</th>
               <th className="py-3 pr-4 font-semibold">Rol</th>
               <th className="py-3 pr-4 font-semibold">Coordinador</th>
-              <th className="py-3 pr-4 font-semibold">Creado</th>
+              <th className="py-3 pr-4 font-semibold">Teletrabajo</th>
               <th className="py-3 text-right font-semibold">Acciones</th>
             </tr>
           </thead>
@@ -107,6 +109,7 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
 
               return (
                 <tr key={user.id}>
+                  <td className="py-4 pr-4 text-zinc-700">{user.wdNumber ?? <span className="text-zinc-400">—</span>}</td>
                   <td className="py-4 pr-4">
                     <div className="font-medium text-zinc-950">{user.name}</div>
                     <div className="text-xs text-zinc-500">{user.email}</div>
@@ -125,7 +128,15 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
                       <span className="text-zinc-400">Sin coordinador</span>
                     )}
                   </td>
-                  <td className="py-4 pr-4 text-zinc-600">{user.createdAtLabel}</td>
+                  <td className="py-4 pr-4">
+                    {user.hasWfh === null ? (
+                      <span className="text-zinc-400">—</span>
+                    ) : (
+                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${user.hasWfh ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-600"}`}>
+                        {user.hasWfh ? "Sí" : "No"}
+                      </span>
+                    )}
+                  </td>
                   <td className="py-4 text-right">
                     <div className="flex flex-wrap justify-end gap-2">
                       <button className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => setModal({ type: "edit", user })} type="button">

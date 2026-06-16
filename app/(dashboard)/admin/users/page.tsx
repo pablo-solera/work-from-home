@@ -3,23 +3,18 @@ import { UsersTable } from "@/components/admin/users-table";
 import { requireAdmin } from "@/lib/auth/guards";
 import { findCoordinators, findUsersForAdmin } from "@/lib/users/user-repository";
 
-const dateFormatter = new Intl.DateTimeFormat("es-ES", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-});
-
 export default async function AdminUsersPage() {
   const admin = await requireAdmin();
   const [coordinators, users] = await Promise.all([findCoordinators(), findUsersForAdmin()]);
   const managedUsers = users.map((user) => ({
     coordinator: user.coordinator,
     coordinatorId: user.coordinatorId,
-    createdAtLabel: dateFormatter.format(user.createdAt),
     email: user.email,
+    hasWfh: user.hasWfh,
     id: user.id,
     name: user.name,
     role: user.role,
+    wdNumber: user.wdNumber,
   }));
 
   return (

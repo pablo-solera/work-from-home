@@ -5,6 +5,10 @@ const optionalUuid = z.preprocess((value) => (value === null || (typeof value ==
 
 const optionalPassword = z.preprocess((value) => (value === null || (typeof value === "string" && value.trim() === "") ? undefined : value), z.string().min(8).optional());
 
+const optionalText = z.preprocess((value) => (value === null || (typeof value === "string" && value.trim() === "") ? null : value), z.string().trim().max(50).nullable());
+
+const checkboxBoolean = z.preprocess((value) => value === "on", z.boolean());
+
 export const loginSchema = z.object({
   email: z.string().email().transform((email) => email.toLowerCase()),
   password: z.string().min(1),
@@ -28,9 +32,11 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   coordinatorId: optionalUuid,
   email: z.string().email().transform((email) => email.toLowerCase()),
+  hasWfh: checkboxBoolean,
   id: z.string().uuid(),
   name: z.string().trim().min(1),
   role: z.enum(["admin", "coordinator", "employee"]),
+  wdNumber: optionalText,
 });
 
 export const changePasswordSchema = z.object({
