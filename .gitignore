@@ -28,6 +28,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# generated imports with temporary credentials
+/scripts/teletrabajo-2026-passwords.csv
+
 # vercel
 .vercel
 

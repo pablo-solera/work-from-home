@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { type AnyPgColumn, date, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, type AnyPgColumn, date, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const userRole = pgEnum("user_role", ["admin", "coordinator", "employee"]);
 
@@ -10,6 +10,8 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: userRole("role").notNull().default("employee"),
   coordinatorId: uuid("coordinator_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+  wdNumber: text("wd_number"),
+  hasWfh: boolean("has_wfh"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

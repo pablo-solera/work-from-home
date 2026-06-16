@@ -15,6 +15,13 @@
       "when": 1778591098867,
       "tag": "0001_nervous_silk_fever",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781602111204,
+      "tag": "0002_first_ultimatum",
+      "breakpoints": true
     }
   ]
 }

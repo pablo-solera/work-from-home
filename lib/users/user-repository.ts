@@ -62,9 +62,11 @@ export function findUsersForAdmin() {
       coordinatorId: true,
       createdAt: true,
       email: true,
+      hasWfh: true,
       id: true,
       name: true,
       role: true,
+      wdNumber: true,
     },
     orderBy: (users, { asc }) => [asc(users.name)],
     with: {
@@ -97,7 +99,11 @@ export function createUser(value: NewUser) {
   return getDb().insert(users).values(value).returning();
 }
 
-export function updateUser(id: string, values: Partial<Pick<NewUser, "coordinatorId" | "email" | "name" | "role">>) {
+export function updateUser(id: string, values: Partial<Pick<NewUser, "coordinatorId" | "email" | "hasWfh" | "name" | "role" | "wdNumber">>) {
+  return getDb().update(users).set(values).where(eq(users.id, id)).returning();
+}
+
+export function updateUserTeleworkFields(id: string, values: Pick<NewUser, "hasWfh" | "wdNumber">) {
   return getDb().update(users).set(values).where(eq(users.id, id)).returning();
 }
 
