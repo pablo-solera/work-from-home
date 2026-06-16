@@ -56,6 +56,18 @@ export function findAllUsers() {
   });
 }
 
+export function findUsersForEmailUpdate() {
+  return getDb().query.users.findMany({
+    columns: {
+      email: true,
+      id: true,
+      name: true,
+      wdNumber: true,
+    },
+    orderBy: (users, { asc }) => [asc(users.name)],
+  });
+}
+
 export function findUsersForAdmin() {
   return getDb().query.users.findMany({
     columns: {
@@ -100,6 +112,14 @@ export function createUser(value: NewUser) {
 }
 
 export function updateUser(id: string, values: Partial<Pick<NewUser, "coordinatorId" | "email" | "hasWfh" | "name" | "role" | "wdNumber">>) {
+  return getDb().update(users).set(values).where(eq(users.id, id)).returning();
+}
+
+export function updateUserEmailByWdNumber(wdNumber: string, email: string) {
+  return getDb().update(users).set({ email }).where(eq(users.wdNumber, wdNumber)).returning();
+}
+
+export function updateUserEmailAndWdNumber(id: string, values: Pick<NewUser, "email" | "wdNumber">) {
   return getDb().update(users).set(values).where(eq(users.id, id)).returning();
 }
 

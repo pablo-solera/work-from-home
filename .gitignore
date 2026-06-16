@@ -30,6 +30,7 @@ yarn-error.log*
 
 # generated imports with temporary credentials
 /scripts/teletrabajo-2026-passwords.csv
+/scripts/wfh-email-mapping.csv
 
 # vercel
 .vercel

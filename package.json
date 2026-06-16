@@ -12,6 +12,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "bun run db/seed.ts",
     "import:teletrabajo": "bun run scripts/import-teletrabajo-2026.ts",
+    "email:wfh": "bun run scripts/update-emails-wfh.ts",
+    "email:wfh:apply": "bun run scripts/update-emails-wfh.ts --apply",
     "docker:build": "docker build -t work-from-home-web:latest .",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
