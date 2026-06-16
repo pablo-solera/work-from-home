@@ -28,6 +28,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS coordinator_id uuid;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS role user_role DEFAULT 'employee' NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS wd_number text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS has_wfh boolean;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS team_wfh_visible boolean DEFAULT false NOT NULL;
 ALTER TABLE users ALTER COLUMN role DROP DEFAULT;
 UPDATE users SET role = 'employee' WHERE role::text = 'user';
 

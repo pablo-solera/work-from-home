@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   coordinatorId: uuid("coordinator_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
   wdNumber: text("wd_number"),
   hasWfh: boolean("has_wfh"),
+  teamWfhVisible: boolean("team_wfh_visible").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

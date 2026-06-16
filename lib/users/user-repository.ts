@@ -33,6 +33,34 @@ export function findEmployeesByCoordinatorId(coordinatorId: string) {
   });
 }
 
+export async function findEmployeeTeamVisibility(employeeId: string) {
+  const employee = await getDb().query.users.findFirst({
+    columns: {
+      coordinatorId: true,
+      id: true,
+      role: true,
+    },
+    where: eq(users.id, employeeId),
+    with: {
+      coordinator: {
+        columns: {
+          id: true,
+          teamWfhVisible: true,
+        },
+      },
+    },
+  });
+
+  if (!employee || employee.role !== "employee" || !employee.coordinator) {
+    return null;
+  }
+
+  return {
+    coordinatorId: employee.coordinator.id,
+    teamWfhVisible: employee.coordinator.teamWfhVisible,
+  };
+}
+
 export function findCoordinators() {
   return getDb().query.users.findMany({
     columns: {
@@ -113,6 +141,10 @@ export function createUser(value: NewUser) {
 
 export function updateUser(id: string, values: Partial<Pick<NewUser, "coordinatorId" | "email" | "hasWfh" | "name" | "role" | "wdNumber">>) {
   return getDb().update(users).set(values).where(eq(users.id, id)).returning();
+}
+
+export function updateTeamWfhVisibility(coordinatorId: string, teamWfhVisible: boolean) {
+  return getDb().update(users).set({ teamWfhVisible }).where(eq(users.id, coordinatorId)).returning();
 }
 
 export function updateUserEmailByWdNumber(wdNumber: string, email: string) {

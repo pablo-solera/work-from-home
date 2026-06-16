@@ -1,5 +1,5 @@
 import type { SessionUser } from "@/lib/auth/session";
-import { findAllUsers, findEmployeeByCoordinatorId, findEmployeesByCoordinatorId, findUserById } from "@/lib/users/user-repository";
+import { findAllUsers, findEmployeeByCoordinatorId, findEmployeesByCoordinatorId, findEmployeeTeamVisibility, findUserById } from "@/lib/users/user-repository";
 import { createWorkFromHomeDay, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds } from "./calendar-repository";
 import { getCalendarDays, getMonthRange, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
 
@@ -49,8 +49,9 @@ export async function getAdminUserCalendar(userId: string, year: number, month: 
 export async function getCoordinatorCalendarOverview(coordinatorId: string, year: number, month: number, employeeId?: string) {
   const employees = await findEmployeesByCoordinatorId(coordinatorId);
   const visibleEmployees = employeeId ? employees.filter((employee) => employee.id === employeeId) : employees;
+  const visibleUserIds = employeeId ? visibleEmployees.map((employee) => employee.id) : [coordinatorId, ...visibleEmployees.map((employee) => employee.id)];
   const range = getMonthRange(year, month);
-  const entries = await findWorkFromHomeDaysByUserIds(visibleEmployees.map((employee) => employee.id), range.start, range.end);
+  const entries = await findWorkFromHomeDaysByUserIds(visibleUserIds, range.start, range.end);
   const calendar = getCalendarDays(year, month);
 
   return {
@@ -62,6 +63,24 @@ export async function getCoordinatorCalendarOverview(coordinatorId: string, year
       return accumulator;
     }, {}),
   };
+}
+
+export async function getTeamCalendarForViewer(viewer: SessionUser, year: number, month: number) {
+  if (viewer.role === "coordinator") {
+    return getCoordinatorCalendarOverview(viewer.id, year, month);
+  }
+
+  if (viewer.role !== "employee") {
+    return null;
+  }
+
+  const teamVisibility = await findEmployeeTeamVisibility(viewer.id);
+
+  if (!teamVisibility?.teamWfhVisible) {
+    return null;
+  }
+
+  return getCoordinatorCalendarOverview(teamVisibility.coordinatorId, year, month);
 }
 
 export async function getCoordinatorEmployeeCalendar(coordinatorId: string, employeeId: string, year: number, month: number) {
