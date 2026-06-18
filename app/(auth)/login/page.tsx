@@ -10,7 +10,7 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
+    <main className="flex flex-1 items-center justify-center bg-zinc-50 px-6">
       <section className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
         <div className="mb-8">
           <p className="text-sm font-medium text-zinc-500">Work From Home</p>
