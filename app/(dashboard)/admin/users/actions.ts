@@ -52,6 +52,7 @@ export async function updateUserAction(_state: UserManagementState, formData: Fo
   const admin = await requireAdmin();
 
   const parsed = updateUserSchema.safeParse({
+    canEditAllWfh: formData.get("canEditAllWfh"),
     coordinatorId: formData.get("coordinatorId"),
     email: formData.get("email"),
     hasWfh: formData.get("hasWfh"),

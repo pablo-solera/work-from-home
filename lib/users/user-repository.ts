@@ -99,6 +99,7 @@ export function findUsersForEmailUpdate() {
 export function findUsersForAdmin() {
   return getDb().query.users.findMany({
     columns: {
+      canEditAllWfh: true,
       coordinatorId: true,
       createdAt: true,
       email: true,
@@ -139,7 +140,7 @@ export function createUser(value: NewUser) {
   return getDb().insert(users).values(value).returning();
 }
 
-export function updateUser(id: string, values: Partial<Pick<NewUser, "coordinatorId" | "email" | "hasWfh" | "name" | "role" | "wdNumber">>) {
+export function updateUser(id: string, values: Partial<Pick<NewUser, "canEditAllWfh" | "coordinatorId" | "email" | "hasWfh" | "name" | "role" | "wdNumber">>) {
   return getDb().update(users).set(values).where(eq(users.id, id)).returning();
 }
 

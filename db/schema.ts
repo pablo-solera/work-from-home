@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   wdNumber: text("wd_number"),
   hasWfh: boolean("has_wfh"),
   teamWfhVisible: boolean("team_wfh_visible").notNull().default(false),
+  canEditAllWfh: boolean("can_edit_all_wfh").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

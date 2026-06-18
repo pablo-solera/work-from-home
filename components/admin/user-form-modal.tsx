@@ -100,6 +100,13 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
                   <span className="text-xs text-zinc-500">Marca si el usuario tiene WFH.</span>
                 </span>
               </label>
+              <label className="flex items-center gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 sm:col-span-2">
+                <input className="size-4 rounded border-zinc-300" defaultChecked={user?.canEditAllWfh ?? false} name="canEditAllWfh" type="checkbox" />
+                <span>
+                  <span className="block font-medium">Cobertura de teletrabajo</span>
+                  <span className="text-xs text-zinc-500">Permite editar los días de teletrabajo de cualquier persona, sin permisos de administración.</span>
+                </span>
+              </label>
             </div>
           ) : null}
 

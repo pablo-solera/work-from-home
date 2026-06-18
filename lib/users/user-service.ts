@@ -15,6 +15,7 @@ type CreateSingleUserInput = {
 };
 
 type UpdateUserInput = {
+  canEditAllWfh: boolean;
   coordinatorId?: string;
   email: string;
   hasWfh: boolean;
@@ -175,6 +176,7 @@ export async function updateUserById(actor: SessionUser, input: UpdateUserInput)
 
   try {
     await updateUser(input.id, {
+      canEditAllWfh: input.canEditAllWfh,
       coordinatorId: await resolveCoordinatorId(input.role, input.coordinatorId),
       email: input.email,
       hasWfh: input.hasWfh,

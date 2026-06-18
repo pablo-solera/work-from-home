@@ -30,6 +30,7 @@ export const createUserSchema = z.object({
 });
 
 export const updateUserSchema = z.object({
+  canEditAllWfh: checkboxBoolean,
   coordinatorId: optionalUuid,
   email: z.string().email().transform((email) => email.toLowerCase()),
   hasWfh: checkboxBoolean,

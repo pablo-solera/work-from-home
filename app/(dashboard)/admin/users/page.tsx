@@ -7,6 +7,7 @@ export default async function AdminUsersPage() {
   const admin = await requireAdmin();
   const [coordinators, users] = await Promise.all([findCoordinators(), findUsersForAdmin()]);
   const managedUsers = users.map((user) => ({
+    canEditAllWfh: user.canEditAllWfh,
     coordinator: user.coordinator,
     coordinatorId: user.coordinatorId,
     email: user.email,

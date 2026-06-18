@@ -120,6 +120,18 @@ export async function setWorkFromHomeDay(userId: string, date: string, enabled: 
 }
 
 export async function setWorkFromHomeDayForActor(actor: SessionUser, targetUserId: string, date: string, enabled: boolean) {
+  if (actor.role === "admin") {
+    await setWorkFromHomeDay(targetUserId, date, enabled);
+    return;
+  }
+
+  const actorUser = await findUserById(actor.id);
+
+  if (actorUser?.canEditAllWfh) {
+    await setWorkFromHomeDay(targetUserId, date, enabled);
+    return;
+  }
+
   if (actor.role === "employee") {
     throw new Error("Employees cannot update work-from-home days");
   }

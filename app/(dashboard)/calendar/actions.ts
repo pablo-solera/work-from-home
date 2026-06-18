@@ -19,4 +19,6 @@ export async function toggleWorkFromHomeDayAction(formData: FormData) {
   revalidatePath(`/team?year=${year}&month=${month}`);
   revalidatePath("/admin");
   revalidatePath(`/admin?year=${year}&month=${month}`);
+  revalidatePath("/coverage");
+  revalidatePath(`/coverage?year=${year}&month=${month}`);
 }
