@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CalendarCell } from "@/lib/calendar/dates";
 import { DayCell } from "./day-cell";
+import { ReplicateControls } from "./replicate-controls";
 
 type MonthCalendarProps = {
   canEdit: boolean;
@@ -50,6 +51,7 @@ export function MonthCalendar({
             Mes siguiente
           </Link>
         </div>
+        {canEdit ? <ReplicateControls month={month} selectedCount={selectedDates.length} targetUserId={targetUserId} year={year} /> : null}
       </div>
       <div className="grid grid-cols-7 gap-2">
         {weekDays.map((weekDay) => (

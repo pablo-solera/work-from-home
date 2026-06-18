@@ -1,7 +1,9 @@
 import type { SessionUser } from "@/lib/auth/session";
 import { findAllUsers, findEmployeeByCoordinatorId, findEmployeesByCoordinatorId, findEmployeeTeamVisibility, findUserById } from "@/lib/users/user-repository";
-import { createWorkFromHomeDay, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds } from "./calendar-repository";
-import { getCalendarDays, getMonthRange, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
+import { createWorkFromHomeDay, createWorkFromHomeDays, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds } from "./calendar-repository";
+import { getCalendarDays, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
+
+export type ReplicateWorkFromHomeScope = "next" | "untilYearEnd";
 
 export async function getUserCalendar(userId: string, year: number, month: number) {
   const range = getMonthRange(year, month);
@@ -120,15 +122,18 @@ export async function setWorkFromHomeDay(userId: string, date: string, enabled: 
 }
 
 export async function setWorkFromHomeDayForActor(actor: SessionUser, targetUserId: string, date: string, enabled: boolean) {
+  await assertCanEditWorkFromHomeDays(actor, targetUserId);
+  await setWorkFromHomeDay(targetUserId, date, enabled);
+}
+
+async function assertCanEditWorkFromHomeDays(actor: SessionUser, targetUserId: string) {
   if (actor.role === "admin") {
-    await setWorkFromHomeDay(targetUserId, date, enabled);
     return;
   }
 
   const actorUser = await findUserById(actor.id);
 
   if (actorUser?.canEditAllWfh) {
-    await setWorkFromHomeDay(targetUserId, date, enabled);
     return;
   }
 
@@ -138,7 +143,6 @@ export async function setWorkFromHomeDayForActor(actor: SessionUser, targetUserI
 
   if (actor.role === "coordinator") {
     if (targetUserId === actor.id) {
-      await setWorkFromHomeDay(targetUserId, date, enabled);
       return;
     }
 
@@ -148,6 +152,36 @@ export async function setWorkFromHomeDayForActor(actor: SessionUser, targetUserI
       throw new Error("Employee is not assigned to this coordinator");
     }
   }
+}
 
-  await setWorkFromHomeDay(targetUserId, date, enabled);
+export async function replicateWorkFromHomeDays(
+  actor: SessionUser,
+  input: { month: number; scope: ReplicateWorkFromHomeScope; targetUserId: string; year: number }
+) {
+  if (!Number.isInteger(input.year) || !Number.isInteger(input.month) || input.month < 1 || input.month > 12) {
+    throw new Error("Invalid month");
+  }
+
+  await assertCanEditWorkFromHomeDays(actor, input.targetUserId);
+
+  const sourceRange = getMonthRange(input.year, input.month);
+  const sourceEntries = await findUserWorkFromHomeDays(input.targetUserId, sourceRange.start, sourceRange.end);
+  const sourceWeekdays = new Set(sourceEntries.map((entry) => getWeekdayFromDateKey(entry.date)));
+
+  if (sourceWeekdays.size === 0 || input.month === 12) {
+    return;
+  }
+
+  const targetMonths = input.scope === "next" ? [{ year: input.year, month: input.month + 1 }] : getMonthsUntilYearEnd(input.year, input.month);
+  const values = targetMonths.flatMap(({ year, month }) =>
+    getCalendarDays(year, month).cells.flatMap((cell) => {
+      if (!cell || cell.isWeekend || cell.isHoliday || !sourceWeekdays.has(getWeekdayFromDateKey(cell.date))) {
+        return [];
+      }
+
+      return [{ userId: input.targetUserId, date: cell.date }];
+    })
+  );
+
+  await createWorkFromHomeDays(values);
 }

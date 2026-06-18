@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/guards";
-import { setWorkFromHomeDayForActor } from "@/lib/calendar/calendar-service";
+import { type ReplicateWorkFromHomeScope, replicateWorkFromHomeDays, setWorkFromHomeDayForActor } from "@/lib/calendar/calendar-service";
 
 export async function toggleWorkFromHomeDayAction(formData: FormData) {
   const user = await requireUser();
@@ -21,4 +21,22 @@ export async function toggleWorkFromHomeDayAction(formData: FormData) {
   revalidatePath(`/admin?year=${year}&month=${month}`);
   revalidatePath("/coverage");
   revalidatePath(`/coverage?year=${year}&month=${month}`);
+}
+
+export async function replicateWorkFromHomeDaysAction(formData: FormData) {
+  const user = await requireUser();
+  const targetUserId = String(formData.get("targetUserId") ?? "");
+  const year = Number(formData.get("year"));
+  const month = Number(formData.get("month"));
+  const scope = String(formData.get("scope") ?? "") as ReplicateWorkFromHomeScope;
+
+  if (scope !== "next" && scope !== "untilYearEnd") {
+    throw new Error("Invalid replication scope");
+  }
+
+  await replicateWorkFromHomeDays(user, { month, scope, targetUserId, year });
+  revalidatePath("/calendar");
+  revalidatePath("/team");
+  revalidatePath("/admin");
+  revalidatePath("/coverage");
 }
