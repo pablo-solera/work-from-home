@@ -27,12 +27,16 @@ export async function createUserAction(_state: UserManagementState, formData: Fo
   await requireAdmin();
 
   const parsed = createUserSchema.safeParse({
+    canEditAllWfh: formData.get("canEditAllWfh"),
     coordinatorId: formData.get("coordinatorId"),
     email: formData.get("email"),
+    hasWfh: formData.get("hasWfh"),
     name: formData.get("name"),
     password: formData.get("password"),
     passwordMode: formData.get("passwordMode"),
     role: formData.get("role"),
+    wfhDaysAllowance: formData.get("wfhDaysAllowance"),
+    wdNumber: formData.get("wdNumber"),
   });
 
   if (!parsed.success || !isUserRole(parsed.data.role)) {

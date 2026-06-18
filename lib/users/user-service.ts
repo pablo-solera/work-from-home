@@ -6,12 +6,16 @@ import { createUser, createUsers, deleteUser, findUserByEmail, findUserById, fin
 import { isValidEmail, parseBulkEmails } from "./user-validation";
 
 type CreateSingleUserInput = {
+  canEditAllWfh: boolean;
   coordinatorId?: string;
   email: string;
+  hasWfh: boolean;
   name: string;
   password?: string;
   passwordMode: "generate" | "manual";
   role: UserRole;
+  wfhDaysAllowance: number | null;
+  wdNumber: string | null;
 };
 
 type UpdateUserInput = {
@@ -137,11 +141,15 @@ export async function createSingleUser(input: CreateSingleUserInput) {
     }
 
     await createUser({
+      canEditAllWfh: input.canEditAllWfh,
       coordinatorId,
       email: input.email,
+      hasWfh: input.hasWfh,
       name: input.name,
       passwordHash: await hashPassword(password),
       role: input.role,
+      wfhDaysAllowance: input.wfhDaysAllowance,
+      wdNumber: input.wdNumber,
     });
 
     return {

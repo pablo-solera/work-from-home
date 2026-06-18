@@ -49,9 +49,11 @@ export function UserPasswordModal({ onClose, user }: UserPasswordModalProps) {
           {state.message ? <p className="text-sm text-emerald-700">{state.message}</p> : null}
           {state.generatedPassword ? <p className="rounded-lg bg-emerald-50 p-3 text-sm text-zinc-700">Contraseña temporal: <span className="font-mono font-semibold">{state.generatedPassword}</span></p> : null}
 
-          <button className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
-            {pending ? "Actualizando..." : "Actualizar contraseña"}
-          </button>
+          <div className="flex justify-end">
+            <button className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
+              {pending ? "Actualizando..." : "Actualizar contraseña"}
+            </button>
+          </div>
         </form>
       </section>
     </div>

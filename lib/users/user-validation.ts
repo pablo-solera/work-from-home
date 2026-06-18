@@ -30,12 +30,16 @@ export const bulkUsersSchema = z.object({
 });
 
 export const createUserSchema = z.object({
+  canEditAllWfh: checkboxBoolean,
   coordinatorId: optionalUuid,
   email: z.string().email().transform((email) => email.toLowerCase()),
+  hasWfh: checkboxBoolean,
   name: z.string().trim().min(1),
   password: optionalPassword,
   passwordMode: z.enum(["generate", "manual"]).default("generate"),
   role: z.enum(["admin", "coordinator", "employee"]).default("employee"),
+  wfhDaysAllowance: optionalNonNegativeInt,
+  wdNumber: optionalText,
 });
 
 export const updateUserSchema = z.object({
