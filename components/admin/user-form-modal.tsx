@@ -93,6 +93,18 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
                 <span className="text-sm font-medium text-zinc-700">WD</span>
                 <input className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950" defaultValue={user?.wdNumber ?? ""} name="wdNumber" placeholder="Ej. 100164" />
               </label>
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-zinc-700">Cupo de días de teletrabajo</span>
+                <input
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950"
+                  defaultValue={user?.wfhDaysAllowance ?? ""}
+                  min={0}
+                  name="wfhDaysAllowance"
+                  placeholder="Ej. 20"
+                  step={1}
+                  type="number"
+                />
+              </label>
               <label className="flex items-center gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700">
                 <input className="size-4 rounded border-zinc-300" defaultChecked={user?.hasWfh ?? false} name="hasWfh" type="checkbox" />
                 <span>

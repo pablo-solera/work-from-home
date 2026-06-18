@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, type AnyPgColumn, date, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, type AnyPgColumn, date, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const userRole = pgEnum("user_role", ["admin", "coordinator", "employee"]);
 
@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   hasWfh: boolean("has_wfh"),
   teamWfhVisible: boolean("team_wfh_visible").notNull().default(false),
   canEditAllWfh: boolean("can_edit_all_wfh").notNull().default(false),
+  wfhDaysAllowance: integer("wfh_days_allowance"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

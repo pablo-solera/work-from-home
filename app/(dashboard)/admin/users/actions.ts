@@ -59,6 +59,7 @@ export async function updateUserAction(_state: UserManagementState, formData: Fo
     id: formData.get("id"),
     name: formData.get("name"),
     role: formData.get("role"),
+    wfhDaysAllowance: formData.get("wfhDaysAllowance"),
     wdNumber: formData.get("wdNumber"),
   });
 

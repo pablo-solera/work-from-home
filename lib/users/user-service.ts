@@ -22,6 +22,7 @@ type UpdateUserInput = {
   id: string;
   name: string;
   role: UserRole;
+  wfhDaysAllowance: number | null;
   wdNumber: string | null;
 };
 
@@ -182,6 +183,7 @@ export async function updateUserById(actor: SessionUser, input: UpdateUserInput)
       hasWfh: input.hasWfh,
       name: input.name,
       role: input.role,
+      wfhDaysAllowance: input.wfhDaysAllowance,
       wdNumber: input.wdNumber,
     });
 

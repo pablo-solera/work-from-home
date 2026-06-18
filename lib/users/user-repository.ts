@@ -107,6 +107,7 @@ export function findUsersForAdmin() {
       id: true,
       name: true,
       role: true,
+      wfhDaysAllowance: true,
       wdNumber: true,
     },
     orderBy: (users, { asc }) => [asc(users.name)],
@@ -140,7 +141,7 @@ export function createUser(value: NewUser) {
   return getDb().insert(users).values(value).returning();
 }
 
-export function updateUser(id: string, values: Partial<Pick<NewUser, "canEditAllWfh" | "coordinatorId" | "email" | "hasWfh" | "name" | "role" | "wdNumber">>) {
+export function updateUser(id: string, values: Partial<Pick<NewUser, "canEditAllWfh" | "coordinatorId" | "email" | "hasWfh" | "name" | "role" | "wfhDaysAllowance" | "wdNumber">>) {
   return getDb().update(users).set(values).where(eq(users.id, id)).returning();
 }
 

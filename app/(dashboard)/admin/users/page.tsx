@@ -15,6 +15,7 @@ export default async function AdminUsersPage() {
     id: user.id,
     name: user.name,
     role: user.role,
+    wfhDaysAllowance: user.wfhDaysAllowance,
     wdNumber: user.wdNumber,
   }));
 
