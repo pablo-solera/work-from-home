@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { logoutAction } from "@/app/(dashboard)/actions";
 import { GeneratedAvatar } from "@/components/common/generated-avatar";
+import { PowerOffIcon } from "@/components/icons/power-off-icon";
+import { SettingsIcon } from "@/components/icons/settings-icon";
 import type { SessionUser } from "@/lib/auth/session";
 
 const roleLabels: Record<SessionUser["role"], string> = {
@@ -66,12 +68,14 @@ export function UserMenu({ user }: { user: SessionUser }) {
             <p className="text-xs text-zinc-500">{roleLabels[user.role]}</p>
           </div>
           {user.role === "coordinator" ? (
-            <Link className="block cursor-pointer px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950" href="/settings" onClick={() => setOpen(false)}>
+            <Link className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950" href="/settings" onClick={() => setOpen(false)}>
+              <SettingsIcon className="size-4 shrink-0" />
               Configuración
             </Link>
           ) : null}
           <form action={logoutAction}>
-            <button className="w-full cursor-pointer px-4 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950" type="submit">
+            <button className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950" type="submit">
+              <PowerOffIcon className="size-4 shrink-0" />
               Cerrar sesión
             </button>
           </form>
