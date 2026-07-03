@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { changeUserPasswordAction } from "@/app/(dashboard)/admin/users/actions";
+import { CloseIcon } from "@/components/icons/close-icon";
 import { initialUserManagementState } from "@/lib/users/user-management-state";
 import type { ManagedUser } from "./users-table";
 
@@ -23,8 +24,8 @@ export function UserPasswordModal({ onClose, user }: UserPasswordModalProps) {
             <h2 className="mt-1 text-xl font-semibold text-zinc-950">Cambiar contraseña</h2>
             <p className="mt-1 text-sm text-zinc-600">{user.name} · {user.email}</p>
           </div>
-          <button className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100" onClick={onClose} type="button">
-            Cerrar
+          <button aria-label="Cerrar" className="inline-flex cursor-pointer items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950" onClick={onClose} type="button">
+            <CloseIcon className="size-5" />
           </button>
         </div>
 
@@ -50,7 +51,7 @@ export function UserPasswordModal({ onClose, user }: UserPasswordModalProps) {
           {state.generatedPassword ? <p className="rounded-lg bg-emerald-50 p-3 text-sm text-zinc-700">Contraseña temporal: <span className="font-mono font-semibold">{state.generatedPassword}</span></p> : null}
 
           <div className="flex justify-end">
-            <button className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
+            <button className="cursor-pointer rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
               {pending ? "Actualizando..." : "Actualizar contraseña"}
             </button>
           </div>

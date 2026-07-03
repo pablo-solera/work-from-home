@@ -43,7 +43,7 @@ export function BulkUserForm({ coordinators }: BulkUserFormProps) {
           </select>
           <span className="text-xs text-zinc-500">Opcional. Solo se aplica al crear employees.</span>
         </label>
-        <button className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
+        <button className="cursor-pointer rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
           {pending ? "Creando..." : "Crear usuarios"}
         </button>
       </form>

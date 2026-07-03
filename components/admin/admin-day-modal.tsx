@@ -1,4 +1,5 @@
 import { GeneratedAvatar } from "@/components/common/generated-avatar";
+import { CloseIcon } from "@/components/icons/close-icon";
 import type { AdminCalendarDay } from "./admin-calendar";
 
 type AdminDayModalProps = {
@@ -23,8 +24,8 @@ export function AdminDayModal({ day, onClose }: AdminDayModalProps) {
               {day.entries.length} {day.entries.length === 1 ? "persona" : "personas"} trabajando desde casa
             </p>
           </div>
-          <button className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100" onClick={onClose} type="button">
-            Cerrar
+          <button aria-label="Cerrar" className="inline-flex cursor-pointer items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950" onClick={onClose} type="button">
+            <CloseIcon className="size-5" />
           </button>
         </div>
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { useDeferredValue, useState } from "react";
+import { ChevronLeftIcon } from "@/components/icons/chevron-left-icon";
+import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
 import { DeleteUserDialog } from "./delete-user-dialog";
 import { UserFormModal } from "./user-form-modal";
 import { UserPasswordModal } from "./user-password-modal";
@@ -75,7 +77,7 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
           <h2 className="text-xl font-semibold text-zinc-950">Usuarios</h2>
           <p className="mt-1 text-sm text-zinc-600">Gestiona usuarios, roles, coordinadores y contraseñas.</p>
         </div>
-        <button className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800" onClick={() => setModal({ type: "create" })} type="button">
+        <button className="cursor-pointer rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800" onClick={() => setModal({ type: "create" })} type="button">
           Nuevo usuario
         </button>
       </div>
@@ -151,13 +153,13 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
                   </td>
                   <td className="py-4 text-right">
                     <div className="flex flex-wrap justify-end gap-2">
-                      <button className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => setModal({ type: "edit", user })} type="button">
+                      <button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => setModal({ type: "edit", user })} type="button">
                         Editar
                       </button>
-                      <button className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => setModal({ type: "password", user })} type="button">
+                      <button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => setModal({ type: "password", user })} type="button">
                         Contraseña
                       </button>
-                      <button className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={isCurrentUser} onClick={() => setModal({ type: "delete", user })} type="button">
+                      <button className="cursor-pointer rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={isCurrentUser} onClick={() => setModal({ type: "delete", user })} type="button">
                         Eliminar
                       </button>
                     </div>
@@ -179,23 +181,25 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
           {totalPages > 1 ? (
             <div className="flex items-center gap-3">
               <button
-                className="rounded-lg border border-zinc-300 px-3 py-1.5 font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Página anterior"
+                className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-zinc-300 p-1.5 font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={currentPage === 1}
                 onClick={() => setPage((value) => Math.max(1, value - 1))}
                 type="button"
               >
-                Anterior
+                <ChevronLeftIcon className="size-5" />
               </button>
               <span>
                 Página {currentPage} de {totalPages}
               </span>
               <button
-                className="rounded-lg border border-zinc-300 px-3 py-1.5 font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Página siguiente"
+                className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-zinc-300 p-1.5 font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={currentPage === totalPages}
                 onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
                 type="button"
               >
-                Siguiente
+                <ChevronRightIcon className="size-5" />
               </button>
             </div>
           ) : null}

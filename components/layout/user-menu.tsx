@@ -48,7 +48,7 @@ export function UserMenu({ user }: { user: SessionUser }) {
     <div className="relative border-l border-zinc-200 pl-4" ref={menuRef}>
       <button
         aria-expanded={open}
-        className="flex items-center gap-3 rounded-xl px-2 py-1 text-left hover:bg-zinc-100"
+        className="flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1 text-left hover:bg-zinc-100"
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
@@ -66,12 +66,12 @@ export function UserMenu({ user }: { user: SessionUser }) {
             <p className="text-xs text-zinc-500">{roleLabels[user.role]}</p>
           </div>
           {user.role === "coordinator" ? (
-            <Link className="block px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950" href="/settings" onClick={() => setOpen(false)}>
+            <Link className="block cursor-pointer px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950" href="/settings" onClick={() => setOpen(false)}>
               Configuración
             </Link>
           ) : null}
           <form action={logoutAction}>
-            <button className="w-full px-4 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950" type="submit">
+            <button className="w-full cursor-pointer px-4 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950" type="submit">
               Cerrar sesión
             </button>
           </form>

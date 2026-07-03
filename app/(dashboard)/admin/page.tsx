@@ -34,11 +34,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const adminLinks = (
     <div className="grid gap-4 md:grid-cols-2">
-      <Link className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-400" href="/calendar">
+      <Link className="cursor-pointer rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-400" href="/calendar">
         <h2 className="font-semibold text-zinc-950">Mi calendario</h2>
         <p className="mt-2 text-sm text-zinc-600">Marca tus propios días de teletrabajo.</p>
       </Link>
-      <Link className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-400" href="/admin/users">
+      <Link className="cursor-pointer rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-400" href="/admin/users">
         <h2 className="font-semibold text-zinc-950">Gestión de usuarios</h2>
         <p className="mt-2 text-sm text-zinc-600">Crea usuarios de forma masiva pegando correos.</p>
       </Link>

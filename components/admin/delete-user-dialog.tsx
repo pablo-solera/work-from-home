@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { deleteUserAction } from "@/app/(dashboard)/admin/users/actions";
+import { CloseIcon } from "@/components/icons/close-icon";
 import { initialUserManagementState } from "@/lib/users/user-management-state";
 import type { ManagedUser } from "./users-table";
 
@@ -24,8 +25,8 @@ export function DeleteUserDialog({ currentUserId, onClose, user }: DeleteUserDia
             <h2 className="mt-1 text-xl font-semibold text-zinc-950">{user.name}</h2>
             <p className="mt-1 text-sm text-zinc-600">{user.email}</p>
           </div>
-          <button className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100" onClick={onClose} type="button">
-            Cerrar
+          <button aria-label="Cerrar" className="inline-flex cursor-pointer items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950" onClick={onClose} type="button">
+            <CloseIcon className="size-5" />
           </button>
         </div>
 
@@ -35,7 +36,7 @@ export function DeleteUserDialog({ currentUserId, onClose, user }: DeleteUserDia
           {isCurrentUser ? <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">No puedes eliminar tu propia cuenta.</p> : null}
           {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
           {state.message ? <p className="text-sm text-emerald-700">{state.message}</p> : null}
-          <button className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60" disabled={pending || isCurrentUser}>
+          <button className="cursor-pointer rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60" disabled={pending || isCurrentUser}>
             {pending ? "Eliminando..." : "Eliminar usuario"}
           </button>
         </form>
