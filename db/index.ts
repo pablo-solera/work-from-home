@@ -13,11 +13,17 @@ export function getDb() {
     throw new Error("DATABASE_URL is required to access the database.");
   }
 
-  const client = postgres(process.env.DATABASE_URL, {
+  const databaseUrl = new URL(process.env.DATABASE_URL);
+  const client = postgres({
     connect_timeout: 30,
+    database: databaseUrl.pathname.slice(1),
+    host: databaseUrl.hostname,
     idle_timeout: 30,
     max: 10,
     max_lifetime: 60 * 30,
+    password: decodeURIComponent(databaseUrl.password),
+    port: databaseUrl.port ? Number(databaseUrl.port) : 5432,
+    username: decodeURIComponent(databaseUrl.username),
   });
   db = drizzle(client, { schema });
 
