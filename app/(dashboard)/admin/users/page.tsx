@@ -18,7 +18,7 @@ export default async function AdminUsersPage() {
   const identities = await resolveUserIdentities([...users, ...coordinators]);
 
   function identityOf(id: string) {
-    return identities.get(id) ?? { name: "Usuario", email: null };
+    return identities.get(id) ?? { name: "Usuario", email: null, wdNumber: null };
   }
 
   const coordinatorOptions = coordinators.map((coordinator) => {
@@ -40,7 +40,7 @@ export default async function AdminUsersPage() {
       name: identity.name,
       role: user.role,
       wfhDaysAllowance: user.wfhDaysAllowance,
-      wdNumber: user.wdNumber,
+      wdNumber: identity.wdNumber,
     };
   });
 

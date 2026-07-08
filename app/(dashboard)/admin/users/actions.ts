@@ -16,7 +16,6 @@ export async function updateUserAction(_state: UserManagementState, formData: Fo
     id: formData.get("id"),
     role: formData.get("role"),
     wfhDaysAllowance: formData.get("wfhDaysAllowance"),
-    wdNumber: formData.get("wdNumber"),
   });
 
   if (!parsed.success || !isUserRole(parsed.data.role)) {

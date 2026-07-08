@@ -52,7 +52,8 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
               <p className="text-sm font-medium text-zinc-950">{user.name}</p>
               <p className="text-xs text-zinc-500">{user.email}</p>
-              <p className="mt-2 text-xs text-zinc-500">La identidad (nombre y email) se gestiona en TimerTask.</p>
+              <p className="text-xs text-zinc-500">WD: {user.wdNumber ?? "—"}</p>
+              <p className="mt-2 text-xs text-zinc-500">La identidad (nombre, email y WD) se gestiona en TimerTask.</p>
             </div>
 
             <label className="block space-y-2">
@@ -90,10 +91,6 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-zinc-700">WD</span>
-                <input className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950" defaultValue={user.wdNumber ?? ""} name="wdNumber" placeholder="Ej. 100164" />
-              </label>
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-zinc-700">Cupo de días de teletrabajo</span>
                 <input

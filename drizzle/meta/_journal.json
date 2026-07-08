@@ -36,6 +36,13 @@
       "when": 1783699200000,
       "tag": "0004_oracle_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783785600000,
+      "tag": "0005_drop_wd_number",
+      "breakpoints": true
     }
   ]
 }

@@ -5,8 +5,6 @@ const optionalUuid = z.preprocess((value) => (value === null || (typeof value ==
 
 const optionalPassword = z.preprocess((value) => (value === null || (typeof value === "string" && value.trim() === "") ? undefined : value), z.string().min(8).optional());
 
-const optionalText = z.preprocess((value) => (value === null || (typeof value === "string" && value.trim() === "") ? null : value), z.string().trim().max(50).nullable());
-
 const checkboxBoolean = z.preprocess((value) => value === "on", z.boolean());
 
 const optionalNonNegativeInt = z.preprocess((value) => {
@@ -30,7 +28,6 @@ export const updateUserSchema = z.object({
   id: z.string().uuid(),
   role: z.enum(["admin", "coordinator", "employee"]),
   wfhDaysAllowance: optionalNonNegativeInt,
-  wdNumber: optionalText,
 });
 
 export const changePasswordSchema = z.object({

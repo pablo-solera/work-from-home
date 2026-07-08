@@ -8,11 +8,11 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: userRole("role").notNull().default("employee"),
   coordinatorId: uuid("coordinator_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
-  wdNumber: text("wd_number"),
   oracleEmpId: integer("oracle_emp_id").unique(),
-  // Identity (name/email) lives in Oracle (TIMERTASK). These fallback fields are
-  // only used for system accounts that have no Oracle employee (oracleEmpId null),
-  // e.g. the app admin, so they can still log in without depending on Oracle.
+  // Identity (name/email/wd number) lives in Oracle (TIMERTASK). These fallback
+  // fields are only used for system accounts that have no Oracle employee
+  // (oracleEmpId null), e.g. the app admin, so they can still log in without
+  // depending on Oracle.
   fallbackEmail: text("fallback_email").unique(),
   fallbackName: text("fallback_name"),
   hasWfh: boolean("has_wfh"),

@@ -5,6 +5,7 @@ export type OracleEmployee = {
   empId: number;
   name: string;
   email: string;
+  wdNumber: string | null;
 };
 
 type EmployeeRow = {
@@ -13,6 +14,7 @@ type EmployeeRow = {
   EMP_APELLIDO1: string | null;
   EMP_APELLIDO2: string | null;
   EMP_EMAIL: string | null;
+  EMP_TEL1: string | null;
 };
 
 // Allow-list of schemas. The schema name cannot be a bind variable, so it is
@@ -75,6 +77,7 @@ function mapRow(row: EmployeeRow): OracleEmployee {
     empId: row.EMP_ID,
     name: buildName(row),
     email: (row.EMP_EMAIL ?? "").trim(),
+    wdNumber: (row.EMP_TEL1 ?? "").trim() || null,
   };
 }
 
@@ -83,7 +86,8 @@ const SELECT_EMPLOYEE = `
          e.emp_nombre AS emp_nombre,
          e.emp_apellido1 AS emp_apellido1,
          e.emp_apellido2 AS emp_apellido2,
-         e.emp_email AS emp_email
+         e.emp_email AS emp_email,
+         e.emp_tel1 AS emp_tel1
     FROM {schema}.templeados e
 `;
 

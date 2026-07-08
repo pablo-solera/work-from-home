@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash text NOT NULL,
   role user_role DEFAULT 'employee' NOT NULL,
   coordinator_id uuid,
-  wd_number text,
   oracle_emp_id integer,
   fallback_email text,
   fallback_name text,
@@ -33,7 +32,6 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Idempotent columns (for pre-existing databases).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS coordinator_id uuid;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS wd_number text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS oracle_emp_id integer;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS fallback_email text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS fallback_name text;
@@ -41,6 +39,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS has_wfh boolean;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS team_wfh_visible boolean DEFAULT false NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS can_edit_all_wfh boolean DEFAULT false NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS wfh_days_allowance integer;
+
+-- The Workday number (wd_number) now lives in Oracle (TEMPLEADOS.EMP_TEL1).
+ALTER TABLE users DROP COLUMN IF EXISTS wd_number;
 
 -- Migrate legacy identity columns into fallback_* for system accounts, then drop them.
 DO $$

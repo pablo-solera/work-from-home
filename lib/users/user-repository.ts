@@ -108,7 +108,6 @@ export function findUsersForAdmin() {
       fallbackEmail: true,
       role: true,
       wfhDaysAllowance: true,
-      wdNumber: true,
     },
     with: {
       coordinator: {
@@ -152,16 +151,12 @@ export function createUser(value: NewUser) {
   return getDb().insert(users).values(value).returning();
 }
 
-export function updateUser(id: string, values: Partial<Pick<NewUser, "canEditAllWfh" | "coordinatorId" | "hasWfh" | "role" | "wfhDaysAllowance" | "wdNumber">>) {
+export function updateUser(id: string, values: Partial<Pick<NewUser, "canEditAllWfh" | "coordinatorId" | "hasWfh" | "role" | "wfhDaysAllowance">>) {
   return getDb().update(users).set(values).where(eq(users.id, id)).returning();
 }
 
 export function updateTeamWfhVisibility(coordinatorId: string, teamWfhVisible: boolean) {
   return getDb().update(users).set({ teamWfhVisible }).where(eq(users.id, coordinatorId)).returning();
-}
-
-export function updateUserTeleworkFields(id: string, values: Pick<NewUser, "hasWfh" | "wdNumber">) {
-  return getDb().update(users).set(values).where(eq(users.id, id)).returning();
 }
 
 export function updateUserPassword(id: string, passwordHash: string) {

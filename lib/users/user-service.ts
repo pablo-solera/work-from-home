@@ -12,7 +12,6 @@ type UpdateUserInput = {
   id: string;
   role: UserRole;
   wfhDaysAllowance: number | null;
-  wdNumber: string | null;
 };
 
 type ChangePasswordInput = {
@@ -109,7 +108,6 @@ export async function updateUserById(actor: SessionUser, input: UpdateUserInput)
       hasWfh: input.hasWfh,
       role: input.role,
       wfhDaysAllowance: input.wfhDaysAllowance,
-      wdNumber: input.wdNumber,
     });
 
     return { message: "Usuario actualizado correctamente.", ok: true };
