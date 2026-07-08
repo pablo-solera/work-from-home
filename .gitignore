@@ -28,9 +28,8 @@ yarn-error.log*
 .env*.local
 .env
 
-# generated imports with temporary credentials
-/scripts/teletrabajo-2026-passwords.csv
-/scripts/wfh-email-mapping.csv
+# generated files with temporary credentials
+/scripts/sync-users-passwords.csv
 
 # vercel
 .vercel
