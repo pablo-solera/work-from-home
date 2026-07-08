@@ -102,7 +102,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <AdminCalendar
         cells={overview.cells}
         currentMonthHref={createMonthHref("/admin", currentMonth)}
-        entriesByDate={overview.entriesByDate}
+        sectionsByDate={overview.sectionsByDate}
         monthName={overview.monthName}
         nextMonthHref={createMonthHref("/admin", getNextMonth(year, month))}
         previousMonthHref={createMonthHref("/admin", getPreviousMonth(year, month))}

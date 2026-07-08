@@ -80,7 +80,7 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
       <AdminCalendar
         cells={overview.cells}
         currentMonthHref={createMonthHref("/coverage", currentMonth)}
-        entriesByDate={overview.entriesByDate}
+        sectionsByDate={overview.sectionsByDate}
         monthName={overview.monthName}
         nextMonthHref={createMonthHref("/coverage", getNextMonth(year, month))}
         previousMonthHref={createMonthHref("/coverage", getPreviousMonth(year, month))}

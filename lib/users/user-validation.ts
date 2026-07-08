@@ -23,32 +23,11 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-export const bulkUsersSchema = z.object({
-  emails: z.string().min(1),
-  role: z.enum(["admin", "coordinator", "employee"]).default("employee"),
-  coordinatorEmail: z.string().optional(),
-});
-
-export const createUserSchema = z.object({
-  canEditAllWfh: checkboxBoolean,
-  coordinatorId: optionalUuid,
-  email: z.string().email().transform((email) => email.toLowerCase()),
-  hasWfh: checkboxBoolean,
-  name: z.string().trim().min(1),
-  password: optionalPassword,
-  passwordMode: z.enum(["generate", "manual"]).default("generate"),
-  role: z.enum(["admin", "coordinator", "employee"]).default("employee"),
-  wfhDaysAllowance: optionalNonNegativeInt,
-  wdNumber: optionalText,
-});
-
 export const updateUserSchema = z.object({
   canEditAllWfh: checkboxBoolean,
   coordinatorId: optionalUuid,
-  email: z.string().email().transform((email) => email.toLowerCase()),
   hasWfh: checkboxBoolean,
   id: z.string().uuid(),
-  name: z.string().trim().min(1),
   role: z.enum(["admin", "coordinator", "employee"]),
   wfhDaysAllowance: optionalNonNegativeInt,
   wdNumber: optionalText,
@@ -63,19 +42,6 @@ export const changePasswordSchema = z.object({
 export const deleteUserSchema = z.object({
   id: z.string().uuid(),
 });
-
-export function parseBulkEmails(input: string) {
-  const rawEmails = input
-    .split(/[\s,;]+/)
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-
-  return Array.from(new Set(rawEmails));
-}
-
-export function isValidEmail(email: string) {
-  return z.string().email().safeParse(email).success;
-}
 
 export function isUserRole(role: string): role is UserRole {
   return role === "admin" || role === "coordinator" || role === "employee";

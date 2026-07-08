@@ -22,6 +22,20 @@
       "when": 1781602111204,
       "tag": "0002_first_ultimatum",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783504219186,
+      "tag": "0003_legal_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783699200000,
+      "tag": "0004_oracle_identity",
+      "breakpoints": true
     }
   ]
 }

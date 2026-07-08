@@ -1,9 +1,19 @@
 import type { SessionUser } from "@/lib/auth/session";
+import { createEmptySections, type DaySections, getAbsenceSectionsByDate } from "@/lib/absences/absence-service";
+import { ABSENCE_SECTIONS } from "@/lib/absences/absence-sections";
+import { resolveUserIdentities } from "@/lib/employees/identity-service";
+import { filterVisibleStaff } from "@/lib/employees/staff-service";
 import { findAllUsers, findEmployeeByCoordinatorId, findEmployeesByCoordinatorId, findEmployeeTeamVisibility, findUserById } from "@/lib/users/user-repository";
 import { createWorkFromHomeDay, createWorkFromHomeDays, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds } from "./calendar-repository";
 import { getCalendarDays, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
 
 export type ReplicateWorkFromHomeScope = "next" | "untilYearEnd";
+
+const UNKNOWN_IDENTITY = { name: "Usuario", email: null } as const;
+
+// Sections (other than "enOficina" itself) whose people are considered NOT in
+// the office on a given day: teletrabajo plus every absence section.
+const OUT_OF_OFFICE_SECTION_KEYS = ABSENCE_SECTIONS.map((section) => section.key).filter((key) => key !== "enOficina");
 
 export async function getUserCalendar(userId: string, year: number, month: number) {
   const range = getMonthRange(year, month);
@@ -19,17 +29,106 @@ export async function getUserCalendar(userId: string, year: number, month: numbe
 
 export async function getAdminCalendarOverview(year: number, month: number) {
   const range = getMonthRange(year, month);
-  const [entries, users] = await Promise.all([findAllWorkFromHomeDays(range.start, range.end), findAllUsers()]);
+  const [entries, allUsers, absenceSectionsByDate] = await Promise.all([
+    findAllWorkFromHomeDays(range.start, range.end),
+    findAllUsers(),
+    getAbsenceSectionsByDate(range.start, range.end),
+  ]);
   const calendar = getCalendarDays(year, month);
+
+  // Only show/count employees that belong to the configured staff lines.
+  const users = await filterVisibleStaff(allUsers);
+  const visibleUserIds = new Set(users.map((user) => user.id));
+
+  const identities = await resolveUserIdentities(users);
+
+  const sectionsByDate: Record<string, DaySections> = {};
+  // Absence wins over teletrabajo: track who is absent each day so we can drop
+  // them from the teletrabajo section (a person on holiday/leave is not WFH).
+  const absentUserIdsByDate: Record<string, Set<string>> = {};
+
+  for (const [date, sections] of Object.entries(absenceSectionsByDate)) {
+    // Keep only absence entries for visible staff (or unmatched Oracle rows have userId null → dropped).
+    const filtered = createEmptySections();
+    const absentIds = new Set<string>();
+    for (const key of Object.keys(sections) as (keyof DaySections)[]) {
+      filtered[key] = sections[key].filter((entry) => entry.userId !== null && visibleUserIds.has(entry.userId));
+      for (const entry of filtered[key]) {
+        if (entry.userId) {
+          absentIds.add(entry.userId);
+        }
+      }
+    }
+    sectionsByDate[date] = filtered;
+    absentUserIdsByDate[date] = absentIds;
+  }
+
+  for (const entry of entries) {
+    if (!visibleUserIds.has(entry.userId)) {
+      continue;
+    }
+
+    // Absence prevails: skip teletrabajo if the user is absent that day.
+    if (absentUserIdsByDate[entry.date]?.has(entry.userId)) {
+      continue;
+    }
+
+    const identity = identities.get(entry.userId) ?? UNKNOWN_IDENTITY;
+    sectionsByDate[entry.date] = sectionsByDate[entry.date] ?? createEmptySections();
+    sectionsByDate[entry.date].teletrabajo.push({
+      userId: entry.userId,
+      userName: identity.name,
+      userEmail: identity.email,
+    });
+  }
+
+  // "En oficina": visible staff who, on a given working day, are neither working
+  // from home nor in any absence section. Only computed for working days.
+  const officeStaff = users.filter((user) => user.oracleEmpId !== null && user.oracleEmpId !== undefined);
+
+  for (const cell of calendar.cells) {
+    if (!cell || cell.isWeekend || cell.isHoliday) {
+      continue;
+    }
+
+    const sections = sectionsByDate[cell.date];
+    const outOfOfficeUserIds = new Set<string>();
+
+    if (sections) {
+      for (const key of OUT_OF_OFFICE_SECTION_KEYS) {
+        for (const entry of sections[key]) {
+          if (entry.userId) {
+            outOfOfficeUserIds.add(entry.userId);
+          }
+        }
+      }
+    }
+
+    const inOffice = officeStaff
+      .filter((user) => !outOfOfficeUserIds.has(user.id))
+      .map((user) => {
+        const identity = identities.get(user.id) ?? UNKNOWN_IDENTITY;
+        return { userId: user.id, userName: identity.name, userEmail: identity.email };
+      })
+      .sort((a, b) => a.userName.localeCompare(b.userName, "es"));
+
+    if (inOffice.length > 0) {
+      sectionsByDate[cell.date] = sectionsByDate[cell.date] ?? createEmptySections();
+      sectionsByDate[cell.date].enOficina = inOffice;
+    }
+  }
+
+  const userList = users
+    .map((user) => {
+      const identity = identities.get(user.id) ?? UNKNOWN_IDENTITY;
+      return { id: user.id, name: identity.name, email: identity.email ?? "" };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
 
   return {
     ...calendar,
-    users: users.map((user) => ({ id: user.id, name: user.name, email: user.email })),
-    entriesByDate: entries.reduce<Record<string, (typeof entries)[number][]>>((accumulator, entry) => {
-      accumulator[entry.date] = accumulator[entry.date] ?? [];
-      accumulator[entry.date].push(entry);
-      return accumulator;
-    }, {}),
+    users: userList,
+    sectionsByDate,
   };
 }
 
@@ -41,29 +140,49 @@ export async function getAdminUserCalendar(userId: string, year: number, month: 
   }
 
   const calendar = await getUserCalendar(user.id, year, month);
+  const identities = await resolveUserIdentities([user]);
+  const identity = identities.get(user.id) ?? UNKNOWN_IDENTITY;
 
   return {
     ...calendar,
-    user: { id: user.id, name: user.name, email: user.email },
+    user: { id: user.id, name: identity.name, email: identity.email ?? "" },
   };
 }
 
 export async function getCoordinatorCalendarOverview(coordinatorId: string, year: number, month: number, employeeId?: string) {
-  const employees = await findEmployeesByCoordinatorId(coordinatorId);
+  const allEmployees = await findEmployeesByCoordinatorId(coordinatorId);
+  const employees = await filterVisibleStaff(allEmployees);
   const visibleEmployees = employeeId ? employees.filter((employee) => employee.id === employeeId) : employees;
   const visibleUserIds = employeeId ? visibleEmployees.map((employee) => employee.id) : [coordinatorId, ...visibleEmployees.map((employee) => employee.id)];
   const range = getMonthRange(year, month);
   const entries = await findWorkFromHomeDaysByUserIds(visibleUserIds, range.start, range.end);
   const calendar = getCalendarDays(year, month);
 
+  const identities = await resolveUserIdentities(employees);
+
+  const sectionsByDate: Record<string, DaySections> = {};
+
+  for (const entry of entries) {
+    const identity = identities.get(entry.userId) ?? UNKNOWN_IDENTITY;
+    sectionsByDate[entry.date] = sectionsByDate[entry.date] ?? createEmptySections();
+    sectionsByDate[entry.date].teletrabajo.push({
+      userId: entry.userId,
+      userName: identity.name,
+      userEmail: identity.email,
+    });
+  }
+
+  const employeeList = employees
+    .map((employee) => {
+      const identity = identities.get(employee.id) ?? UNKNOWN_IDENTITY;
+      return { id: employee.id, name: identity.name, email: identity.email ?? "" };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
+
   return {
     ...calendar,
-    employees: employees.map((employee) => ({ id: employee.id, name: employee.name, email: employee.email })),
-    entriesByDate: entries.reduce<Record<string, (typeof entries)[number][]>>((accumulator, entry) => {
-      accumulator[entry.date] = accumulator[entry.date] ?? [];
-      accumulator[entry.date].push(entry);
-      return accumulator;
-    }, {}),
+    employees: employeeList,
+    sectionsByDate,
   };
 }
 
@@ -93,10 +212,12 @@ export async function getCoordinatorEmployeeCalendar(coordinatorId: string, empl
   }
 
   const calendar = await getUserCalendar(employee.id, year, month);
+  const identities = await resolveUserIdentities([employee]);
+  const identity = identities.get(employee.id) ?? UNKNOWN_IDENTITY;
 
   return {
     ...calendar,
-    employee: { id: employee.id, name: employee.name, email: employee.email },
+    employee: { id: employee.id, name: identity.name, email: identity.email ?? "" },
   };
 }
 

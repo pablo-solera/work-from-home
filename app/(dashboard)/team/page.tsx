@@ -45,7 +45,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
         <AdminCalendar
           cells={overview.cells}
           currentMonthHref={createMonthHref("/team", currentMonth)}
-          entriesByDate={overview.entriesByDate}
+          sectionsByDate={overview.sectionsByDate}
           monthName={overview.monthName}
           nextMonthHref={createMonthHref("/team", getNextMonth(year, month))}
           previousMonthHref={createMonthHref("/team", getPreviousMonth(year, month))}
@@ -96,7 +96,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
       <AdminCalendar
         cells={overview.cells}
         currentMonthHref={createMonthHref("/team", currentMonth)}
-        entriesByDate={overview.entriesByDate}
+        sectionsByDate={overview.sectionsByDate}
         monthName={overview.monthName}
         nextMonthHref={createMonthHref("/team", getNextMonth(year, month))}
         previousMonthHref={createMonthHref("/team", getPreviousMonth(year, month))}

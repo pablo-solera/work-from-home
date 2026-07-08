@@ -12,25 +12,55 @@ ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'admin';
 ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'coordinator';
 ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'employee';
 
+-- Identity (name/email) lives in Oracle (TIMERTASK). Postgres only stores the
+-- login credentials, app role/hierarchy and work-from-home days. System accounts
+-- (no Oracle employee) use fallback_email/fallback_name to log in.
 CREATE TABLE IF NOT EXISTS users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-  name text NOT NULL,
-  email text NOT NULL,
   password_hash text NOT NULL,
   role user_role DEFAULT 'employee' NOT NULL,
   coordinator_id uuid,
+  wd_number text,
+  oracle_emp_id integer,
+  fallback_email text,
+  fallback_name text,
+  has_wfh boolean,
+  team_wfh_visible boolean DEFAULT false NOT NULL,
+  can_edit_all_wfh boolean DEFAULT false NOT NULL,
+  wfh_days_allowance integer,
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users USING btree (email);
-
+-- Idempotent columns (for pre-existing databases).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS coordinator_id uuid;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS role user_role DEFAULT 'employee' NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS wd_number text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS oracle_emp_id integer;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS fallback_email text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS fallback_name text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS has_wfh boolean;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS team_wfh_visible boolean DEFAULT false NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS can_edit_all_wfh boolean DEFAULT false NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS wfh_days_allowance integer;
+
+-- Migrate legacy identity columns into fallback_* for system accounts, then drop them.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='email') THEN
+    UPDATE users SET fallback_email = email WHERE oracle_emp_id IS NULL AND fallback_email IS NULL;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='name') THEN
+    UPDATE users SET fallback_name = name WHERE oracle_emp_id IS NULL AND fallback_name IS NULL;
+  END IF;
+END
+$$;
+
+DROP INDEX IF EXISTS users_email_unique;
+ALTER TABLE users DROP COLUMN IF EXISTS email;
+ALTER TABLE users DROP COLUMN IF EXISTS name;
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_oracle_emp_id_unique ON users (oracle_emp_id) WHERE oracle_emp_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS users_fallback_email_unique ON users (fallback_email) WHERE fallback_email IS NOT NULL;
+
 ALTER TABLE users ALTER COLUMN role DROP DEFAULT;
 UPDATE users SET role = 'employee' WHERE role::text = 'user';
 
@@ -81,10 +111,10 @@ BEGIN
 END
 $$;
 
-INSERT INTO users (name, email, password_hash, role)
-VALUES ('Admin', lower('admin@example.com'), crypt('admin123', gen_salt('bf')), 'admin')
-ON CONFLICT (email) DO UPDATE SET
-  name = EXCLUDED.name,
+-- Seed the system admin (no Oracle employee) via fallback_email.
+INSERT INTO users (password_hash, role, fallback_email, fallback_name)
+VALUES (crypt('admin123', gen_salt('bf')), 'admin', lower('admin@example.com'), 'Admin')
+ON CONFLICT (fallback_email) DO UPDATE SET
   password_hash = EXCLUDED.password_hash,
   role = 'admin',
   coordinator_id = NULL;

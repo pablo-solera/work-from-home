@@ -33,7 +33,6 @@ type UsersTableProps = {
 };
 
 type ModalState =
-  | { type: "create" }
   | { type: "delete"; user: ManagedUser }
   | { type: "edit"; user: ManagedUser }
   | { type: "password"; user: ManagedUser }
@@ -75,11 +74,8 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-zinc-950">Usuarios</h2>
-          <p className="mt-1 text-sm text-zinc-600">Gestiona usuarios, roles, coordinadores y contraseñas.</p>
+          <p className="mt-1 text-sm text-zinc-600">Gestiona roles, coordinadores, contraseñas y opciones de teletrabajo. Las altas y bajas se sincronizan desde TimerTask.</p>
         </div>
-        <button className="cursor-pointer rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800" onClick={() => setModal({ type: "create" })} type="button">
-          Nuevo usuario
-        </button>
       </div>
 
       <label className="mt-5 block max-w-md space-y-2">
@@ -206,7 +202,6 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
         </div>
       ) : null}
 
-      {modal?.type === "create" ? <UserFormModal coordinators={coordinators} currentUserId={currentUserId} onClose={() => setModal(null)} /> : null}
       {modal?.type === "edit" ? <UserFormModal coordinators={coordinators} currentUserId={currentUserId} onClose={() => setModal(null)} user={modal.user} /> : null}
       {modal?.type === "password" ? <UserPasswordModal onClose={() => setModal(null)} user={modal.user} /> : null}
       {modal?.type === "delete" ? <DeleteUserDialog currentUserId={currentUserId} onClose={() => setModal(null)} user={modal.user} /> : null}

@@ -17,13 +17,14 @@ export function findAllWorkFromHomeDays(start: string, end: string) {
     .select({
       date: workFromHomeDays.date,
       userId: users.id,
-      userName: users.name,
-      userEmail: users.email,
+      oracleEmpId: users.oracleEmpId,
+      fallbackName: users.fallbackName,
+      fallbackEmail: users.fallbackEmail,
     })
     .from(workFromHomeDays)
     .innerJoin(users, eq(workFromHomeDays.userId, users.id))
     .where(between(workFromHomeDays.date, start, end))
-    .orderBy(asc(workFromHomeDays.date), asc(users.name));
+    .orderBy(asc(workFromHomeDays.date));
 }
 
 export function findWorkFromHomeDaysByUserIds(userIds: string[], start: string, end: string) {
@@ -35,13 +36,14 @@ export function findWorkFromHomeDaysByUserIds(userIds: string[], start: string, 
     .select({
       date: workFromHomeDays.date,
       userId: users.id,
-      userName: users.name,
-      userEmail: users.email,
+      oracleEmpId: users.oracleEmpId,
+      fallbackName: users.fallbackName,
+      fallbackEmail: users.fallbackEmail,
     })
     .from(workFromHomeDays)
     .innerJoin(users, eq(workFromHomeDays.userId, users.id))
     .where(and(inArray(workFromHomeDays.userId, userIds), between(workFromHomeDays.date, start, end)))
-    .orderBy(asc(workFromHomeDays.date), asc(users.name));
+    .orderBy(asc(workFromHomeDays.date));
 }
 
 export function createWorkFromHomeDay(userId: string, date: string) {

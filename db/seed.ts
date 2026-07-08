@@ -1,34 +1,29 @@
 import { hashPassword } from "@/lib/auth/password";
-import { createUsers } from "@/lib/users/user-repository";
+import { createUser } from "@/lib/users/user-repository";
 
+// System accounts have no Oracle employee; they log in via fallback_email.
 async function main() {
-  await createUsers([
-    {
-      name: "Admin",
-      email: "admin@example.com",
-      passwordHash: await hashPassword("admin123"),
-      role: "admin",
-    },
-  ]);
+  await createUser({
+    fallbackName: "Admin",
+    fallbackEmail: "admin@example.com",
+    passwordHash: await hashPassword("admin123"),
+    role: "admin",
+  });
 
-  const [coordinator] = await createUsers([
-    {
-      name: "Coordinador",
-      email: "coordinator@example.com",
-      passwordHash: await hashPassword("coordinator123"),
-      role: "coordinator",
-    },
-  ]);
+  const [coordinator] = await createUser({
+    fallbackName: "Coordinador",
+    fallbackEmail: "coordinator@example.com",
+    passwordHash: await hashPassword("coordinator123"),
+    role: "coordinator",
+  });
 
-  await createUsers([
-    {
-      name: "Employee",
-      email: "employee@example.com",
-      passwordHash: await hashPassword("employee123"),
-      role: "employee",
-      coordinatorId: coordinator?.id,
-    },
-  ]);
+  await createUser({
+    fallbackName: "Employee",
+    fallbackEmail: "employee@example.com",
+    passwordHash: await hashPassword("employee123"),
+    role: "employee",
+    coordinatorId: coordinator?.id,
+  });
 }
 
 main()
