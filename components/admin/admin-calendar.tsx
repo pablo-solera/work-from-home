@@ -4,25 +4,19 @@ import Link from "next/link";
 import { useState } from "react";
 import { ChevronLeftIcon } from "@/components/icons/chevron-left-icon";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
+import type { DaySections } from "@/lib/absences/absence-service";
 import type { CalendarCell } from "@/lib/calendar/dates";
 import { AdminDayCell } from "./admin-day-cell";
 import { AdminDayModal } from "./admin-day-modal";
 
-export type AdminCalendarEntry = {
-  date: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-};
-
 export type AdminCalendarDay = Exclude<CalendarCell, null> & {
-  entries: AdminCalendarEntry[];
+  sections: DaySections;
 };
 
 type AdminCalendarProps = {
   cells: CalendarCell[];
   currentMonthHref: string;
-  entriesByDate: Record<string, AdminCalendarEntry[]>;
+  sectionsByDate: Record<string, DaySections>;
   monthName: string;
   nextMonthHref: string;
   previousMonthHref: string;
@@ -31,10 +25,24 @@ type AdminCalendarProps = {
 
 const weekDays = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
+function emptySections(): DaySections {
+  return {
+    enOficina: [],
+    teletrabajo: [],
+    vacaciones: [],
+    ausencias: [],
+    bajas: [],
+    viajes: [],
+    permisos: [],
+    excedencia: [],
+    mudanza: [],
+  };
+}
+
 export function AdminCalendar({
   cells,
   currentMonthHref,
-  entriesByDate,
+  sectionsByDate,
   monthName,
   nextMonthHref,
   previousMonthHref,
@@ -80,7 +88,7 @@ export function AdminCalendar({
 
           const day = {
             ...cell,
-            entries: entriesByDate[cell.date] ?? [],
+            sections: sectionsByDate[cell.date] ?? emptySections(),
           };
 
           return <AdminDayCell day={day} key={cell.date} onSelect={setSelectedDay} />;
