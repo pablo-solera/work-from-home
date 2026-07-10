@@ -4,6 +4,7 @@ import { useDeferredValue, useState } from "react";
 import { ChevronLeftIcon } from "@/components/icons/chevron-left-icon";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
 import { DeleteUserDialog } from "./delete-user-dialog";
+import { SyncUsersButton } from "./sync-users-button";
 import { UserFormModal } from "./user-form-modal";
 import { UserPasswordModal } from "./user-password-modal";
 
@@ -76,6 +77,8 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
           <h2 className="text-xl font-semibold text-zinc-950">Usuarios</h2>
           <p className="mt-1 text-sm text-zinc-600">Gestiona roles, coordinadores, contraseñas y opciones de teletrabajo. Las altas y bajas se sincronizan desde TimerTask.</p>
         </div>
+
+        <SyncUsersButton />
       </div>
 
       <label className="mt-5 block max-w-md space-y-2">

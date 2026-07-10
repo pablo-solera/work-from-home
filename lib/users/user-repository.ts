@@ -144,7 +144,10 @@ export async function createUsers(values: NewUser[]) {
     return [];
   }
 
-  return getDb().insert(users).values(values).onConflictDoNothing({ target: users.oracleEmpId }).returning();
+  // oracle_emp_id uniqueness is a PARTIAL unique index (WHERE oracle_emp_id IS
+  // NOT NULL), so ON CONFLICT must repeat the same predicate via `where` to
+  // match it. All rows created here have a non-null oracleEmpId.
+  return getDb().insert(users).values(values).onConflictDoNothing({ target: users.oracleEmpId, where: isNotNull(users.oracleEmpId) }).returning();
 }
 
 export function createUser(value: NewUser) {

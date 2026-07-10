@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/guards";
+import { runUserSync } from "@/lib/users/sync-service";
 import type { UserManagementState } from "@/lib/users/user-management-state";
+import type { SyncUsersState } from "@/lib/users/sync-state";
 import { changeUserPassword, deleteUserById, updateUserById } from "@/lib/users/user-service";
 import { changePasswordSchema, deleteUserSchema, isUserRole, updateUserSchema } from "@/lib/users/user-validation";
 
@@ -51,6 +53,27 @@ export async function changeUserPasswordAction(_state: UserManagementState, form
   }
 
   return result;
+}
+
+export async function syncUsersAction(): Promise<SyncUsersState> {
+  await requireAdmin();
+
+  try {
+    const result = await runUserSync();
+
+    revalidatePath("/admin/users");
+
+    return {
+      ok: true,
+      created: result.created,
+      deleted: result.deleted,
+      passwords: result.passwords,
+    };
+  } catch (error) {
+    console.error("Failed to sync users from Oracle:", error);
+
+    return { error: "No se pudo sincronizar con TimerTask. Inténtalo de nuevo." };
+  }
 }
 
 export async function deleteUserAction(_state: UserManagementState, formData: FormData): Promise<UserManagementState> {

@@ -9,13 +9,13 @@ export default async function AdminUsersPage() {
   const [allCoordinators, allUsers] = await Promise.all([findCoordinators(), findUsersForAdmin()]);
 
   // Only show employees from the configured staff lines. System accounts (admin,
-  // etc.) are kept so they can still be managed.
-  const [coordinators, users] = await Promise.all([
+  // etc.) are kept so they can still be managed. The staff filter and identity
+  // resolution both hit Oracle and are independent, so run them together.
+  const [coordinators, users, identities] = await Promise.all([
     filterVisibleStaff(allCoordinators, { includeSystemUsers: true }),
     filterVisibleStaff(allUsers, { includeSystemUsers: true }),
+    resolveUserIdentities([...allUsers, ...allCoordinators]),
   ]);
-
-  const identities = await resolveUserIdentities([...users, ...coordinators]);
 
   function identityOf(id: string) {
     return identities.get(id) ?? { name: "Usuario", email: null, wdNumber: null };
