@@ -5,6 +5,7 @@ import { GeneratedAvatar } from "@/components/common/generated-avatar";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
 import { CloseIcon } from "@/components/icons/close-icon";
 import { ABSENCE_SECTIONS, type AbsenceSectionKey } from "@/lib/absences/absence-sections";
+import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
 import type { AdminCalendarDay } from "./admin-calendar";
 
 type AdminDayModalProps = {
@@ -13,6 +14,7 @@ type AdminDayModalProps = {
 };
 
 export function AdminDayModal({ day, onClose }: AdminDayModalProps) {
+  const dialogRef = useModalDismiss<HTMLElement>(onClose);
   const [openSections, setOpenSections] = useState<Set<AbsenceSectionKey>>(new Set());
 
   const sections = ABSENCE_SECTIONS.map((section) => ({
@@ -42,7 +44,9 @@ export function AdminDayModal({ day, onClose }: AdminDayModalProps) {
         aria-modal="true"
         className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
         onClick={(event) => event.stopPropagation()}
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -54,7 +58,7 @@ export function AdminDayModal({ day, onClose }: AdminDayModalProps) {
           </button>
         </div>
 
-        <div className="mt-6 max-h-[28rem] space-y-3 overflow-auto">
+        <div className="mt-6 max-h-[28rem] space-y-3 overflow-auto overscroll-contain">
           {hasPeople ? (
             sections.map((section) => {
               const isOpen = openSections.has(section.key);

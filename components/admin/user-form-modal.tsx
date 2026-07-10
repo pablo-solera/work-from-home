@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { updateUserAction } from "@/app/(dashboard)/admin/users/actions";
 import { CloseIcon } from "@/components/icons/close-icon";
+import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
 import { initialUserManagementState } from "@/lib/users/user-management-state";
 import type { ManagedUser, UserCoordinatorOption } from "./users-table";
 
@@ -20,6 +21,7 @@ const roleLabels: Record<ManagedUser["role"], string> = {
 };
 
 export function UserFormModal({ coordinators, currentUserId, onClose, user }: UserFormModalProps) {
+  const dialogRef = useModalDismiss<HTMLElement>(onClose);
   const isCurrentUser = user.id === currentUserId;
   const [role, setRole] = useState<ManagedUser["role"]>(user.role);
   const [state, action, pending] = useActionState(updateUserAction, initialUserManagementState);
@@ -33,7 +35,7 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4" onClick={onClose}>
-      <section aria-modal="true" className="flex max-h-[90dvh] w-full max-w-xl flex-col rounded-2xl bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()} role="dialog">
+      <section aria-modal="true" className="flex max-h-[90dvh] w-full max-w-xl flex-col rounded-2xl bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()} ref={dialogRef} role="dialog" tabIndex={-1}>
         <div className="flex shrink-0 items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-zinc-500">Gestión de usuarios</p>
@@ -45,7 +47,7 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
         </div>
 
         <form action={action} className="mt-6 flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain">
             <input name="id" type="hidden" value={user.id} />
             {isCurrentUser ? <input name="role" type="hidden" value="admin" /> : null}
 
@@ -60,10 +62,10 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
               <span className="text-sm font-medium text-zinc-700">Rol</span>
               <select
                 className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-950 disabled:bg-zinc-100 disabled:text-zinc-500"
-                defaultValue={user.role}
                 disabled={isCurrentUser}
                 name="role"
                 onChange={(event) => setRole(event.target.value as ManagedUser["role"])}
+                value={role}
               >
                 {Object.entries(roleLabels).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -121,12 +123,20 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
           </div>
 
           <div className="shrink-0 space-y-4 border-t border-zinc-200 pt-4">
-            {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
-            {state.message ? <p className="text-sm text-emerald-700">{state.message}</p> : null}
+            {state.error ? (
+              <p aria-live="polite" className="text-sm text-red-600">
+                {state.error}
+              </p>
+            ) : null}
+            {state.message ? (
+              <p aria-live="polite" className="text-sm text-emerald-700">
+                {state.message}
+              </p>
+            ) : null}
 
             <div className="flex justify-end">
               <button className="cursor-pointer rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
-                {pending ? "Guardando..." : "Guardar cambios"}
+                {pending ? "Guardando…" : "Guardar cambios"}
               </button>
             </div>
           </div>

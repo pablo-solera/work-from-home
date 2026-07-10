@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { changeUserPasswordAction } from "@/app/(dashboard)/admin/users/actions";
 import { CloseIcon } from "@/components/icons/close-icon";
+import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
 import { initialUserManagementState } from "@/lib/users/user-management-state";
 import type { ManagedUser } from "./users-table";
 
@@ -12,12 +13,13 @@ type UserPasswordModalProps = {
 };
 
 export function UserPasswordModal({ onClose, user }: UserPasswordModalProps) {
+  const dialogRef = useModalDismiss<HTMLElement>(onClose);
   const [passwordMode, setPasswordMode] = useState<"generate" | "manual">("generate");
   const [state, action, pending] = useActionState(changeUserPasswordAction, initialUserManagementState);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4" onClick={onClose}>
-      <section aria-modal="true" className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()} role="dialog">
+      <section aria-modal="true" className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()} ref={dialogRef} role="dialog" tabIndex={-1}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-zinc-500">Contraseña</p>
@@ -46,13 +48,21 @@ export function UserPasswordModal({ onClose, user }: UserPasswordModalProps) {
             {passwordMode === "manual" ? <input className="mt-3 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950" minLength={8} name="password" placeholder="Mínimo 8 caracteres" type="password" /> : null}
           </div>
 
-          {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
-          {state.message ? <p className="text-sm text-emerald-700">{state.message}</p> : null}
+          {state.error ? (
+            <p aria-live="polite" className="text-sm text-red-600">
+              {state.error}
+            </p>
+          ) : null}
+          {state.message ? (
+            <p aria-live="polite" className="text-sm text-emerald-700">
+              {state.message}
+            </p>
+          ) : null}
           {state.generatedPassword ? <p className="rounded-lg bg-emerald-50 p-3 text-sm text-zinc-700">Contraseña temporal: <span className="font-mono font-semibold">{state.generatedPassword}</span></p> : null}
 
           <div className="flex justify-end">
             <button className="cursor-pointer rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
-              {pending ? "Actualizando..." : "Actualizar contraseña"}
+              {pending ? "Actualizando…" : "Actualizar contraseña"}
             </button>
           </div>
         </form>
