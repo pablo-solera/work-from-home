@@ -29,18 +29,18 @@ export async function getUserCalendar(userId: string, year: number, month: numbe
 
 export async function getAdminCalendarOverview(year: number, month: number) {
   const range = getMonthRange(year, month);
-  const [entries, allUsers, absenceSectionsByDate] = await Promise.all([
-    findAllWorkFromHomeDays(range.start, range.end),
-    findAllUsers(),
-    getAbsenceSectionsByDate(range.start, range.end),
-  ]);
+  const [entries, allUsers] = await Promise.all([findAllWorkFromHomeDays(range.start, range.end), findAllUsers()]);
   const calendar = getCalendarDays(year, month);
 
   // Only show/count employees that belong to the configured staff lines.
-  const users = await filterVisibleStaff(allUsers);
+  // Absences reuse `allUsers` (no extra query); identities and the staff filter
+  // both hit Oracle and are independent, so run them together.
+  const [absenceSectionsByDate, users, identities] = await Promise.all([
+    getAbsenceSectionsByDate(range.start, range.end, allUsers),
+    filterVisibleStaff(allUsers),
+    resolveUserIdentities(allUsers),
+  ]);
   const visibleUserIds = new Set(users.map((user) => user.id));
-
-  const identities = await resolveUserIdentities(users);
 
   const sectionsByDate: Record<string, DaySections> = {};
   // Absence wins over teletrabajo: track who is absent each day so we can drop
@@ -139,8 +139,7 @@ export async function getAdminUserCalendar(userId: string, year: number, month: 
     return null;
   }
 
-  const calendar = await getUserCalendar(user.id, year, month);
-  const identities = await resolveUserIdentities([user]);
+  const [calendar, identities] = await Promise.all([getUserCalendar(user.id, year, month), resolveUserIdentities([user])]);
   const identity = identities.get(user.id) ?? UNKNOWN_IDENTITY;
 
   return {
@@ -155,10 +154,10 @@ export async function getCoordinatorCalendarOverview(coordinatorId: string, year
   const visibleEmployees = employeeId ? employees.filter((employee) => employee.id === employeeId) : employees;
   const visibleUserIds = employeeId ? visibleEmployees.map((employee) => employee.id) : [coordinatorId, ...visibleEmployees.map((employee) => employee.id)];
   const range = getMonthRange(year, month);
-  const entries = await findWorkFromHomeDaysByUserIds(visibleUserIds, range.start, range.end);
   const calendar = getCalendarDays(year, month);
 
-  const identities = await resolveUserIdentities(employees);
+  // Entries and identities are independent once employees are known.
+  const [entries, identities] = await Promise.all([findWorkFromHomeDaysByUserIds(visibleUserIds, range.start, range.end), resolveUserIdentities(employees)]);
 
   const sectionsByDate: Record<string, DaySections> = {};
 
@@ -211,8 +210,7 @@ export async function getCoordinatorEmployeeCalendar(coordinatorId: string, empl
     return null;
   }
 
-  const calendar = await getUserCalendar(employee.id, year, month);
-  const identities = await resolveUserIdentities([employee]);
+  const [calendar, identities] = await Promise.all([getUserCalendar(employee.id, year, month), resolveUserIdentities([employee])]);
   const identity = identities.get(employee.id) ?? UNKNOWN_IDENTITY;
 
   return {

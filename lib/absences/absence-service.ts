@@ -2,6 +2,8 @@ import { findAllUsers } from "@/lib/users/user-repository";
 import { findAbsencesByDateRange } from "./absence-repository";
 import type { AbsenceSectionKey } from "./absence-sections";
 
+type CalendarUser = Awaited<ReturnType<typeof findAllUsers>>[number];
+
 export type CalendarPersonEntry = {
   userId: string | null;
   userName: string;
@@ -31,8 +33,11 @@ function createEmptySections(): DaySections {
  *
  * If Oracle is unreachable the function degrades gracefully to empty sections
  * so the teletrabajo view keeps working.
+ *
+ * `users` can be passed in by callers that already loaded the user list (e.g.
+ * the calendar overview) to avoid a redundant Postgres query.
  */
-export async function getAbsenceSectionsByDate(start: string, end: string): Promise<Record<string, DaySections>> {
+export async function getAbsenceSectionsByDate(start: string, end: string, users?: CalendarUser[]): Promise<Record<string, DaySections>> {
   let absences: Awaited<ReturnType<typeof findAbsencesByDateRange>> = [];
 
   try {
@@ -46,10 +51,10 @@ export async function getAbsenceSectionsByDate(start: string, end: string): Prom
     return {};
   }
 
-  const users = await findAllUsers();
-  const userByOracleId = new Map<number, (typeof users)[number]>();
+  const resolvedUsers = users ?? (await findAllUsers());
+  const userByOracleId = new Map<number, CalendarUser>();
 
-  for (const user of users) {
+  for (const user of resolvedUsers) {
     if (user.oracleEmpId !== null && user.oracleEmpId !== undefined) {
       userByOracleId.set(user.oracleEmpId, user);
     }
