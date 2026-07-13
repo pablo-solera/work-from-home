@@ -21,7 +21,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    ORACLE_CLIENT_LIB_DIR=/opt/oracle/instantclient
+    ORACLE_CLIENT_LIB_DIR=/opt/oracle/instantclient \
+    LD_LIBRARY_PATH=/opt/oracle/instantclient
 
 # Oracle Instant Client Basic Light + its runtime dependency (libaio).
 ARG INSTANTCLIENT_ZIP=instantclient-basiclite-linux.x64-21.13.0.0.0dbru.zip

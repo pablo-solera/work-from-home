@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   // oracledb ships native binaries; keep it external so Next.js does not bundle
   // it and it is loaded from node_modules at runtime (thick mode for Oracle 11g).
   serverExternalPackages: ["oracledb"],
+  // The oracledb native .node binary is loaded dynamically at runtime, so
+  // Next.js' output file tracing doesn't detect it and excludes it from the
+  // standalone build. Force-include it so `oracledb` works in the Docker image.
+  outputFileTracingIncludes: {
+    "/*": ["node_modules/oracledb/build/Release/*.node"],
+  },
 };
 
 export default nextConfig;
