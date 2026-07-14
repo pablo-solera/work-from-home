@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { LdapUnavailableError } from "@/lib/auth/ldap";
 import { setSessionCookie } from "@/lib/auth/session";
 import { authenticateUser } from "@/lib/users/user-service";
 import { loginSchema } from "@/lib/users/user-validation";
@@ -19,7 +20,17 @@ export async function loginAction(_state: LoginFormState, formData: FormData): P
     return { error: "Credenciales incorrectas." };
   }
 
-  const user = await authenticateUser(parsed.data.email, parsed.data.password);
+  let user;
+
+  try {
+    user = await authenticateUser(parsed.data.email, parsed.data.password);
+  } catch (error) {
+    if (error instanceof LdapUnavailableError) {
+      return { error: "Servicio de autenticación no disponible. Inténtalo de nuevo en unos minutos." };
+    }
+
+    throw error;
+  }
 
   if (!user) {
     return { error: "Credenciales incorrectas." };

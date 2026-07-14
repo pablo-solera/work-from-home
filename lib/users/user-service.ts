@@ -1,5 +1,6 @@
 import type { UserRole } from "@/db/schema";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { findLdapUserDn, verifyLdapCredentials } from "@/lib/auth/ldap";
 import type { SessionUser } from "@/lib/auth/session";
 import { findActiveEmployeeByEmail } from "@/lib/employees/employee-repository";
 import { generateTemporaryPassword } from "./password-generator";
@@ -22,9 +23,11 @@ type ChangePasswordInput = {
 
 /**
  * Authenticates by email + password. Identity lives in Oracle (TIMERTASK):
- * the email is resolved against the active staff to obtain the employee, whose
- * credentials are then verified against Postgres. System accounts (no Oracle
- * employee) authenticate via fallback_email so they do not depend on Oracle.
+ * the email is resolved against the active staff to obtain the employee.
+ * Corporate employees' credentials are verified against LDAP (Active
+ * Directory); system accounts (no Oracle employee) authenticate via
+ * fallback_email against their local password hash so they do not depend on
+ * Oracle nor LDAP.
  */
 export async function authenticateUser(email: string, password: string): Promise<SessionUser | null> {
   const normalizedEmail = email.trim().toLowerCase();
@@ -41,7 +44,13 @@ export async function authenticateUser(email: string, password: string): Promise
   if (oracleEmployee) {
     const user = await findUserByOracleEmpId(oracleEmployee.empId);
 
-    if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    if (!user) {
+      return null;
+    }
+
+    const ldapDn = await findLdapUserDn(oracleEmployee.email);
+
+    if (!ldapDn || !(await verifyLdapCredentials(ldapDn, password))) {
       return null;
     }
 
