@@ -58,7 +58,7 @@ export function AdminDayCell({ day, onSelect }: AdminDayCellProps) {
           ) : null}
           {total > 0 ? (
             <p className="text-xs font-medium text-zinc-700">
-              {total} {total === 1 ? "WFH" : "WFH"}
+              {total} en teletrabajo
             </p>
           ) : isDisabledDay ? (
             <p className="text-xs text-zinc-400">{day.holidayName ?? "Fin de semana"}</p>
@@ -67,7 +67,7 @@ export function AdminDayCell({ day, onSelect }: AdminDayCellProps) {
           )}
           {absencesCount > 0 ? (
             <p className="text-xs font-medium text-amber-600">
-              {absencesCount} {absencesCount === 1 ? "ausente" : "ausentes"}
+              {absencesCount} {absencesCount === 1 ? "ausencia" : "ausencias"}
             </p>
           ) : null}
         </div>
