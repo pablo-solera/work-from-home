@@ -21,14 +21,14 @@ export const ABSENCE_SECTIONS: AbsenceSectionDefinition[] = [
   { key: "teletrabajo", label: "Teletrabajo", tdiaIds: [] },
 
   {
-    key: "vacaciones", label: "Vacaciones", tdiaIds: [1, 5, 6, 17, 18, 15, 13
-    ]
+    key: "vacaciones", label: "Vacaciones", tdiaIds: [1, 5, 6, 17, 18, 15]
   },
   { key: "ausencias", label: "Ausencias", tdiaIds: [2] },
   { key: "bajas", label: "Bajas", tdiaIds: [4] },
   { key: "viajes", label: "Viajes", tdiaIds: [3] },
   { key: "permisos", label: "Permisos", tdiaIds: [14] },
   { key: "excedencia", label: "Excedencia", tdiaIds: [16] },
+  { key: "mudanza", label: "Mudanza", tdiaIds: [13] },
 ];
 
 const SECTION_BY_TDIA_ID = new Map<number, AbsenceSectionKey>();

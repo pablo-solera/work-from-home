@@ -15,61 +15,42 @@ const UNKNOWN_IDENTITY = { name: "Usuario", email: null } as const;
 // the office on a given day: teletrabajo plus every absence section.
 const OUT_OF_OFFICE_SECTION_KEYS = ABSENCE_SECTIONS.map((section) => section.key).filter((key) => key !== "enOficina");
 
-export async function getUserCalendar(userId: string, year: number, month: number) {
-  const range = getMonthRange(year, month);
-  const entries = await findUserWorkFromHomeDays(userId, range.start, range.end);
-  const selectedDates = new Set(entries.map((entry) => entry.date));
-  const calendar = getCalendarDays(year, month);
-
-  return {
-    ...calendar,
-    selectedDates: Array.from(selectedDates),
-  };
-}
-
-export async function getAdminCalendarOverview(year: number, month: number) {
-  const range = getMonthRange(year, month);
-  const [entries, allUsers] = await Promise.all([findAllWorkFromHomeDays(range.start, range.end), findAllUsers()]);
-  const calendar = getCalendarDays(year, month);
-
-  // Only show/count employees that belong to the configured staff lines.
-  // Absences reuse `allUsers` (no extra query); identities and the staff filter
-  // both hit Oracle and are independent, so run them together.
-  const [absenceSectionsByDate, users, identities] = await Promise.all([
-    getAbsenceSectionsByDate(range.start, range.end, allUsers),
-    filterVisibleStaff(allUsers),
-    resolveUserIdentities(allUsers),
-  ]);
+function buildSectionsByDate(
+  entries: Awaited<ReturnType<typeof findAllWorkFromHomeDays>>,
+  users: Awaited<ReturnType<typeof findAllUsers>>,
+  identities: Awaited<ReturnType<typeof resolveUserIdentities>>,
+  absenceSectionsByDate: Record<string, DaySections>,
+  calendar: ReturnType<typeof getCalendarDays>,
+) {
   const visibleUserIds = new Set(users.map((user) => user.id));
-
   const sectionsByDate: Record<string, DaySections> = {};
-  // Absence wins over teletrabajo: track who is absent each day so we can drop
-  // them from the teletrabajo section (a person on holiday/leave is not WFH).
   const absentUserIdsByDate: Record<string, Set<string>> = {};
 
   for (const [date, sections] of Object.entries(absenceSectionsByDate)) {
-    // Keep only absence entries for visible staff (or unmatched Oracle rows have userId null → dropped).
     const filtered = createEmptySections();
     const absentIds = new Set<string>();
+
     for (const key of Object.keys(sections) as (keyof DaySections)[]) {
-      filtered[key] = sections[key].filter((entry) => entry.userId !== null && visibleUserIds.has(entry.userId));
+      filtered[key] = sections[key]
+        .filter((entry) => entry.userId !== null && visibleUserIds.has(entry.userId))
+        .map((entry) => {
+          const identity = entry.userId ? identities.get(entry.userId) : undefined;
+          return identity ? { ...entry, userName: identity.name, userEmail: identity.email } : entry;
+        });
+
       for (const entry of filtered[key]) {
         if (entry.userId) {
           absentIds.add(entry.userId);
         }
       }
     }
+
     sectionsByDate[date] = filtered;
     absentUserIdsByDate[date] = absentIds;
   }
 
   for (const entry of entries) {
-    if (!visibleUserIds.has(entry.userId)) {
-      continue;
-    }
-
-    // Absence prevails: skip teletrabajo if the user is absent that day.
-    if (absentUserIdsByDate[entry.date]?.has(entry.userId)) {
+    if (!visibleUserIds.has(entry.userId) || absentUserIdsByDate[entry.date]?.has(entry.userId)) {
       continue;
     }
 
@@ -82,8 +63,6 @@ export async function getAdminCalendarOverview(year: number, month: number) {
     });
   }
 
-  // "En oficina": visible staff who, on a given working day, are neither working
-  // from home nor in any absence section. Only computed for working days.
   const officeStaff = users.filter((user) => user.oracleEmpId !== null && user.oracleEmpId !== undefined);
 
   for (const cell of calendar.cells) {
@@ -117,6 +96,36 @@ export async function getAdminCalendarOverview(year: number, month: number) {
       sectionsByDate[cell.date].enOficina = inOffice;
     }
   }
+
+  return sectionsByDate;
+}
+
+export async function getUserCalendar(userId: string, year: number, month: number) {
+  const range = getMonthRange(year, month);
+  const entries = await findUserWorkFromHomeDays(userId, range.start, range.end);
+  const selectedDates = new Set(entries.map((entry) => entry.date));
+  const calendar = getCalendarDays(year, month);
+
+  return {
+    ...calendar,
+    selectedDates: Array.from(selectedDates),
+  };
+}
+
+export async function getAdminCalendarOverview(year: number, month: number) {
+  const range = getMonthRange(year, month);
+  const [entries, allUsers] = await Promise.all([findAllWorkFromHomeDays(range.start, range.end), findAllUsers()]);
+  const calendar = getCalendarDays(year, month);
+
+  // Only show/count employees that belong to the configured staff lines.
+  // Absences reuse `allUsers` (no extra query); identities and the staff filter
+  // both hit Oracle and are independent, so run them together.
+  const [absenceSectionsByDate, users, identities] = await Promise.all([
+    getAbsenceSectionsByDate(range.start, range.end, allUsers),
+    filterVisibleStaff(allUsers),
+    resolveUserIdentities(allUsers),
+  ]);
+  const sectionsByDate = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar);
 
   const userList = users
     .map((user) => {
@@ -152,24 +161,16 @@ export async function getCoordinatorCalendarOverview(coordinatorId: string, year
   const allEmployees = await findEmployeesByCoordinatorId(coordinatorId);
   const employees = await filterVisibleStaff(allEmployees);
   const visibleEmployees = employeeId ? employees.filter((employee) => employee.id === employeeId) : employees;
-  const visibleUserIds = employeeId ? visibleEmployees.map((employee) => employee.id) : [coordinatorId, ...visibleEmployees.map((employee) => employee.id)];
+  const visibleUserIds = visibleEmployees.map((employee) => employee.id);
   const range = getMonthRange(year, month);
   const calendar = getCalendarDays(year, month);
 
-  // Entries and identities are independent once employees are known.
-  const [entries, identities] = await Promise.all([findWorkFromHomeDaysByUserIds(visibleUserIds, range.start, range.end), resolveUserIdentities(employees)]);
-
-  const sectionsByDate: Record<string, DaySections> = {};
-
-  for (const entry of entries) {
-    const identity = identities.get(entry.userId) ?? UNKNOWN_IDENTITY;
-    sectionsByDate[entry.date] = sectionsByDate[entry.date] ?? createEmptySections();
-    sectionsByDate[entry.date].teletrabajo.push({
-      userId: entry.userId,
-      userName: identity.name,
-      userEmail: identity.email,
-    });
-  }
+  const [entries, identities, absenceSectionsByDate] = await Promise.all([
+    findWorkFromHomeDaysByUserIds(visibleUserIds, range.start, range.end),
+    resolveUserIdentities(employees),
+    getAbsenceSectionsByDate(range.start, range.end, employees),
+  ]);
+  const sectionsByDate = buildSectionsByDate(entries, visibleEmployees, identities, absenceSectionsByDate, calendar);
 
   const employeeList = employees
     .map((employee) => {
