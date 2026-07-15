@@ -62,9 +62,7 @@ export function AdminDayCell({ day, onSelect }: AdminDayCellProps) {
             </p>
           ) : isDisabledDay ? (
             <p className="text-xs text-zinc-400">{day.holidayName ?? "Fin de semana"}</p>
-          ) : (
-            <p className="text-xs text-zinc-500">Sin personas</p>
-          )}
+          ) : null}
           {absencesCount > 0 ? (
             <p className="text-xs font-medium text-amber-600">
               {absencesCount} {absencesCount === 1 ? "ausencia" : "ausencias"}
