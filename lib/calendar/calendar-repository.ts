@@ -61,6 +61,21 @@ export function createWorkFromHomeDays(values: Array<{ userId: string; date: str
   return getDb().insert(workFromHomeDays).values(values).onConflictDoNothing({ target: [workFromHomeDays.userId, workFromHomeDays.date] });
 }
 
+export async function replaceWorkFromHomeDays(
+  userId: string,
+  start: string,
+  end: string,
+  values: Array<{ userId: string; date: string }>,
+) {
+  await getDb().transaction(async (tx) => {
+    await tx.delete(workFromHomeDays).where(and(eq(workFromHomeDays.userId, userId), between(workFromHomeDays.date, start, end)));
+
+    if (values.length > 0) {
+      await tx.insert(workFromHomeDays).values(values).onConflictDoNothing({ target: [workFromHomeDays.userId, workFromHomeDays.date] });
+    }
+  });
+}
+
 export function deleteWorkFromHomeDay(userId: string, date: string) {
   return getDb()
     .delete(workFromHomeDays)

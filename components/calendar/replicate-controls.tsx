@@ -25,11 +25,17 @@ function ReplicateButton({ disabled, label }: { disabled: boolean; label: string
 }
 
 export function ReplicateControls({ month, selectedCount, targetUserId, year }: ReplicateControlsProps) {
-  const disabled = selectedCount === 0 || month === 12;
-  const helperText = month === 12 ? "No quedan meses en el año para replicar." : selectedCount === 0 ? "Marca al menos un día este mes para replicar el patrón." : "Se añadirá el mismo patrón semanal sin borrar días ya existentes.";
+  const disabledBySelection = selectedCount === 0;
+  const nextMonthDisabled = disabledBySelection || month === 12;
+  const yearEndDisabled = disabledBySelection;
+  const helperText = disabledBySelection
+    ? "Marca al menos un día este mes para replicar el patrón."
+    : month === 12
+      ? "Hasta fin de año sustituirá el patrón del mes actual. No hay un mes siguiente dentro del año."
+      : "Se sustituirán los días del mes actual y de los meses afectados por este patrón semanal.";
 
   function confirmReplication(event: React.FormEvent<HTMLFormElement>) {
-    if (!window.confirm("Se añadirán días de teletrabajo siguiendo el patrón semanal del mes actual. No se borrarán días existentes. ¿Continuar?")) {
+    if (!window.confirm("Se sustituirán los días de teletrabajo del mes actual y de los meses afectados por el patrón semanal seleccionado. ¿Continuar?")) {
       event.preventDefault();
     }
   }
@@ -44,14 +50,14 @@ export function ReplicateControls({ month, selectedCount, targetUserId, year }: 
           <input name="year" type="hidden" value={year} />
           <input name="month" type="hidden" value={month} />
           <input name="scope" type="hidden" value="next" />
-          <ReplicateButton disabled={disabled} label="Replicar al mes siguiente" />
+          <ReplicateButton disabled={nextMonthDisabled} label="Replicar al mes siguiente" />
         </form>
         <form action={replicateWorkFromHomeDaysAction} onSubmit={confirmReplication}>
           <input name="targetUserId" type="hidden" value={targetUserId} />
           <input name="year" type="hidden" value={year} />
           <input name="month" type="hidden" value={month} />
           <input name="scope" type="hidden" value="untilYearEnd" />
-          <ReplicateButton disabled={disabled} label="Replicar hasta fin de año" />
+          <ReplicateButton disabled={yearEndDisabled} label="Replicar hasta fin de año" />
         </form>
       </div>
     </div>

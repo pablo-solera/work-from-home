@@ -4,7 +4,7 @@ import { ABSENCE_SECTIONS } from "@/lib/absences/absence-sections";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { filterVisibleStaff } from "@/lib/employees/staff-service";
 import { findAllUsers, findEmployeeByCoordinatorId, findEmployeesByCoordinatorId, findEmployeeTeamVisibility, findUserById } from "@/lib/users/user-repository";
-import { createWorkFromHomeDay, createWorkFromHomeDays, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds } from "./calendar-repository";
+import { createWorkFromHomeDay, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds, replaceWorkFromHomeDays } from "./calendar-repository";
 import { getCalendarDays, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
 
 export type ReplicateWorkFromHomeScope = "next" | "untilYearEnd";
@@ -288,11 +288,14 @@ export async function replicateWorkFromHomeDays(
   const sourceEntries = await findUserWorkFromHomeDays(input.targetUserId, sourceRange.start, sourceRange.end);
   const sourceWeekdays = new Set(sourceEntries.map((entry) => getWeekdayFromDateKey(entry.date)));
 
-  if (sourceWeekdays.size === 0 || input.month === 12) {
+  if (sourceWeekdays.size === 0 || (input.scope === "next" && input.month === 12)) {
     return;
   }
 
-  const targetMonths = input.scope === "next" ? [{ year: input.year, month: input.month + 1 }] : getMonthsUntilYearEnd(input.year, input.month);
+  const targetMonths = [
+    { year: input.year, month: input.month },
+    ...(input.scope === "next" ? [{ year: input.year, month: input.month + 1 }] : getMonthsUntilYearEnd(input.year, input.month)),
+  ];
   const values = targetMonths.flatMap(({ year, month }) =>
     getCalendarDays(year, month).cells.flatMap((cell) => {
       if (!cell || cell.isWeekend || cell.isHoliday || !sourceWeekdays.has(getWeekdayFromDateKey(cell.date))) {
@@ -303,5 +306,7 @@ export async function replicateWorkFromHomeDays(
     })
   );
 
-  await createWorkFromHomeDays(values);
+  const lastMonth = targetMonths[targetMonths.length - 1];
+  const targetRange = getMonthRange(lastMonth.year, lastMonth.month);
+  await replaceWorkFromHomeDays(input.targetUserId, sourceRange.start, targetRange.end, values);
 }
