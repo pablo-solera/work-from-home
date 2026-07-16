@@ -1,13 +1,15 @@
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users, wfhChangeRequestDates, wfhChangeRequests, workFromHomeDays } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/session";
 import { getAbsenceSectionsByDateStrict } from "@/lib/absences/absence-service";
-import { getHolidayName, isValidDateKey, isWeekendDateKey } from "@/lib/calendar/dates";
+import { getHolidayName, getRequestDateRange, isValidDateKey, isWeekendDateKey, type RequestDateFilter } from "@/lib/calendar/dates";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 
 export type RequestFormState = { error?: string; message?: string; ok?: boolean };
 export type RequestKind = "additional" | "substitution";
+export type RequestStatusFilter = "all" | "pending" | "accepted" | "rejected";
+export type RequestFilters = { date: RequestDateFilter; status: RequestStatusFilter };
 
 type RequestInput = {
   kind: RequestKind;
@@ -106,6 +108,7 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
             status: "accepted",
             decisionComment: "Aplicada automáticamente por el sistema.",
             decidedAt: new Date(),
+            coordinatorNotifiedAt: new Date(),
           })
           .returning({ id: wfhChangeRequests.id });
 
@@ -155,9 +158,28 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
   }
 }
 
-export async function getRequestsForRequester(userId: string) {
+function requestWhere(filters: RequestFilters, userColumn: typeof wfhChangeRequests.requesterId | typeof wfhChangeRequests.coordinatorId, userId: string) {
+  const conditions = [eq(userColumn, userId)];
+
+  if (filters.status !== "all") {
+    conditions.push(eq(wfhChangeRequests.status, filters.status));
+  }
+
+  if (filters.date !== "all") {
+    const range = getRequestDateRange(filters.date);
+    const matchingRequests = getDb()
+      .select({ requestId: wfhChangeRequestDates.requestId })
+      .from(wfhChangeRequestDates)
+      .where(and(gte(wfhChangeRequestDates.requestedDate, range.start), lte(wfhChangeRequestDates.requestedDate, range.end)));
+    conditions.push(inArray(wfhChangeRequests.id, matchingRequests));
+  }
+
+  return and(...conditions);
+}
+
+export async function getRequestsForRequester(userId: string, filters: RequestFilters) {
   const requests = await getDb().query.wfhChangeRequests.findMany({
-    where: eq(wfhChangeRequests.requesterId, userId),
+    where: requestWhere(filters, wfhChangeRequests.requesterId, userId),
     orderBy: desc(wfhChangeRequests.createdAt),
     with: { dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) } },
   });
@@ -189,9 +211,39 @@ export async function getPendingRequestCountForCoordinator(coordinatorId: string
   return result?.count ?? 0;
 }
 
-export async function getRequestsForCoordinator(coordinatorId: string) {
+export async function getUnreadAutomaticSubstitutionCount(coordinatorId: string) {
+  const [result] = await getDb()
+    .select({ count: count() })
+    .from(wfhChangeRequests)
+    .where(and(
+      eq(wfhChangeRequests.coordinatorId, coordinatorId),
+      eq(wfhChangeRequests.kind, "substitution"),
+      sql`${wfhChangeRequests.coordinatorNotifiedAt} IS NOT NULL`,
+      sql`${wfhChangeRequests.coordinatorAcknowledgedAt} IS NULL`,
+    ));
+
+  return result?.count ?? 0;
+}
+
+export async function markSubstitutionAsRead(coordinatorId: string, requestId: string) {
+  const updated = await getDb()
+    .update(wfhChangeRequests)
+    .set({ coordinatorAcknowledgedAt: new Date() })
+    .where(and(
+      eq(wfhChangeRequests.id, requestId),
+      eq(wfhChangeRequests.coordinatorId, coordinatorId),
+      eq(wfhChangeRequests.kind, "substitution"),
+      sql`${wfhChangeRequests.coordinatorNotifiedAt} IS NOT NULL`,
+      sql`${wfhChangeRequests.coordinatorAcknowledgedAt} IS NULL`,
+    ))
+    .returning({ id: wfhChangeRequests.id });
+
+  return updated.length > 0;
+}
+
+export async function getRequestsForCoordinator(coordinatorId: string, filters: RequestFilters) {
   const requests = await getDb().query.wfhChangeRequests.findMany({
-    where: eq(wfhChangeRequests.coordinatorId, coordinatorId),
+    where: requestWhere(filters, wfhChangeRequests.coordinatorId, coordinatorId),
     orderBy: desc(wfhChangeRequests.createdAt),
     with: {
       dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) },

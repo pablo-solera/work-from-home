@@ -27,6 +27,42 @@ export function getTodayDateKey() {
   return `${year}-${month}-${day}`;
 }
 
+function getMadridTodayDateKey() {
+  const parts = new Intl.DateTimeFormat("en", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function addDateKey(dateKey: string, days: number) {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return toDateKey(date);
+}
+
+export type RequestDateFilter = "all" | "month" | "week";
+
+export function getRequestDateRange(filter: Exclude<RequestDateFilter, "all">) {
+  const today = getMadridTodayDateKey();
+
+  if (filter === "month") {
+    const year = Number(today.slice(0, 4));
+    const month = Number(today.slice(5, 7));
+    return getMonthRange(year, month);
+  }
+
+  const weekday = getWeekdayFromDateKey(today);
+  const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+  const start = addDateKey(today, mondayOffset);
+
+  return { start, end: addDateKey(start, 6) };
+}
+
 export function getCurrentCalendarMonth(): CalendarMonthParams {
   const now = new Date();
 

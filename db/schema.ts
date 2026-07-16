@@ -65,6 +65,8 @@ export const wfhChangeRequests = pgTable("wfh_change_requests", {
   decidedById: uuid("decided_by_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   decidedAt: timestamp("decided_at", { withTimezone: true }),
+  coordinatorNotifiedAt: timestamp("coordinator_notified_at", { withTimezone: true }),
+  coordinatorAcknowledgedAt: timestamp("coordinator_acknowledged_at", { withTimezone: true }),
 }, (table) => [index("wfh_change_requests_requester_status_idx").on(table.requesterId, table.status)]);
 
 export const wfhChangeRequestDates = pgTable(
