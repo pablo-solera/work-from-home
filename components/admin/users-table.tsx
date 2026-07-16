@@ -3,10 +3,8 @@
 import { useDeferredValue, useState } from "react";
 import { ChevronLeftIcon } from "@/components/icons/chevron-left-icon";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
-import { DeleteUserDialog } from "./delete-user-dialog";
 import { SyncUsersButton } from "./sync-users-button";
 import { UserFormModal } from "./user-form-modal";
-import { UserPasswordModal } from "./user-password-modal";
 
 export type UserCoordinatorOption = {
   email: string;
@@ -34,9 +32,7 @@ type UsersTableProps = {
 };
 
 type ModalState =
-  | { type: "delete"; user: ManagedUser }
   | { type: "edit"; user: ManagedUser }
-  | { type: "password"; user: ManagedUser }
   | null;
 
 const roleLabels: Record<ManagedUser["role"], string> = {
@@ -75,7 +71,7 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-zinc-950">Usuarios</h2>
-          <p className="mt-1 text-sm text-zinc-600">Gestiona roles, coordinadores, contraseñas y opciones de teletrabajo. Las altas y bajas se sincronizan desde TimerTask.</p>
+          <p className="mt-1 text-sm text-zinc-600">Gestiona roles, coordinadores y opciones de teletrabajo. Las altas y bajas se sincronizan desde TimerTask.</p>
         </div>
 
         <SyncUsersButton />
@@ -155,12 +151,6 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
                       <button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => setModal({ type: "edit", user })} type="button">
                         Editar
                       </button>
-                      <button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => setModal({ type: "password", user })} type="button">
-                        Contraseña
-                      </button>
-                      <button className="cursor-pointer rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={isCurrentUser} onClick={() => setModal({ type: "delete", user })} type="button">
-                        Eliminar
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -206,8 +196,6 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
       ) : null}
 
       {modal?.type === "edit" ? <UserFormModal coordinators={coordinators} currentUserId={currentUserId} onClose={() => setModal(null)} user={modal.user} /> : null}
-      {modal?.type === "password" ? <UserPasswordModal onClose={() => setModal(null)} user={modal.user} /> : null}
-      {modal?.type === "delete" ? <DeleteUserDialog currentUserId={currentUserId} onClose={() => setModal(null)} user={modal.user} /> : null}
     </div>
   );
 }

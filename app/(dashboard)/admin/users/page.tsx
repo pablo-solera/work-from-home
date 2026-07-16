@@ -50,7 +50,7 @@ export default async function AdminUsersPage() {
         <p className="text-sm font-medium text-zinc-500">Dashboard admin</p>
         <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Gestión de usuarios</h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-          La identidad de los empleados (nombre y email) se gestiona en TimerTask. Aquí administras roles, coordinadores, contraseñas y opciones de teletrabajo.
+          La identidad de los empleados (nombre y email) se gestiona en TimerTask. Aquí administras roles, coordinadores y opciones de teletrabajo.
         </p>
       </div>
 
