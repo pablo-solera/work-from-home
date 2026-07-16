@@ -1,5 +1,7 @@
 import { toggleWorkFromHomeDayAction } from "@/app/(dashboard)/calendar/actions";
 
+export type RequestMode = "chooser" | "additional" | "substitution-source" | "substitution-target";
+
 type DayCellProps = {
   canEdit: boolean;
   date: string;
@@ -9,48 +11,29 @@ type DayCellProps = {
   isToday: boolean;
   isWeekend: boolean;
   month: number;
+  pending: boolean;
+  requestMode: RequestMode | null;
+  requestSelected: boolean;
   selected: boolean;
   targetUserId: string;
   year: number;
+  onRequestClick: (date: string) => void;
 };
 
-export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isToday, isWeekend, month, selected, targetUserId, year }: DayCellProps) {
+export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isToday, isWeekend, month, pending, requestMode, requestSelected, selected, targetUserId, year, onRequestClick }: DayCellProps) {
   if (isWeekend || isHoliday) {
-    return (
-      <div className={`min-h-24 rounded-xl border p-3 text-zinc-400 ${isToday ? "border-zinc-950 bg-zinc-100 ring-2 ring-zinc-950/10" : "border-zinc-200 bg-zinc-50"}`}>
-        <span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold"}>{dayNumber}</span>
-        <p className="mt-4 text-xs">{holidayName ?? "Fin de semana"}</p>
-      </div>
-    );
+    return <div className={`min-h-24 rounded-xl border p-3 text-zinc-400 ${isToday ? "border-zinc-950 bg-zinc-100 ring-2 ring-zinc-950/10" : "border-zinc-200 bg-zinc-50"}`}><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold"}>{dayNumber}</span><p className="mt-4 text-xs">{holidayName ?? "Fin de semana"}</p></div>;
+  }
+
+  if (requestMode && requestMode !== "chooser") {
+    const canSelect = !pending && (requestMode === "additional" ? !selected : requestMode === "substitution-source" ? selected : !selected);
+    const label = pending ? "Pendiente" : requestMode === "substitution-source" ? "Elegir día" : requestSelected ? "Seleccionado" : requestMode === "substitution-target" ? "Elegir día" : "Seleccionar";
+    return <button className={`cursor-pointer min-h-24 w-full rounded-xl border p-3 text-left ${requestSelected ? "border-sky-500 bg-sky-100/70" : selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""} disabled:cursor-not-allowed disabled:opacity-60`} disabled={!canSelect} onClick={() => onRequestClick(date)} type="button"><div className="flex h-full flex-col justify-between gap-3"><div className="flex items-start justify-between"><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>{pending ? <span aria-label="Solicitud pendiente" className="text-amber-600" title="Solicitud pendiente">●</span> : null}</div><span className="rounded-lg border border-zinc-300 px-2 py-1 text-center text-xs font-medium text-zinc-700">{label}</span></div></button>;
   }
 
   if (!canEdit) {
-    return (
-      <div className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}>
-        <div className="flex h-full flex-col justify-between gap-4">
-          <span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>
-          <p className={selected ? "text-xs font-medium text-emerald-800" : "text-xs text-zinc-500"}>{selected ? "Teletrabajo" : "Sin asignar"}</p>
-        </div>
-      </div>
-    );
+    return <div className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}><div className="flex h-full flex-col justify-between gap-4"><div className="flex items-start justify-between"><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>{pending ? <span aria-label="Solicitud pendiente" className="text-amber-600" title="Solicitud pendiente">●</span> : null}</div><p className={selected ? "text-xs font-medium text-emerald-800" : "text-xs text-zinc-500"}>{selected ? "Teletrabajo" : "Sin asignar"}</p></div></div>;
   }
 
-  return (
-    <form
-      action={toggleWorkFromHomeDayAction}
-      className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}
-    >
-      <input name="date" type="hidden" value={date} />
-      <input name="enabled" type="hidden" value={selected ? "false" : "true"} />
-      <input name="targetUserId" type="hidden" value={targetUserId} />
-      <input name="year" type="hidden" value={year} />
-      <input name="month" type="hidden" value={month} />
-      <div className="flex h-full flex-col justify-between gap-4">
-        <span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>
-        <button className={`rounded-lg border px-2 py-1 text-xs font-medium cursor-pointer ${selected ? "border-emerald-400 bg-white text-emerald-800 hover:bg-emerald-50" : "border-zinc-300 text-zinc-700 hover:bg-zinc-100"}`}>
-          {selected ? "Quitar" : "Marcar"}
-        </button>
-      </div>
-    </form>
-  );
+  return <form action={toggleWorkFromHomeDayAction} className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}><input name="date" type="hidden" value={date} /><input name="enabled" type="hidden" value={selected ? "false" : "true"} /><input name="targetUserId" type="hidden" value={targetUserId} /><input name="year" type="hidden" value={year} /><input name="month" type="hidden" value={month} /><div className="flex h-full flex-col justify-between gap-4"><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span><button className={`cursor-pointer rounded-lg border px-2 py-1 text-xs font-medium ${selected ? "border-emerald-400 bg-white text-emerald-800 hover:bg-emerald-50" : "border-zinc-300 text-zinc-700 hover:bg-zinc-100"}`} type="submit">{selected ? "Quitar" : "Marcar"}</button></div></form>;
 }

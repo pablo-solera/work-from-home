@@ -6,6 +6,7 @@ import { filterVisibleStaff } from "@/lib/employees/staff-service";
 import { findAllUsers, findEmployeeByCoordinatorId, findEmployeesByCoordinatorId, findEmployeeTeamVisibility, findUserById } from "@/lib/users/user-repository";
 import { createWorkFromHomeDay, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds, replaceWorkFromHomeDays } from "./calendar-repository";
 import { getCalendarDays, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
+import { getPendingRequestedDates } from "@/lib/requests/request-service";
 
 export type ReplicateWorkFromHomeScope = "next" | "untilYearEnd";
 
@@ -102,13 +103,17 @@ function buildSectionsByDate(
 
 export async function getUserCalendar(userId: string, year: number, month: number) {
   const range = getMonthRange(year, month);
-  const entries = await findUserWorkFromHomeDays(userId, range.start, range.end);
+  const [entries, pendingDates] = await Promise.all([
+    findUserWorkFromHomeDays(userId, range.start, range.end),
+    getPendingRequestedDates(userId, range.start, range.end),
+  ]);
   const selectedDates = new Set(entries.map((entry) => entry.date));
   const calendar = getCalendarDays(year, month);
 
   return {
     ...calendar,
     selectedDates: Array.from(selectedDates),
+    pendingDates,
   };
 }
 

@@ -1,7 +1,9 @@
 import { relations } from "drizzle-orm";
-import { boolean, type AnyPgColumn, date, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, type AnyPgColumn, date, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const userRole = pgEnum("user_role", ["admin", "coordinator", "employee"]);
+export const wfhRequestKind = pgEnum("wfh_request_kind", ["additional", "substitution"]);
+export const wfhRequestStatus = pgEnum("wfh_request_status", ["pending", "accepted", "rejected"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -50,6 +52,41 @@ export const workFromHomeDaysRelations = relations(workFromHomeDays, ({ one }) =
     fields: [workFromHomeDays.userId],
     references: [users.id],
   }),
+}));
+
+export const wfhChangeRequests = pgTable("wfh_change_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  requesterId: uuid("requester_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  coordinatorId: uuid("coordinator_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  kind: wfhRequestKind("kind").notNull(),
+  status: wfhRequestStatus("status").notNull().default("pending"),
+  requesterComment: text("requester_comment"),
+  decisionComment: text("decision_comment"),
+  decidedById: uuid("decided_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+}, (table) => [index("wfh_change_requests_requester_status_idx").on(table.requesterId, table.status)]);
+
+export const wfhChangeRequestDates = pgTable(
+  "wfh_change_request_dates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    requestId: uuid("request_id").notNull().references(() => wfhChangeRequests.id, { onDelete: "cascade" }),
+    requestedDate: date("requested_date").notNull(),
+    replacedDate: date("replaced_date"),
+  },
+  (table) => [uniqueIndex("wfh_change_request_dates_request_date_idx").on(table.requestId, table.requestedDate)],
+);
+
+export const wfhChangeRequestsRelations = relations(wfhChangeRequests, ({ many, one }) => ({
+  requester: one(users, { fields: [wfhChangeRequests.requesterId], references: [users.id], relationName: "wfhRequestRequester" }),
+  coordinator: one(users, { fields: [wfhChangeRequests.coordinatorId], references: [users.id], relationName: "wfhRequestCoordinator" }),
+  decidedBy: one(users, { fields: [wfhChangeRequests.decidedById], references: [users.id], relationName: "wfhRequestDecider" }),
+  dates: many(wfhChangeRequestDates),
+}));
+
+export const wfhChangeRequestDatesRelations = relations(wfhChangeRequestDates, ({ one }) => ({
+  request: one(wfhChangeRequests, { fields: [wfhChangeRequestDates.requestId], references: [wfhChangeRequests.id] }),
 }));
 
 export type UserRole = (typeof userRole.enumValues)[number];

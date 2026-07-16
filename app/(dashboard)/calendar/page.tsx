@@ -23,15 +23,17 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         <p className="text-sm font-medium text-zinc-500">Mi calendario</p>
         <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Días de teletrabajo</h1>
       </div>
-      <MonthCalendar
-        canEdit={canEdit}
+        <MonthCalendar
+          canEdit={canEdit}
+          canRequest={user.role === "employee"}
         cells={calendar.cells}
         currentMonthHref={createMonthHref("/calendar", currentMonth)}
         month={month}
         monthName={calendar.monthName}
         nextMonthHref={createMonthHref("/calendar", getNextMonth(year, month))}
         previousMonthHref={createMonthHref("/calendar", getPreviousMonth(year, month))}
-        selectedDates={calendar.selectedDates}
+          selectedDates={calendar.selectedDates}
+          pendingDates={calendar.pendingDates}
         showCurrentMonthLink={showCurrentMonthLink}
         targetUserId={user.id}
         year={year}

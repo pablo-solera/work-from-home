@@ -208,3 +208,12 @@ export function getCalendarDays(year: number, month: number) {
 export function isValidDateKey(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T00:00:00.000Z`).getTime());
 }
+
+export function formatDateKeyForDisplay(value: string) {
+  if (!isValidDateKey(value)) {
+    return "Fecha no válida";
+  }
+
+  const [year, month, day] = value.split("-");
+  return `${day}-${month}-${year}`;
+}

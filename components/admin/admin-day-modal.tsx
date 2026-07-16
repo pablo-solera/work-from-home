@@ -5,6 +5,7 @@ import { GeneratedAvatar } from "@/components/common/generated-avatar";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
 import { CloseIcon } from "@/components/icons/close-icon";
 import { ABSENCE_SECTIONS, type AbsenceSectionKey } from "@/lib/absences/absence-sections";
+import { formatDateKeyForDisplay } from "@/lib/calendar/dates";
 import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
 import type { AdminCalendarDay } from "./admin-calendar";
 
@@ -51,7 +52,7 @@ export function AdminDayModal({ day, onClose }: AdminDayModalProps) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-zinc-500">Detalle del día</p>
-            <h2 className="mt-1 text-xl font-semibold text-zinc-950">{day.date}</h2>
+            <h2 className="mt-1 text-xl font-semibold text-zinc-950">{formatDateKeyForDisplay(day.date)}</h2>
           </div>
           <button aria-label="Cerrar" className="inline-flex cursor-pointer items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950" onClick={onClose} type="button">
             <CloseIcon className="size-5" />
