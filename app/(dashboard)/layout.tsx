@@ -1,4 +1,5 @@
 import { AppHeader } from "@/components/layout/app-header";
+import { ToastProvider } from "@/components/common/toast-provider";
 import { requireUser } from "@/lib/auth/guards";
 import { findEmployeeTeamVisibility, findUserById } from "@/lib/users/user-repository";
 import { getPendingRequestCountForCoordinator } from "@/lib/requests/request-service";
@@ -12,9 +13,11 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   ]);
 
   return (
-    <div className="flex-1 bg-zinc-50">
-      <AppHeader canCover={user.role !== "admin" && (dbUser?.canEditAllWfh ?? false)} canViewTeam={teamVisibility?.teamWfhVisible ?? false} pendingRequestCount={pendingRequestCount} user={user} />
-      <main className="mx-auto w-full max-w-6xl px-6 py-8">{children}</main>
-    </div>
+    <ToastProvider>
+      <div className="flex-1 bg-zinc-50">
+        <AppHeader canCover={user.role !== "admin" && (dbUser?.canEditAllWfh ?? false)} canViewTeam={teamVisibility?.teamWfhVisible ?? false} pendingRequestCount={pendingRequestCount} user={user} />
+        <main className="mx-auto w-full max-w-6xl px-6 py-8">{children}</main>
+      </div>
+    </ToastProvider>
   );
 }

@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import { deleteUserAction } from "@/app/(dashboard)/admin/users/actions";
 import { CloseIcon } from "@/components/icons/close-icon";
+import { useToast } from "@/components/common/toast-provider";
+import { useEffect } from "react";
 import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
 import { initialUserManagementState } from "@/lib/users/user-management-state";
 import type { ManagedUser } from "./users-table";
@@ -15,8 +17,21 @@ type DeleteUserDialogProps = {
 
 export function DeleteUserDialog({ currentUserId, onClose, user }: DeleteUserDialogProps) {
   const dialogRef = useModalDismiss<HTMLElement>(onClose);
-  const [state, action, pending] = useActionState(deleteUserAction, initialUserManagementState);
+  const { showToast } = useToast();
+  const [state, action, pending] = useActionState(async (previousState: typeof initialUserManagementState, formData: FormData) => {
+    const result = await deleteUserAction(previousState, formData);
+    if (result.ok) {
+      showToast(result.message ?? "Usuario eliminado correctamente.");
+    }
+    return result;
+  }, initialUserManagementState);
   const isCurrentUser = user.id === currentUserId;
+
+  useEffect(() => {
+    if (state.ok) {
+      onClose();
+    }
+  }, [onClose, state.ok]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4" onClick={onClose}>
@@ -39,11 +54,6 @@ export function DeleteUserDialog({ currentUserId, onClose, user }: DeleteUserDia
           {state.error ? (
             <p aria-live="polite" className="text-sm text-red-600">
               {state.error}
-            </p>
-          ) : null}
-          {state.message ? (
-            <p aria-live="polite" className="text-sm text-emerald-700">
-              {state.message}
             </p>
           ) : null}
           <button className="cursor-pointer rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60" disabled={pending || isCurrentUser}>

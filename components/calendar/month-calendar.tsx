@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { createWfhRequestAction } from "@/app/(dashboard)/requests/actions";
+import { useToast } from "@/components/common/toast-provider";
 import { ChevronLeftIcon } from "@/components/icons/chevron-left-icon";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
 import { formatDateKeyForDisplay, type CalendarCell } from "@/lib/calendar/dates";
@@ -160,7 +161,14 @@ function SelectionBanner({ mode, additionalCount, replacementSource, replacement
 }
 
 function RequestReviewModal({ dates, kind, replacedDate, onClose }: { dates: string[]; kind: "additional" | "substitution"; replacedDate: string | null; onClose: () => void }) {
-  const [state, action, pending] = useActionState(createWfhRequestAction, {});
+  const { showToast } = useToast();
+  const [state, action, pending] = useActionState(async (previousState: { error?: string; message?: string; ok?: boolean }, formData: FormData) => {
+    const result = await createWfhRequestAction(previousState, formData);
+    if (result.ok) {
+      showToast(result.message ?? "Solicitud enviada correctamente.");
+    }
+    return result;
+  }, {});
   const visibleDates = dates.map(formatDateKeyForDisplay).join(", ");
 
   useEffect(() => {

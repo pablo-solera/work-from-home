@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { updateUserAction } from "@/app/(dashboard)/admin/users/actions";
 import { CloseIcon } from "@/components/icons/close-icon";
+import { useToast } from "@/components/common/toast-provider";
 import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
 import { initialUserManagementState } from "@/lib/users/user-management-state";
 import type { ManagedUser, UserCoordinatorOption } from "./users-table";
@@ -24,7 +25,14 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
   const dialogRef = useModalDismiss<HTMLElement>(onClose);
   const isCurrentUser = user.id === currentUserId;
   const [role, setRole] = useState<ManagedUser["role"]>(user.role);
-  const [state, action, pending] = useActionState(updateUserAction, initialUserManagementState);
+  const { showToast } = useToast();
+  const [state, action, pending] = useActionState(async (previousState: typeof initialUserManagementState, formData: FormData) => {
+    const result = await updateUserAction(previousState, formData);
+    if (result.ok) {
+      showToast(result.message ?? "Cambios guardados correctamente.");
+    }
+    return result;
+  }, initialUserManagementState);
   const availableCoordinators = coordinators.filter((coordinator) => coordinator.id !== user.id);
 
   useEffect(() => {
@@ -128,12 +136,6 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
                 {state.error}
               </p>
             ) : null}
-            {state.message ? (
-              <p aria-live="polite" className="text-sm text-emerald-700">
-                {state.message}
-              </p>
-            ) : null}
-
             <div className="flex justify-end">
               <button className="cursor-pointer rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
                 {pending ? "Guardando…" : "Guardar cambios"}

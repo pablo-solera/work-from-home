@@ -2,6 +2,11 @@ import { decideWfhRequestAction } from "@/app/(dashboard)/requests/actions";
 import { formatDateKeyForDisplay } from "@/lib/calendar/dates";
 
 const statusLabels = { accepted: "Aceptado", pending: "Pendiente", rejected: "Rechazado" } as const;
+const statusStyles = {
+  accepted: "bg-emerald-100 text-emerald-800",
+  pending: "bg-amber-100 text-amber-800",
+  rejected: "bg-red-100 text-red-800",
+} as const;
 
 type RequestListItem = {
   id: string;
@@ -33,7 +38,7 @@ export function RequestList({ requests, coordinatorView = false }: { coordinator
               <p className="mt-1 text-sm text-zinc-700">{request.kind === "substitution" ? "Sustitución" : "Días adicionales"}</p>
               <p className="mt-1 text-sm text-zinc-600">{formatDates(request.dates, request.kind)}</p>
             </div>
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700">{statusLabels[request.status as keyof typeof statusLabels]}</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusStyles[request.status]}`}>{statusLabels[request.status]}</span>
           </div>
           {request.requesterComment ? <p className="mt-3 text-sm text-zinc-600">Comentario: {request.requesterComment}</p> : null}
           {request.decisionComment ? <p className="mt-2 text-sm text-zinc-600">Respuesta: {request.decisionComment}</p> : null}

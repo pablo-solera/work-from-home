@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { changeUserPasswordAction } from "@/app/(dashboard)/admin/users/actions";
+import { useToast } from "@/components/common/toast-provider";
 import { CloseIcon } from "@/components/icons/close-icon";
 import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
 import { initialUserManagementState } from "@/lib/users/user-management-state";
@@ -15,7 +16,20 @@ type UserPasswordModalProps = {
 export function UserPasswordModal({ onClose, user }: UserPasswordModalProps) {
   const dialogRef = useModalDismiss<HTMLElement>(onClose);
   const [passwordMode, setPasswordMode] = useState<"generate" | "manual">("generate");
-  const [state, action, pending] = useActionState(changeUserPasswordAction, initialUserManagementState);
+  const { showToast } = useToast();
+  const [state, action, pending] = useActionState(async (previousState: typeof initialUserManagementState, formData: FormData) => {
+    const result = await changeUserPasswordAction(previousState, formData);
+    if (result.ok) {
+      showToast(result.message ?? "Contraseña actualizada correctamente.");
+    }
+    return result;
+  }, initialUserManagementState);
+
+  useEffect(() => {
+    if (state.ok && !state.generatedPassword) {
+      onClose();
+    }
+  }, [onClose, state.generatedPassword, state.ok]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4" onClick={onClose}>
@@ -51,11 +65,6 @@ export function UserPasswordModal({ onClose, user }: UserPasswordModalProps) {
           {state.error ? (
             <p aria-live="polite" className="text-sm text-red-600">
               {state.error}
-            </p>
-          ) : null}
-          {state.message ? (
-            <p aria-live="polite" className="text-sm text-emerald-700">
-              {state.message}
             </p>
           ) : null}
           {state.generatedPassword ? <p className="rounded-lg bg-emerald-50 p-3 text-sm text-zinc-700">Contraseña temporal: <span className="font-mono font-semibold">{state.generatedPassword}</span></p> : null}
