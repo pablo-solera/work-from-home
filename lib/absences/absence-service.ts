@@ -77,4 +77,38 @@ export async function getAbsenceSectionsByDate(start: string, end: string, users
   return sectionsByDate;
 }
 
+/** Same grouping as the calendar view, but propagates Oracle failures. */
+export async function getAbsenceSectionsByDateStrict(start: string, end: string, users?: CalendarUser[]): Promise<Record<string, DaySections>> {
+  const absences = await findAbsencesByDateRange(start, end);
+
+  if (absences.length === 0) {
+    return {};
+  }
+
+  const resolvedUsers = users ?? (await findAllUsers());
+  const userByOracleId = new Map<number, CalendarUser>();
+
+  for (const user of resolvedUsers) {
+    if (user.oracleEmpId !== null && user.oracleEmpId !== undefined) {
+      userByOracleId.set(user.oracleEmpId, user);
+    }
+  }
+
+  const sectionsByDate: Record<string, DaySections> = {};
+
+  for (const absence of absences) {
+    const user = userByOracleId.get(absence.empId);
+    const entry: CalendarPersonEntry = {
+      userId: user?.id ?? null,
+      userName: absence.employeeName ?? `Empleado ${absence.empId}`,
+      userEmail: null,
+    };
+
+    sectionsByDate[absence.date] = sectionsByDate[absence.date] ?? createEmptySections();
+    sectionsByDate[absence.date][absence.sectionKey].push(entry);
+  }
+
+  return sectionsByDate;
+}
+
 export { createEmptySections };

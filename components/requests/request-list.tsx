@@ -38,7 +38,7 @@ export function RequestList({ requests, coordinatorView = false }: { coordinator
               <p className="mt-1 text-sm text-zinc-700">{request.kind === "substitution" ? "Sustitución" : "Días adicionales"}</p>
               <p className="mt-1 text-sm text-zinc-600">{formatDates(request.dates, request.kind)}</p>
             </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusStyles[request.status]}`}>{statusLabels[request.status]}</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusStyles[request.status]}`}>{request.kind === "substitution" && request.status === "accepted" ? "Aplicada" : statusLabels[request.status]}</span>
           </div>
           {request.requesterComment ? <p className="mt-3 text-sm text-zinc-600">Comentario: {request.requesterComment}</p> : null}
           {request.decisionComment ? <p className="mt-2 text-sm text-zinc-600">Respuesta: {request.decisionComment}</p> : null}

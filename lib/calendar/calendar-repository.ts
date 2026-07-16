@@ -1,4 +1,4 @@
-import { and, asc, between, eq, inArray } from "drizzle-orm";
+import { and, asc, between, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users, workFromHomeDays } from "@/db/schema";
 
@@ -47,10 +47,10 @@ export function findWorkFromHomeDaysByUserIds(userIds: string[], start: string, 
 }
 
 export function createWorkFromHomeDay(userId: string, date: string) {
-  return getDb()
-    .insert(workFromHomeDays)
-    .values({ userId, date })
-    .onConflictDoNothing({ target: [workFromHomeDays.userId, workFromHomeDays.date] });
+  return getDb().transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`);
+    await tx.insert(workFromHomeDays).values({ userId, date }).onConflictDoNothing({ target: [workFromHomeDays.userId, workFromHomeDays.date] });
+  });
 }
 
 export function createWorkFromHomeDays(values: Array<{ userId: string; date: string }>) {
@@ -68,6 +68,7 @@ export async function replaceWorkFromHomeDays(
   values: Array<{ userId: string; date: string }>,
 ) {
   await getDb().transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`);
     await tx.delete(workFromHomeDays).where(and(eq(workFromHomeDays.userId, userId), between(workFromHomeDays.date, start, end)));
 
     if (values.length > 0) {
@@ -77,7 +78,8 @@ export async function replaceWorkFromHomeDays(
 }
 
 export function deleteWorkFromHomeDay(userId: string, date: string) {
-  return getDb()
-    .delete(workFromHomeDays)
-    .where(and(eq(workFromHomeDays.userId, userId), eq(workFromHomeDays.date, date)));
+  return getDb().transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`);
+    await tx.delete(workFromHomeDays).where(and(eq(workFromHomeDays.userId, userId), eq(workFromHomeDays.date, date)));
+  });
 }

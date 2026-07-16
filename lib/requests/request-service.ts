@@ -2,7 +2,7 @@ import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users, wfhChangeRequestDates, wfhChangeRequests, workFromHomeDays } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/session";
-import { getAbsenceSectionsByDate } from "@/lib/absences/absence-service";
+import { getAbsenceSectionsByDateStrict } from "@/lib/absences/absence-service";
 import { getHolidayName, isValidDateKey, isWeekendDateKey } from "@/lib/calendar/dates";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 
@@ -71,6 +71,65 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
         throw new Error("Ya existe una solicitud pendiente para una de las fechas seleccionadas.");
       }
 
+      if (input.kind === "substitution") {
+        const existingDates = await tx.query.workFromHomeDays.findMany({
+          where: and(eq(workFromHomeDays.userId, user.id), inArray(workFromHomeDays.date, [...input.requestedDates, ...input.replacedDates])),
+        });
+        const existingDateSet = new Set(existingDates.map((date) => date.date));
+
+        if (input.replacedDates.some((date) => !existingDateSet.has(date))) {
+          throw new Error("Una de las fechas a sustituir ya no está marcada como teletrabajo.");
+        }
+
+        if (input.requestedDates.some((date) => existingDateSet.has(date))) {
+          throw new Error("Una de las nuevas fechas ya está marcada como teletrabajo.");
+        }
+
+        const range = requestRange([...input.requestedDates, ...input.replacedDates]);
+        const absenceSections = await getAbsenceSectionsByDateStrict(range.start, range.end, [requester]);
+        const unavailableDates = new Set(
+          Object.entries(absenceSections).flatMap(([date, sections]) =>
+            Object.values(sections).some((entries) => entries.some((entry) => entry.userId === user.id)) ? [date] : [],
+          ),
+        );
+
+        if (input.requestedDates.some((date) => unavailableDates.has(date))) {
+          throw new Error("No se puede aplicar la sustitución porque el nuevo día tiene una ausencia.");
+        }
+
+        const [request] = await tx
+          .insert(wfhChangeRequests)
+          .values({
+            requesterId: user.id,
+            coordinatorId: requester.coordinatorId,
+            kind: input.kind,
+            status: "accepted",
+            decisionComment: "Aplicada automáticamente por el sistema.",
+            decidedAt: new Date(),
+          })
+          .returning({ id: wfhChangeRequests.id });
+
+        await tx.insert(wfhChangeRequestDates).values(
+          input.requestedDates.map((requestedDate, index) => ({
+            requestId: request.id,
+            requestedDate,
+            replacedDate: input.replacedDates[index],
+          })),
+        );
+
+        const deleted = await tx
+          .delete(workFromHomeDays)
+          .where(and(eq(workFromHomeDays.userId, user.id), inArray(workFromHomeDays.date, input.replacedDates)))
+          .returning({ id: workFromHomeDays.id });
+
+        if (deleted.length !== input.replacedDates.length) {
+          throw new Error("No se pudieron sustituir todas las fechas originales.");
+        }
+
+        await tx.insert(workFromHomeDays).values(input.requestedDates.map((date) => ({ userId: user.id, date })));
+        return;
+      }
+
       const [request] = await tx
         .insert(wfhChangeRequests)
         .values({
@@ -90,7 +149,7 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
       );
     });
 
-    return { message: "Solicitud enviada correctamente.", ok: true };
+    return { message: input.kind === "substitution" ? "Sustitución aplicada correctamente." : "Solicitud enviada correctamente.", ok: true };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No se pudo crear la solicitud." };
   }
@@ -168,7 +227,7 @@ async function validateApproval(request: NonNullable<Awaited<ReturnType<typeof g
   const requestedDates = request.dates.map((date) => date.requestedDate);
   const replacedDates = request.dates.flatMap((date) => (date.replacedDate ? [date.replacedDate] : []));
   const range = requestRange([...requestedDates, ...replacedDates]);
-  const absenceSections = await getAbsenceSectionsByDate(range.start, range.end, [requester]);
+  const absenceSections = await getAbsenceSectionsByDateStrict(range.start, range.end, [requester]);
   const absenceDates = new Set(
     Object.entries(absenceSections).flatMap(([date, sections]) =>
       Object.values(sections).some((entries) => entries.some((entry) => entry.userId === requester.id)) ? [date] : [],

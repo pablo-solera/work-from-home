@@ -23,6 +23,9 @@ export async function createWfhRequestAction(_state: RequestFormState, formData:
   if (result.ok) {
     revalidatePath("/requests");
     revalidatePath("/calendar");
+    revalidatePath("/team");
+    revalidatePath("/admin");
+    revalidatePath("/coverage");
     revalidatePath("/(dashboard)", "layout");
   }
 
@@ -47,6 +50,8 @@ export async function decideWfhRequestAction(formData: FormData) {
     revalidatePath("/requests");
     revalidatePath("/calendar");
     revalidatePath("/team");
+    revalidatePath("/admin");
+    revalidatePath("/coverage");
     revalidatePath("/(dashboard)", "layout");
     return;
   }
