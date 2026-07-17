@@ -30,13 +30,12 @@ export function TeamVisibilityToggle({ initialEnabled }: TeamVisibilityTogglePro
   return (
     <div className="flex flex-col items-start gap-2 sm:items-end">
       <label className="flex cursor-pointer items-center gap-3" htmlFor={id}>
-        <span className="text-sm font-medium text-zinc-700">{enabled ? "Activado" : "Desactivado"}</span>
+        <span className="sr-only">Visibilidad del teletrabajo del equipo</span>
         <input checked={enabled} className="sr-only" disabled={isPending} id={id} onChange={(event) => handleChange(event.currentTarget.checked)} type="checkbox" />
         <span className={`flex h-7 w-12 items-center rounded-full p-1 transition ${enabled ? "bg-zinc-950" : "bg-zinc-300"}`}>
           <span className={`size-5 rounded-full bg-white shadow-sm transition ${enabled ? "translate-x-5" : "translate-x-0"}`} />
         </span>
       </label>
-      {isPending ? <p className="text-xs text-zinc-500">Guardando...</p> : null}
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>
   );
