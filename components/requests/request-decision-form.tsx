@@ -19,7 +19,6 @@ export function RequestDecisionForm({ requestId }: { requestId: string }) {
         formData.append("status", status);
         formData.append("comment", comment);
         await decideWfhRequestAction(formData);
-        window.dispatchEvent(new Event("request-counts-updated"));
         router.refresh();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "No se pudo resolver la solicitud.");
@@ -29,7 +28,7 @@ export function RequestDecisionForm({ requestId }: { requestId: string }) {
 
   return (
     <div className="mt-4 space-y-3 border-t border-zinc-100 pt-4">
-      <input className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm" disabled={pending} onChange={(event) => setComment(event.target.value)} placeholder="Comentario opcional" value={comment} />
+        <label className="block"><span className="sr-only">Comentario opcional</span><input aria-label="Comentario opcional" className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" disabled={pending} onChange={(event) => setComment(event.target.value)} placeholder="Comentario opcional" value={comment} /></label>
       {error ? <p aria-live="polite" className="text-sm text-red-600">{error}</p> : null}
       <div className="flex gap-2">
         <button className="cursor-pointer rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} onClick={() => decide("accepted")} type="button">{pending ? "Procesando..." : "Aceptar"}</button>

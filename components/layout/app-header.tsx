@@ -13,7 +13,7 @@ export function AppHeader({ canCover = false, canViewTeam = false, pendingReques
         </div>
         <nav className="flex items-center gap-4 text-sm">
           <Link className="cursor-pointer text-zinc-700 hover:text-zinc-950" href="/calendar">Mi calendario</Link>
-          {user.role !== "admin" ? <Link aria-label={user.role === "coordinator" ? `Solicitudes, ${pendingRequestCount} pendientes y ${unreadSubstitutionCount} novedades` : "Solicitudes"} className="inline-flex cursor-pointer items-center text-zinc-700 hover:text-zinc-950" href="/requests"><span>Solicitudes</span>{user.role === "coordinator" ? <RequestBadges pendingRequestCount={pendingRequestCount} unreadSubstitutionCount={unreadSubstitutionCount} /> : null}</Link> : null}
+          {user.role !== "admin" ? <Link className="inline-flex cursor-pointer items-center text-zinc-700 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" href="/requests"><span>Solicitudes</span>{user.role === "coordinator" ? <RequestBadges pendingRequestCount={pendingRequestCount} unreadSubstitutionCount={unreadSubstitutionCount} /> : null}</Link> : null}
           {user.role === "coordinator" || canViewTeam ? <Link className="cursor-pointer text-zinc-700 hover:text-zinc-950" href="/team">Mi equipo</Link> : null}
           {canCover ? <Link className="cursor-pointer text-zinc-700 hover:text-zinc-950" href="/coverage">Cobertura</Link> : null}
           {user.role === "admin" ? <Link className="cursor-pointer text-zinc-700 hover:text-zinc-950" href="/admin">Admin</Link> : null}

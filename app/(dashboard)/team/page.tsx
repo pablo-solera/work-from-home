@@ -3,7 +3,7 @@ import { AdminCalendar } from "@/components/admin/admin-calendar";
 import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-filter";
 import { MonthCalendar } from "@/components/calendar/month-calendar";
 import { requireUser } from "@/lib/auth/guards";
-import { getCoordinatorCalendarOverview, getCoordinatorEmployeeCalendar, getTeamCalendarForViewer } from "@/lib/calendar/calendar-service";
+import { getCoordinatorCalendarOverview, getCoordinatorCalendarUsers, getCoordinatorEmployeeCalendar, getTeamCalendarForViewer } from "@/lib/calendar/calendar-service";
 import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
 
 type TeamPageProps = {
@@ -45,7 +45,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
         <AdminCalendar
           cells={overview.cells}
           currentMonthHref={createMonthHref("/team", currentMonth)}
-          sectionsByDate={overview.sectionsByDate}
+          daySummariesByDate={overview.daySummariesByDate}
           monthName={overview.monthName}
           nextMonthHref={createMonthHref("/team", getNextMonth(year, month))}
           previousMonthHref={createMonthHref("/team", getPreviousMonth(year, month))}
@@ -55,10 +55,11 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
     );
   }
 
-  const overview = await getCoordinatorCalendarOverview(user.id, year, month, selectedEmployeeId === "all" ? undefined : selectedEmployeeId);
-
   if (selectedEmployeeId !== "all") {
-    const employeeCalendar = await getCoordinatorEmployeeCalendar(user.id, selectedEmployeeId, year, month);
+    const [employees, employeeCalendar] = await Promise.all([
+      getCoordinatorCalendarUsers(user.id),
+      getCoordinatorEmployeeCalendar(user.id, selectedEmployeeId, year, month),
+    ]);
 
     if (employeeCalendar) {
       return (
@@ -67,7 +68,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
             <p className="text-sm font-medium text-zinc-500">Mi equipo</p>
             <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Teletrabajo de {employeeCalendar.employee.name}</h1>
           </div>
-          <EmployeeCalendarFilter basePath="/team" employees={overview.employees} month={month} selectedEmployeeId={selectedEmployeeId} year={year} />
+          <EmployeeCalendarFilter basePath="/team" employees={employees} month={month} selectedEmployeeId={selectedEmployeeId} year={year} />
           <MonthCalendar
             canEdit
             cells={employeeCalendar.cells}
@@ -86,6 +87,8 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
     }
   }
 
+  const overview = await getCoordinatorCalendarOverview(user.id, year, month);
+
   return (
     <section className="space-y-6">
       <div>
@@ -96,7 +99,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
       <AdminCalendar
         cells={overview.cells}
         currentMonthHref={createMonthHref("/team", currentMonth)}
-        sectionsByDate={overview.sectionsByDate}
+        daySummariesByDate={overview.daySummariesByDate}
         monthName={overview.monthName}
         nextMonthHref={createMonthHref("/team", getNextMonth(year, month))}
         previousMonthHref={createMonthHref("/team", getPreviousMonth(year, month))}

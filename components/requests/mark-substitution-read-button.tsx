@@ -13,10 +13,9 @@ export function MarkSubstitutionReadButton({ requestId }: { requestId: string })
       const formData = new FormData();
       formData.append("id", requestId);
       await markSubstitutionAsReadAction(formData);
-      window.dispatchEvent(new Event("request-counts-updated"));
-      router.refresh();
+       router.refresh();
     });
   }
 
-  return <button className="cursor-pointer text-sm font-medium text-sky-700 hover:text-sky-950 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} onClick={markAsRead} type="button">{pending ? "Marcando..." : "Marcar como leída"}</button>;
+  return <button className="cursor-pointer text-sm font-medium text-sky-700 hover:text-sky-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} onClick={markAsRead} type="button">{pending ? "Marcando…" : "Marcar como leída"}</button>;
 }

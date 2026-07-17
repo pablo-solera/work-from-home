@@ -1,27 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { GeneratedAvatar } from "@/components/common/generated-avatar";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
 import { CloseIcon } from "@/components/icons/close-icon";
 import { ABSENCE_SECTIONS, type AbsenceSectionKey } from "@/lib/absences/absence-sections";
+import type { DaySections } from "@/lib/absences/absence-service";
 import { formatDateKeyForDisplay } from "@/lib/calendar/dates";
 import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
 import type { AdminCalendarDay } from "./admin-calendar";
 
 type AdminDayModalProps = {
   day: AdminCalendarDay;
+  detail: DaySections | null;
+  error: string | null;
+  loading: boolean;
   onClose: () => void;
 };
 
-export function AdminDayModal({ day, onClose }: AdminDayModalProps) {
+export function AdminDayModal({ day, detail, error, loading, onClose }: AdminDayModalProps) {
   const dialogRef = useModalDismiss<HTMLElement>(onClose);
+  const titleId = useId();
   const [openSections, setOpenSections] = useState<Set<AbsenceSectionKey>>(new Set());
 
-  const sections = ABSENCE_SECTIONS.map((section) => ({
-    ...section,
-    entries: day.sections[section.key],
-  })).filter((section) => section.entries.length > 0);
+  const sections = detail ? ABSENCE_SECTIONS.map((section) => ({
+      ...section,
+      entries: detail[section.key],
+    })).filter((section) => section.entries.length > 0) : [];
 
   const hasPeople = sections.length > 0;
 
@@ -42,6 +47,7 @@ export function AdminDayModal({ day, onClose }: AdminDayModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4" onClick={onClose}>
       <section
+        aria-labelledby={titleId}
         aria-modal="true"
         className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
         onClick={(event) => event.stopPropagation()}
@@ -52,7 +58,7 @@ export function AdminDayModal({ day, onClose }: AdminDayModalProps) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-zinc-500">Detalle del día</p>
-            <h2 className="mt-1 text-xl font-semibold text-zinc-950">{formatDateKeyForDisplay(day.date)}</h2>
+            <h2 className="mt-1 text-xl font-semibold text-zinc-950" id={titleId}>{formatDateKeyForDisplay(day.date)}</h2>
           </div>
           <button aria-label="Cerrar" className="inline-flex cursor-pointer items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950" onClick={onClose} type="button">
             <CloseIcon className="size-5" />
@@ -60,7 +66,11 @@ export function AdminDayModal({ day, onClose }: AdminDayModalProps) {
         </div>
 
         <div className="mt-6 max-h-[28rem] space-y-3 overflow-auto overscroll-contain">
-          {hasPeople ? (
+          {loading ? (
+            <p aria-live="polite" className="text-sm text-zinc-500">Cargando detalle…</p>
+          ) : error ? (
+            <p aria-live="polite" className="text-sm text-red-600">{error}</p>
+          ) : hasPeople ? (
             sections.map((section) => {
               const isOpen = openSections.has(section.key);
               const panelId = `day-section-${section.key}`;

@@ -1,6 +1,7 @@
 "use client";
 
-import { useDeferredValue, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { ChevronLeftIcon } from "@/components/icons/chevron-left-icon";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
 import { SyncUsersButton } from "./sync-users-button";
@@ -28,6 +29,10 @@ export type ManagedUser = {
 type UsersTableProps = {
   coordinators: UserCoordinatorOption[];
   currentUserId: string;
+  page: number;
+  query: string;
+  totalPages: number;
+  totalUsers: number;
   users: ManagedUser[];
 };
 
@@ -47,24 +52,9 @@ const roleBadgeClasses: Record<ManagedUser["role"], string> = {
   employee: "bg-zinc-100 text-zinc-700",
 };
 
-const PAGE_SIZE = 10;
-
-export function UsersTable({ coordinators, currentUserId, users }: UsersTableProps) {
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
+export function UsersTable({ coordinators, currentUserId, page, query, totalPages, totalUsers, users }: UsersTableProps) {
   const [modal, setModal] = useState<ModalState>(null);
-  const deferredQuery = useDeferredValue(query.trim().toLowerCase());
-  const filteredUsers = deferredQuery
-    ? users.filter((user) => {
-        const searchable = [user.name, user.email, roleLabels[user.role], user.coordinator?.name, user.coordinator?.email].filter(Boolean).join(" ").toLowerCase();
-
-        return searchable.includes(deferredQuery);
-      })
-    : users;
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + PAGE_SIZE);
+  const pageHref = (nextPage: number) => `/admin/users?query=${encodeURIComponent(query)}&page=${nextPage}`;
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -77,18 +67,13 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
         <SyncUsersButton />
       </div>
 
-      <label className="mt-5 block max-w-md space-y-2">
-        <span className="text-sm font-medium text-zinc-700">Buscar</span>
-        <input
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950"
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setPage(1);
-          }}
-          placeholder="Nombre, email, rol o coordinador"
-          value={query}
-        />
-      </label>
+      <form action="/admin/users" className="mt-5 flex max-w-md items-end gap-2" method="get">
+        <label className="block flex-1 space-y-2">
+          <span className="text-sm font-medium text-zinc-700">Buscar</span>
+          <input className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950 focus-visible:ring-2 focus-visible:ring-zinc-950" defaultValue={query} name="query" placeholder="Nombre, email, rol o coordinador…" type="search" />
+        </label>
+        <button className="rounded-lg bg-zinc-950 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" type="submit">Buscar</button>
+      </form>
 
       <div className="mt-6 overflow-x-auto">
         <table className="w-full min-w-[80rem] text-left text-sm">
@@ -105,7 +90,7 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
-            {paginatedUsers.map((user) => {
+            {users.map((user) => {
               const isCurrentUser = user.id === currentUserId;
 
               return (
@@ -160,36 +145,36 @@ export function UsersTable({ coordinators, currentUserId, users }: UsersTablePro
         </table>
       </div>
 
-      {filteredUsers.length === 0 ? <p className="mt-6 rounded-xl bg-zinc-50 p-4 text-sm text-zinc-600">No hay usuarios que coincidan con la búsqueda.</p> : null}
+      {totalUsers === 0 ? <p className="mt-6 rounded-xl bg-zinc-50 p-4 text-sm text-zinc-600">No hay usuarios que coincidan con la búsqueda.</p> : null}
 
-      {filteredUsers.length > 0 ? (
+      {totalUsers > 0 ? (
         <div className="mt-6 flex flex-col gap-3 border-t border-zinc-100 pt-4 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
           <p>
-            {filteredUsers.length} {filteredUsers.length === 1 ? "usuario" : "usuarios"}
+            {totalUsers} {totalUsers === 1 ? "usuario" : "usuarios"}
           </p>
           {totalPages > 1 ? (
             <div className="flex items-center gap-3">
-              <button
-                aria-label="Página anterior"
-                className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-zinc-300 p-1.5 font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={currentPage === 1}
-                onClick={() => setPage((value) => Math.max(1, value - 1))}
-                type="button"
-              >
-                <ChevronLeftIcon className="size-5" />
-              </button>
-              <span>
-                Página {currentPage} de {totalPages}
-              </span>
-              <button
-                aria-label="Página siguiente"
-                className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-zinc-300 p-1.5 font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={currentPage === totalPages}
-                onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
-                type="button"
-              >
-                <ChevronRightIcon className="size-5" />
-              </button>
+                <Link
+                  aria-label="Página anterior"
+                  className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-zinc-300 p-1.5 font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  href={pageHref(Math.max(1, page - 1))}
+                  aria-disabled={page === 1}
+                  tabIndex={page === 1 ? -1 : undefined}
+                >
+                  <ChevronLeftIcon className="size-5" />
+                </Link>
+                <span>
+                  Página {page} de {totalPages}
+                </span>
+                <Link
+                  aria-label="Página siguiente"
+                  className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-zinc-300 p-1.5 font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  href={pageHref(Math.min(totalPages, page + 1))}
+                  aria-disabled={page === totalPages}
+                  tabIndex={page === totalPages ? -1 : undefined}
+                >
+                  <ChevronRightIcon className="size-5" />
+                </Link>
             </div>
           ) : null}
         </div>

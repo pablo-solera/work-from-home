@@ -4,7 +4,14 @@ import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { filterVisibleStaff } from "@/lib/employees/staff-service";
 import { findCoordinators, findUsersForAdmin } from "@/lib/users/user-repository";
 
-export default async function AdminUsersPage() {
+type AdminUsersPageProps = {
+  searchParams?: Promise<{ page?: string; query?: string }>;
+};
+
+export default async function AdminUsersPage({ searchParams }: AdminUsersPageProps) {
+  const params = await searchParams;
+  const query = params?.query?.trim().toLowerCase() ?? "";
+  const requestedPage = Number.parseInt(params?.page ?? "1", 10);
   const admin = await requireAdmin();
   const [allCoordinators, allUsers] = await Promise.all([findCoordinators(), findUsersForAdmin()]);
 
@@ -26,7 +33,7 @@ export default async function AdminUsersPage() {
     return { id: coordinator.id, name: identity.name, email: identity.email ?? "" };
   });
 
-  const managedUsers = users.map((user) => {
+  const allManagedUsers = users.map((user) => {
     const identity = identityOf(user.id);
     const coordinatorIdentity = user.coordinator ? identityOf(user.coordinator.id) : null;
 
@@ -44,6 +51,14 @@ export default async function AdminUsersPage() {
     };
   });
 
+  const filteredUsers = query
+    ? allManagedUsers.filter((user) => [user.name, user.email, user.role, user.coordinator?.name, user.coordinator?.email].filter(Boolean).join(" ").toLowerCase().includes(query))
+    : allManagedUsers;
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const page = Number.isInteger(requestedPage) ? Math.min(Math.max(requestedPage, 1), totalPages) : 1;
+  const managedUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
+
   return (
     <section className="space-y-8">
       <div>
@@ -54,7 +69,7 @@ export default async function AdminUsersPage() {
         </p>
       </div>
 
-      <UsersTable coordinators={coordinatorOptions} currentUserId={admin.id} users={managedUsers} />
+      <UsersTable coordinators={coordinatorOptions} currentUserId={admin.id} page={page} query={query} totalPages={totalPages} totalUsers={filteredUsers.length} users={managedUsers} />
     </section>
   );
 }

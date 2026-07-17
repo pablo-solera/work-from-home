@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { updateUserAction } from "@/app/(dashboard)/admin/users/actions";
 import { CloseIcon } from "@/components/icons/close-icon";
 import { useToast } from "@/components/common/toast-provider";
@@ -23,6 +23,7 @@ const roleLabels: Record<ManagedUser["role"], string> = {
 
 export function UserFormModal({ coordinators, currentUserId, onClose, user }: UserFormModalProps) {
   const dialogRef = useModalDismiss<HTMLElement>(onClose);
+  const titleId = useId();
   const isCurrentUser = user.id === currentUserId;
   const [role, setRole] = useState<ManagedUser["role"]>(user.role);
   const { showToast } = useToast();
@@ -43,11 +44,11 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4" onClick={onClose}>
-      <section aria-modal="true" className="flex max-h-[90dvh] w-full max-w-xl flex-col rounded-2xl bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()} ref={dialogRef} role="dialog" tabIndex={-1}>
+      <section aria-labelledby={titleId} aria-modal="true" className="flex max-h-[90dvh] w-full max-w-xl flex-col rounded-2xl bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()} ref={dialogRef} role="dialog" tabIndex={-1}>
         <div className="flex shrink-0 items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-zinc-500">Gestión de usuarios</p>
-            <h2 className="mt-1 text-xl font-semibold text-zinc-950">Editar usuario</h2>
+            <h2 className="mt-1 text-xl font-semibold text-zinc-950" id={titleId}>Editar usuario</h2>
           </div>
           <button aria-label="Cerrar" className="inline-flex cursor-pointer items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950" onClick={onClose} type="button">
             <CloseIcon className="size-5" />

@@ -3,7 +3,7 @@ import { AdminCalendar } from "@/components/admin/admin-calendar";
 import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-filter";
 import { MonthCalendar } from "@/components/calendar/month-calendar";
 import { requireUser } from "@/lib/auth/guards";
-import { getAdminCalendarOverview, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
+import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
 import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
 import { findUserById } from "@/lib/users/user-repository";
 
@@ -30,10 +30,11 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
   const selectedUserId = params?.employeeId ?? "all";
   const currentMonth = getCurrentCalendarMonth();
   const showCurrentMonthLink = year !== currentMonth.year || month !== currentMonth.month;
-  const overview = await getAdminCalendarOverview(year, month);
-
   if (selectedUserId !== "all") {
-    const userCalendar = await getAdminUserCalendar(selectedUserId, year, month);
+    const [selectableUsers, userCalendar] = await Promise.all([
+      getAdminCalendarUsers(),
+      getAdminUserCalendar(selectedUserId, year, month),
+    ]);
 
     if (userCalendar) {
       return (
@@ -45,7 +46,7 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
           <EmployeeCalendarFilter
             allLabel="Todos"
             basePath="/coverage"
-            employees={overview.users}
+            employees={selectableUsers}
             label="Usuario"
             month={month}
             selectedEmployeeId={selectedUserId}
@@ -69,6 +70,8 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
     }
   }
 
+  const overview = await getAdminCalendarOverview(year, month);
+
   return (
     <section className="space-y-6">
       <div>
@@ -80,7 +83,7 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
       <AdminCalendar
         cells={overview.cells}
         currentMonthHref={createMonthHref("/coverage", currentMonth)}
-        sectionsByDate={overview.sectionsByDate}
+        daySummariesByDate={overview.daySummariesByDate}
         monthName={overview.monthName}
         nextMonthHref={createMonthHref("/coverage", getNextMonth(year, month))}
         previousMonthHref={createMonthHref("/coverage", getPreviousMonth(year, month))}

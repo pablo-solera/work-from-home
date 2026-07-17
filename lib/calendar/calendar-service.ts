@@ -16,6 +16,13 @@ const UNKNOWN_IDENTITY = { name: "Usuario", email: null } as const;
 // the office on a given day: teletrabajo plus every absence section.
 const OUT_OF_OFFICE_SECTION_KEYS = ABSENCE_SECTIONS.map((section) => section.key).filter((key) => key !== "enOficina");
 
+export type AdminCalendarDaySummary = {
+  absenceCount: number;
+  date: string;
+  officeCount: number;
+  remoteCount: number;
+};
+
 function buildSectionsByDate(
   entries: Awaited<ReturnType<typeof findAllWorkFromHomeDays>>,
   users: Awaited<ReturnType<typeof findAllUsers>>,
@@ -101,6 +108,25 @@ function buildSectionsByDate(
   return sectionsByDate;
 }
 
+function buildDaySummaries(sectionsByDate: Record<string, DaySections>, calendar: ReturnType<typeof getCalendarDays>) {
+  const summaries: Record<string, AdminCalendarDaySummary> = {};
+
+  for (const cell of calendar.cells) {
+    if (!cell) continue;
+    const sections = sectionsByDate[cell.date] ?? createEmptySections();
+    const absenceCount = ABSENCE_SECTIONS.filter((section) => section.key !== "enOficina" && section.key !== "teletrabajo")
+      .reduce((total, section) => total + sections[section.key].length, 0);
+    summaries[cell.date] = {
+      date: cell.date,
+      officeCount: sections.enOficina.length,
+      remoteCount: sections.teletrabajo.length,
+      absenceCount,
+    };
+  }
+
+  return summaries;
+}
+
 export async function getUserCalendar(userId: string, year: number, month: number) {
   const range = getMonthRange(year, month);
   const [entries, pendingDates] = await Promise.all([
@@ -142,8 +168,55 @@ export async function getAdminCalendarOverview(year: number, month: number) {
   return {
     ...calendar,
     users: userList,
-    sectionsByDate,
+    daySummariesByDate: buildDaySummaries(sectionsByDate, calendar),
   };
+}
+
+async function getCalendarUsersForViewer(viewer: SessionUser) {
+  const currentUser = await findUserById(viewer.id);
+  if (viewer.role === "admin" || currentUser?.canEditAllWfh) {
+    const allUsers = await findAllUsers();
+    return filterVisibleStaff(allUsers);
+  }
+
+  if (viewer.role === "coordinator") {
+    return filterVisibleStaff(await findEmployeesByCoordinatorId(viewer.id));
+  }
+
+  const visibility = await findEmployeeTeamVisibility(viewer.id);
+  if (!visibility?.teamWfhVisible) return null;
+  return filterVisibleStaff(await findEmployeesByCoordinatorId(visibility.coordinatorId));
+}
+
+export async function getCalendarDayDetail(viewer: SessionUser, date: string) {
+  if (!isValidDateKey(date)) return null;
+  const users = await getCalendarUsersForViewer(viewer);
+  if (!users) return null;
+
+  const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)));
+  const [entries, absenceSectionsByDate, identities] = await Promise.all([
+    findWorkFromHomeDaysByUserIds(users.map((user) => user.id), date, date),
+    getAbsenceSectionsByDate(date, date, users),
+    resolveUserIdentities(users),
+  ]);
+  const sectionsByDate = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar);
+
+  return sectionsByDate[date] ?? createEmptySections();
+}
+
+export async function getAdminCalendarUsers() {
+  const allUsers = await findAllUsers();
+  const [users, identities] = await Promise.all([
+    filterVisibleStaff(allUsers),
+    resolveUserIdentities(allUsers),
+  ]);
+
+  return users
+    .map((user) => {
+      const identity = identities.get(user.id) ?? UNKNOWN_IDENTITY;
+      return { id: user.id, name: identity.name, email: identity.email ?? "" };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
 }
 
 export async function getAdminUserCalendar(userId: string, year: number, month: number) {
@@ -187,8 +260,21 @@ export async function getCoordinatorCalendarOverview(coordinatorId: string, year
   return {
     ...calendar,
     employees: employeeList,
-    sectionsByDate,
+    daySummariesByDate: buildDaySummaries(sectionsByDate, calendar),
   };
+}
+
+export async function getCoordinatorCalendarUsers(coordinatorId: string) {
+  const allEmployees = await findEmployeesByCoordinatorId(coordinatorId);
+  const employees = await filterVisibleStaff(allEmployees);
+  const identities = await resolveUserIdentities(employees);
+
+  return employees
+    .map((employee) => {
+      const identity = identities.get(employee.id) ?? UNKNOWN_IDENTITY;
+      return { id: employee.id, name: identity.name, email: identity.email ?? "" };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
 }
 
 export async function getTeamCalendarForViewer(viewer: SessionUser, year: number, month: number) {

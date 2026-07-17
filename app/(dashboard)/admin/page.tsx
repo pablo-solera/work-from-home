@@ -4,7 +4,7 @@ import { AdminCalendar } from "@/components/admin/admin-calendar";
 import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-filter";
 import { MonthCalendar } from "@/components/calendar/month-calendar";
 import { requireAdmin } from "@/lib/auth/guards";
-import { getAdminCalendarOverview, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
+import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
 import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
 
 type AdminPageProps = {
@@ -24,14 +24,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const selectedUserId = params?.employeeId ?? "all";
   const currentMonth = getCurrentCalendarMonth();
   const showCurrentMonthLink = year !== currentMonth.year || month !== currentMonth.month;
-  const overview = await getAdminCalendarOverview(year, month);
-
-  if (selectedUserId === admin.id) {
-    redirect(adminHref(year, month));
-  }
-
-  const selectableUsers = overview.users.filter((user) => user.id !== admin.id);
-
   const adminLinks = (
     <div className="grid gap-4 md:grid-cols-2">
       <Link className="cursor-pointer rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-400" href="/calendar">
@@ -44,9 +36,15 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </Link>
     </div>
   );
+  if (selectedUserId === admin.id) {
+    redirect(adminHref(year, month));
+  }
 
   if (selectedUserId !== "all") {
-    const userCalendar = await getAdminUserCalendar(selectedUserId, year, month);
+    const [selectableUsers, userCalendar] = await Promise.all([
+      getAdminCalendarUsers(),
+      getAdminUserCalendar(selectedUserId, year, month),
+    ]);
 
     if (userCalendar) {
       return (
@@ -83,6 +81,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     }
   }
 
+  const overview = await getAdminCalendarOverview(year, month);
+
+  const selectableUsers = overview.users.filter((user) => user.id !== admin.id);
+
   return (
     <section className="space-y-8">
       <div>
@@ -102,7 +104,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <AdminCalendar
         cells={overview.cells}
         currentMonthHref={createMonthHref("/admin", currentMonth)}
-        sectionsByDate={overview.sectionsByDate}
+        daySummariesByDate={overview.daySummariesByDate}
         monthName={overview.monthName}
         nextMonthHref={createMonthHref("/admin", getNextMonth(year, month))}
         previousMonthHref={createMonthHref("/admin", getPreviousMonth(year, month))}
