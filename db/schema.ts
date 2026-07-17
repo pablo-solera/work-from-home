@@ -67,7 +67,11 @@ export const wfhChangeRequests = pgTable("wfh_change_requests", {
   decidedAt: timestamp("decided_at", { withTimezone: true }),
   coordinatorNotifiedAt: timestamp("coordinator_notified_at", { withTimezone: true }),
   coordinatorAcknowledgedAt: timestamp("coordinator_acknowledged_at", { withTimezone: true }),
-}, (table) => [index("wfh_change_requests_requester_status_idx").on(table.requesterId, table.status)]);
+}, (table) => [
+  index("wfh_change_requests_requester_status_idx").on(table.requesterId, table.status),
+  index("wfh_change_requests_coordinator_status_idx").on(table.coordinatorId, table.status),
+  index("wfh_change_requests_coordinator_notification_idx").on(table.coordinatorId, table.coordinatorNotifiedAt, table.coordinatorAcknowledgedAt),
+]);
 
 export const wfhChangeRequestDates = pgTable(
   "wfh_change_request_dates",

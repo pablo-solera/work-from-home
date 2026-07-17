@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users, wfhChangeRequestDates, wfhChangeRequests, workFromHomeDays } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/session";
@@ -66,7 +66,7 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
         .select({ requestedDate: wfhChangeRequestDates.requestedDate, replacedDate: wfhChangeRequestDates.replacedDate })
         .from(wfhChangeRequestDates)
         .innerJoin(wfhChangeRequests, eq(wfhChangeRequestDates.requestId, wfhChangeRequests.id))
-        .where(and(eq(wfhChangeRequests.requesterId, user.id), eq(wfhChangeRequests.status, "pending")));
+        .where(and(eq(wfhChangeRequests.requesterId, user.id), eq(wfhChangeRequests.status, "pending"), sql`${wfhChangeRequestDates.cancelledAt} IS NULL`));
       const requestedDates = new Set(input.requestedDates);
       const affectedDates = new Set([...requestedDates, ...input.replacedDates]);
       const hasDuplicate = pendingDates.some((date) => affectedDates.has(date.requestedDate) || (date.replacedDate ? affectedDates.has(date.replacedDate) : false));
@@ -172,7 +172,7 @@ function requestWhere(filters: RequestFilters, userColumn: typeof wfhChangeReque
     const matchingRequests = getDb()
       .select({ requestId: wfhChangeRequestDates.requestId })
       .from(wfhChangeRequestDates)
-      .where(and(gte(wfhChangeRequestDates.requestedDate, range.start), lte(wfhChangeRequestDates.requestedDate, range.end)));
+      .where(and(gte(wfhChangeRequestDates.requestedDate, range.start), lte(wfhChangeRequestDates.requestedDate, range.end), sql`${wfhChangeRequestDates.cancelledAt} IS NULL`));
     conditions.push(inArray(wfhChangeRequests.id, matchingRequests));
   }
 
@@ -196,7 +196,7 @@ export async function getPendingRequestedDates(userId: string, start: string, en
   });
 
   return requests.flatMap((request) =>
-    request.dates.flatMap((date) => {
+    request.dates.filter((date) => !date.cancelledAt).flatMap((date) => {
       const dates = [date.requestedDate];
       if (date.replacedDate) dates.push(date.replacedDate);
       return dates.filter((value) => value >= start && value <= end);
@@ -205,26 +205,36 @@ export async function getPendingRequestedDates(userId: string, start: string, en
 }
 
 export async function getPendingRequestCountForCoordinator(coordinatorId: string) {
-  const [result] = await getDb()
-    .select({ count: count() })
-    .from(wfhChangeRequests)
-    .where(and(eq(wfhChangeRequests.coordinatorId, coordinatorId), eq(wfhChangeRequests.status, "pending")));
-
-  return result?.count ?? 0;
+  const summary = await getRequestNotificationSummary(coordinatorId);
+  return summary.pendingRequestCount;
 }
 
 export async function getUnreadAutomaticSubstitutionCount(coordinatorId: string) {
-  const [result] = await getDb()
-    .select({ count: count() })
-    .from(wfhChangeRequests)
-    .where(and(
-      eq(wfhChangeRequests.coordinatorId, coordinatorId),
-      eq(wfhChangeRequests.kind, "substitution"),
-      sql`${wfhChangeRequests.coordinatorNotifiedAt} IS NOT NULL`,
-      sql`${wfhChangeRequests.coordinatorAcknowledgedAt} IS NULL`,
-    ));
+  const summary = await getRequestNotificationSummary(coordinatorId);
+  return summary.unreadSubstitutionCount;
+}
 
-  return result?.count ?? 0;
+export type RequestNotificationSummary = {
+  pendingRequestCount: number;
+  unreadSubstitutionCount: number;
+  revision: string | null;
+};
+
+export async function getRequestNotificationSummary(coordinatorId: string): Promise<RequestNotificationSummary> {
+  const [result] = await getDb()
+    .select({
+      pendingRequestCount: sql<number>`count(*) filter (where ${wfhChangeRequests.status} = 'pending')`,
+      unreadSubstitutionCount: sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'substitution' and ${wfhChangeRequests.coordinatorNotifiedAt} is not null and ${wfhChangeRequests.coordinatorAcknowledgedAt} is null)`,
+      revision: sql<string | null>`max(greatest(${wfhChangeRequests.createdAt}, coalesce(${wfhChangeRequests.decidedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorNotifiedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorAcknowledgedAt}, ${wfhChangeRequests.createdAt}), coalesce((select max(d.cancelled_at) from wfh_change_request_dates d where d.request_id = ${wfhChangeRequests.id}), ${wfhChangeRequests.createdAt})))`,
+    })
+    .from(wfhChangeRequests)
+    .where(eq(wfhChangeRequests.coordinatorId, coordinatorId));
+
+  return {
+    pendingRequestCount: Number(result?.pendingRequestCount ?? 0),
+    unreadSubstitutionCount: Number(result?.unreadSubstitutionCount ?? 0),
+    revision: result?.revision ? String(result.revision) : null,
+  };
 }
 
 export async function markSubstitutionAsRead(coordinatorId: string, requestId: string) {
@@ -278,8 +288,12 @@ async function validateApproval(request: NonNullable<Awaited<ReturnType<typeof g
     throw new Error("El empleado ya no pertenece a tu equipo.");
   }
 
-  const requestedDates = request.dates.map((date) => date.requestedDate);
-  const replacedDates = request.dates.flatMap((date) => (date.replacedDate ? [date.replacedDate] : []));
+  const activeDates = request.dates.filter((date) => !date.cancelledAt);
+  if (activeDates.length === 0) {
+    throw new Error("La solicitud no tiene fechas activas para aprobar.");
+  }
+  const requestedDates = activeDates.map((date) => date.requestedDate);
+  const replacedDates = activeDates.flatMap((date) => (date.replacedDate ? [date.replacedDate] : []));
   const range = requestRange([...requestedDates, ...replacedDates]);
   const absenceSections = await getAbsenceSectionsByDateStrict(range.start, range.end, [requester]);
   const absenceDates = new Set(
@@ -302,7 +316,7 @@ async function validateApproval(request: NonNullable<Awaited<ReturnType<typeof g
   }
 
   if (request.kind === "substitution") {
-    if (request.dates.some((date) => !date.replacedDate || !existingDates.has(date.replacedDate))) {
+    if (activeDates.some((date) => !date.replacedDate || !existingDates.has(date.replacedDate))) {
       throw new Error("Una de las fechas a sustituir ya no está marcada como teletrabajo.");
     }
     if (requestedDates.some((date) => existingDates.has(date))) {
@@ -338,11 +352,16 @@ export async function decideWfhRequest(actor: SessionUser, id: string, status: "
       }
 
       if (status === "accepted") {
-        if (request.kind === "substitution") {
-          await tx.delete(workFromHomeDays).where(and(eq(workFromHomeDays.userId, requester.id), inArray(workFromHomeDays.date, request.dates.map((date) => date.replacedDate!))));
+        const activeDates = request.dates.filter((date) => !date.cancelledAt);
+        if (activeDates.length === 0) {
+          throw new Error("La solicitud no tiene fechas activas para aprobar.");
         }
 
-        await tx.insert(workFromHomeDays).values(request.dates.map((date) => ({ userId: requester.id, date: date.requestedDate }))).onConflictDoNothing({ target: [workFromHomeDays.userId, workFromHomeDays.date] });
+        if (request.kind === "substitution") {
+          await tx.delete(workFromHomeDays).where(and(eq(workFromHomeDays.userId, requester.id), inArray(workFromHomeDays.date, activeDates.map((date) => date.replacedDate!))));
+        }
+
+        await tx.insert(workFromHomeDays).values(activeDates.map((date) => ({ userId: requester.id, date: date.requestedDate }))).onConflictDoNothing({ target: [workFromHomeDays.userId, workFromHomeDays.date] });
       }
     });
 

@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
-import { getPendingRequestCountForCoordinator, getUnreadAutomaticSubstitutionCount } from "@/lib/requests/request-service";
+import { getRequestNotificationSummary } from "@/lib/requests/request-service";
 
 export async function GET() {
   const user = await getCurrentUser();
 
-  if (!user || user.role !== "coordinator") {
-    return NextResponse.json({ pendingRequestCount: 0, unreadSubstitutionCount: 0 });
+  if (!user) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
-  const [pendingRequestCount, unreadSubstitutionCount] = await Promise.all([
-    getPendingRequestCountForCoordinator(user.id),
-    getUnreadAutomaticSubstitutionCount(user.id),
-  ]);
+  if (user.role !== "coordinator") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
-  return NextResponse.json({ pendingRequestCount, unreadSubstitutionCount });
+  const summary = await getRequestNotificationSummary(user.id);
+  return NextResponse.json(summary, { headers: { "Cache-Control": "private, no-store" } });
 }

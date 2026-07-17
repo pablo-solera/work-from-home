@@ -1,21 +1,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { markSubstitutionAsReadAction } from "@/app/(dashboard)/requests/actions";
 
 export function MarkSubstitutionReadButton({ requestId }: { requestId: string }) {
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function markAsRead() {
+    setError(null);
     startTransition(async () => {
-      const formData = new FormData();
-      formData.append("id", requestId);
-      await markSubstitutionAsReadAction(formData);
-       router.refresh();
+      try {
+        const formData = new FormData();
+        formData.append("id", requestId);
+        await markSubstitutionAsReadAction(formData);
+        router.refresh();
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "No se pudo marcar la sustitución como leída.");
+      }
     });
   }
 
-  return <button className="cursor-pointer text-sm font-medium text-sky-700 hover:text-sky-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} onClick={markAsRead} type="button">{pending ? "Marcando…" : "Marcar como leída"}</button>;
+  return <span className="inline-flex flex-wrap items-center gap-2"><button aria-busy={pending} className="cursor-pointer text-sm font-medium text-sky-700 hover:text-sky-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} onClick={markAsRead} type="button">{pending ? "Marcando…" : "Marcar como leída"}</button>{error ? <span aria-live="polite" className="text-xs text-red-600" role="alert">{error}</span> : null}</span>;
 }
