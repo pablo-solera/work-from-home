@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type RequestFiltersProps = {
   date: "all" | "month" | "week";
-  status: "all" | "pending" | "accepted" | "rejected";
+  status: "all" | "pending" | "accepted" | "rejected" | "cancelled";
 };
 
 export function RequestFilters({ date, status }: RequestFiltersProps) {
@@ -44,6 +44,7 @@ export function RequestFilters({ date, status }: RequestFiltersProps) {
             <option value="pending">Pendiente</option>
             <option value="accepted">Aceptado</option>
             <option value="rejected">Rechazado</option>
+            <option value="cancelled">Cancelado</option>
           </select>
         </label>
         {hasFilters ? <button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => router.push(pathname)} type="button">Limpiar filtros</button> : <span />}

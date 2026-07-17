@@ -3,12 +3,12 @@ import { getDb } from "@/db";
 import { users, wfhChangeRequestDates, wfhChangeRequests, workFromHomeDays } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/session";
 import { getAbsenceSectionsByDateStrict } from "@/lib/absences/absence-service";
-import { getHolidayName, getRequestDateRange, isValidDateKey, isWeekendDateKey, type RequestDateFilter } from "@/lib/calendar/dates";
+import { getHolidayName, getMadridTodayDateKey, getRequestDateRange, isValidDateKey, isWeekendDateKey, type RequestDateFilter } from "@/lib/calendar/dates";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 
 export type RequestFormState = { error?: string; message?: string; ok?: boolean };
 export type RequestKind = "additional" | "substitution";
-export type RequestStatusFilter = "all" | "pending" | "accepted" | "rejected";
+export type RequestStatusFilter = "all" | "pending" | "accepted" | "rejected" | "cancelled";
 export type RequestFilters = { date: RequestDateFilter; status: RequestStatusFilter };
 
 type RequestInput = {
@@ -19,7 +19,9 @@ type RequestInput = {
 };
 
 function validateDates(dates: string[]) {
-  if (dates.length === 0 || dates.some((date) => !isValidDateKey(date) || isWeekendDateKey(date) || getHolidayName(date))) {
+  const today = getMadridTodayDateKey();
+
+  if (dates.length === 0 || dates.some((date) => !isValidDateKey(date) || date < today || isWeekendDateKey(date) || getHolidayName(date))) {
     throw new Error("Solo se pueden solicitar días laborables que no sean festivos.");
   }
 
@@ -347,5 +349,65 @@ export async function decideWfhRequest(actor: SessionUser, id: string, status: "
     return { message: status === "accepted" ? "Solicitud aceptada." : "Solicitud rechazada.", ok: true };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No se pudo resolver la solicitud." };
+  }
+}
+
+export async function cancelWfhRequestDate(actor: SessionUser, requestId: string, dateId: string): Promise<RequestFormState> {
+  const request = await getRequestWithDates(requestId);
+  const date = request?.dates.find((item) => item.id === dateId);
+
+  if (!request || !date || request.requesterId !== actor.id) {
+    return { error: "No puedes cancelar esta fecha." };
+  }
+
+  if (request.kind !== "additional" || request.status !== "pending") {
+    return { error: "Solo se pueden cancelar solicitudes pendientes de días adicionales." };
+  }
+
+  const today = getMadridTodayDateKey();
+  if (date.requestedDate <= today) {
+    return { error: "Solo puedes cancelar fechas futuras." };
+  }
+
+  try {
+    const db = getDb();
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT id FROM wfh_change_requests WHERE id = ${requestId} FOR UPDATE`);
+      await tx.execute(sql`SELECT id FROM users WHERE id = ${actor.id} FOR UPDATE`);
+      await tx.execute(sql`SELECT id FROM wfh_change_request_dates WHERE id = ${dateId} AND request_id = ${requestId} FOR UPDATE`);
+
+      const currentRequest = await tx.query.wfhChangeRequests.findFirst({
+        where: eq(wfhChangeRequests.id, requestId),
+        with: { dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) } },
+      });
+      const currentDate = currentRequest?.dates.find((item) => item.id === dateId);
+
+      if (!currentRequest || !currentDate || currentRequest.requesterId !== actor.id || currentDate.cancelledAt) {
+        throw new Error("Esta fecha ya no está disponible para cancelar.");
+      }
+
+      if (currentRequest.kind !== "additional" || currentRequest.status !== "pending") {
+        throw new Error("Solo se pueden cancelar solicitudes pendientes de días adicionales.");
+      }
+
+      if (currentDate.requestedDate <= today) {
+        throw new Error("Solo puedes cancelar fechas futuras.");
+      }
+
+      await tx.update(wfhChangeRequestDates)
+        .set({ cancelledAt: new Date(), cancelledById: actor.id })
+        .where(and(eq(wfhChangeRequestDates.id, dateId), sql`${wfhChangeRequestDates.cancelledAt} IS NULL`));
+
+      const remaining = currentRequest.dates.filter((item) => item.id !== dateId && !item.cancelledAt);
+      if (remaining.length === 0) {
+        await tx.update(wfhChangeRequests)
+          .set({ status: "cancelled", decisionComment: "Cancelada por el empleado.", decidedAt: new Date() })
+          .where(eq(wfhChangeRequests.id, requestId));
+      }
+    });
+
+    return { message: "Fecha cancelada correctamente.", ok: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No se pudo cancelar la fecha." };
   }
 }

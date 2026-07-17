@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/guards";
-import { createWfhRequest, decideWfhRequest, markSubstitutionAsRead, type RequestFormState } from "@/lib/requests/request-service";
+import { cancelWfhRequestDate, createWfhRequest, decideWfhRequest, markSubstitutionAsRead, type RequestFormState } from "@/lib/requests/request-service";
 
 function parseDates(value: FormDataEntryValue | null) {
   return String(value ?? "")
@@ -69,4 +69,21 @@ export async function markSubstitutionAsReadAction(formData: FormData) {
   await markSubstitutionAsRead(user.id, String(formData.get("id") ?? ""));
   revalidatePath("/requests");
   revalidatePath("/(dashboard)", "layout");
+}
+
+export async function cancelWfhRequestDateAction(formData: FormData) {
+  const user = await requireUser();
+  const result = await cancelWfhRequestDate(user, String(formData.get("requestId") ?? ""), String(formData.get("dateId") ?? ""));
+
+  if (!result.ok) {
+    throw new Error(result.error ?? "No se pudo cancelar la fecha.");
+  }
+
+  revalidatePath("/requests");
+  revalidatePath("/calendar");
+  revalidatePath("/team");
+  revalidatePath("/admin");
+  revalidatePath("/coverage");
+  revalidatePath("/(dashboard)", "layout");
+  return result;
 }

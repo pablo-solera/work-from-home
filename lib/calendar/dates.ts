@@ -27,7 +27,7 @@ export function getTodayDateKey() {
   return `${year}-${month}-${day}`;
 }
 
-function getMadridTodayDateKey() {
+export function getMadridTodayDateKey() {
   const parts = new Intl.DateTimeFormat("en", {
     day: "2-digit",
     month: "2-digit",

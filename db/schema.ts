@@ -3,7 +3,7 @@ import { boolean, index, type AnyPgColumn, date, integer, pgEnum, pgTable, text,
 
 export const userRole = pgEnum("user_role", ["admin", "coordinator", "employee"]);
 export const wfhRequestKind = pgEnum("wfh_request_kind", ["additional", "substitution"]);
-export const wfhRequestStatus = pgEnum("wfh_request_status", ["pending", "accepted", "rejected"]);
+export const wfhRequestStatus = pgEnum("wfh_request_status", ["pending", "accepted", "rejected", "cancelled"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -76,8 +76,10 @@ export const wfhChangeRequestDates = pgTable(
     requestId: uuid("request_id").notNull().references(() => wfhChangeRequests.id, { onDelete: "cascade" }),
     requestedDate: date("requested_date").notNull(),
     replacedDate: date("replaced_date"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelledById: uuid("cancelled_by_id").references(() => users.id, { onDelete: "set null" }),
   },
-  (table) => [uniqueIndex("wfh_change_request_dates_request_date_idx").on(table.requestId, table.requestedDate)],
+  (table) => [uniqueIndex("wfh_change_request_dates_request_date_idx").on(table.requestId, table.requestedDate), index("wfh_change_request_dates_active_date_idx").on(table.requestedDate)],
 );
 
 export const wfhChangeRequestsRelations = relations(wfhChangeRequests, ({ many, one }) => ({

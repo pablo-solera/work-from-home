@@ -11,7 +11,7 @@ type RequestsPageProps = {
 
 function parseFilters(params?: { date?: string; status?: string }): RequestFilterValues {
   const date = params?.date === "month" || params?.date === "week" ? params.date : "all";
-  const status = params?.status === "pending" || params?.status === "accepted" || params?.status === "rejected" ? params.status : "all";
+  const status = params?.status === "pending" || params?.status === "accepted" || params?.status === "rejected" || params?.status === "cancelled" ? params.status : "all";
   return { date: date as RequestDateFilter, status: status as RequestStatusFilter };
 }
 
