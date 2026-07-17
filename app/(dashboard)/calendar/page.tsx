@@ -1,4 +1,5 @@
-import { MonthCalendar } from "@/components/calendar/month-calendar";
+import { EditableMonthCalendar, RequestableMonthCalendar } from "@/components/calendar/month-calendar-variants";
+import { PageHeader } from "@/components/common/page-header";
 import { requireUser } from "@/lib/auth/guards";
 import { getUserCalendar } from "@/lib/calendar/calendar-service";
 import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
@@ -15,17 +16,12 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   const showCurrentMonthLink = year !== currentMonth.year || month !== currentMonth.month;
 
   const calendar = await getUserCalendar(user.id, year, month);
-  const canEdit = user.role === "admin" || user.role === "coordinator";
+  const CalendarComponent = user.role === "employee" ? RequestableMonthCalendar : EditableMonthCalendar;
 
   return (
     <section className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-zinc-500">Mi calendario</p>
-        <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Días de teletrabajo</h1>
-      </div>
-        <MonthCalendar
-          canEdit={canEdit}
-          canRequest={user.role === "employee"}
+      <PageHeader><PageHeader.Eyebrow>Mi calendario</PageHeader.Eyebrow><PageHeader.Title>Días de teletrabajo</PageHeader.Title></PageHeader>
+        <CalendarComponent
         cells={calendar.cells}
         currentMonthHref={createMonthHref("/calendar", currentMonth)}
         month={month}

@@ -59,3 +59,11 @@ export function RequestList({ requests, coordinatorView = false, filtered = fals
     </div>
   );
 }
+
+export function CoordinatorRequestList({ filtered = false, requests }: { filtered?: boolean; requests: RequestListItem[] }) {
+  return <RequestList coordinatorView filtered={filtered} requests={requests} />;
+}
+
+export function RequesterRequestList({ filtered = false, requests }: { filtered?: boolean; requests: RequestListItem[] }) {
+  return <RequestList filtered={filtered} requests={requests} />;
+}

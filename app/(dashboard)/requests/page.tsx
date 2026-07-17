@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { RequestFilters } from "@/components/requests/request-filters";
-import { RequestList } from "@/components/requests/request-list";
+import { CoordinatorRequestList, RequesterRequestList } from "@/components/requests/request-list";
 import { requireUser } from "@/lib/auth/guards";
 import { type RequestDateFilter } from "@/lib/calendar/dates";
 import { getRequestsForCoordinator, getRequestsForRequester, type RequestFilters as RequestFilterValues, type RequestStatusFilter } from "@/lib/requests/request-service";
@@ -33,7 +33,7 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
           <p className="mt-2 text-sm text-zinc-600">Revisa y decide las solicitudes de tu equipo.</p>
         </div>
         <RequestFilters {...filters} />
-        <RequestList coordinatorView filtered={filters.date !== "all" || filters.status !== "all"} requests={requests} />
+        <CoordinatorRequestList filtered={filters.date !== "all" || filters.status !== "all"} requests={requests} />
       </section>
     );
   }
@@ -47,7 +47,7 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
         <p className="mt-2 text-sm text-zinc-600">Consulta el estado de tus solicitudes. Puedes crear nuevas solicitudes desde tu calendario.</p>
       </div>
       <RequestFilters {...filters} />
-      <RequestList filtered={filters.date !== "all" || filters.status !== "all"} requests={requests} />
+      <RequesterRequestList filtered={filters.date !== "all" || filters.status !== "all"} requests={requests} />
     </section>
   );
 }

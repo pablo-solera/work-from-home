@@ -1,4 +1,5 @@
 import { TeamVisibilityToggle } from "@/components/settings/team-visibility-toggle";
+import { PageHeader } from "@/components/common/page-header";
 import { requireCoordinator } from "@/lib/auth/guards";
 import { findUserById } from "@/lib/users/user-repository";
 
@@ -8,10 +9,7 @@ export default async function SettingsPage() {
 
   return (
     <section className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-zinc-500">Configuración</p>
-        <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Preferencias del equipo</h1>
-      </div>
+      <PageHeader><PageHeader.Eyebrow>Configuración</PageHeader.Eyebrow><PageHeader.Title>Preferencias del equipo</PageHeader.Title></PageHeader>
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">

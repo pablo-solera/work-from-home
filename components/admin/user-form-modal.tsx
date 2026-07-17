@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useId, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { updateUserAction } from "@/app/(dashboard)/admin/users/actions";
-import { CloseIcon } from "@/components/icons/close-icon";
+import { Dialog } from "@/components/common/dialog";
 import { useToast } from "@/components/common/toast-provider";
-import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
+import { ActionFeedback } from "@/components/common/action-feedback";
+import { SubmitButton } from "@/components/common/submit-button";
 import { initialUserManagementState } from "@/lib/users/user-management-state";
 import type { ManagedUser, UserCoordinatorOption } from "./users-table";
 
@@ -22,12 +23,10 @@ const roleLabels: Record<ManagedUser["role"], string> = {
 };
 
 export function UserFormModal({ coordinators, currentUserId, onClose, user }: UserFormModalProps) {
-  const dialogRef = useModalDismiss<HTMLElement>(onClose);
-  const titleId = useId();
   const isCurrentUser = user.id === currentUserId;
   const [role, setRole] = useState<ManagedUser["role"]>(user.role);
   const { showToast } = useToast();
-  const [state, action, pending] = useActionState(async (previousState: typeof initialUserManagementState, formData: FormData) => {
+  const [state, action] = useActionState(async (previousState: typeof initialUserManagementState, formData: FormData) => {
     const result = await updateUserAction(previousState, formData);
     if (result.ok) {
       showToast(result.message ?? "Cambios guardados correctamente.");
@@ -43,16 +42,14 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
   }, [state.ok, state.generatedPassword, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4" onClick={onClose}>
-      <section aria-labelledby={titleId} aria-modal="true" className="flex max-h-[90dvh] w-full max-w-xl flex-col rounded-2xl bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()} ref={dialogRef} role="dialog" tabIndex={-1}>
+    <Dialog onDismiss={onClose}>
+      <Dialog.Panel className="flex max-h-[90dvh] max-w-xl flex-col">
         <div className="flex shrink-0 items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-zinc-500">Gestión de usuarios</p>
-            <h2 className="mt-1 text-xl font-semibold text-zinc-950" id={titleId}>Editar usuario</h2>
+            <Dialog.Title>Editar usuario</Dialog.Title>
           </div>
-          <button aria-label="Cerrar" className="inline-flex cursor-pointer items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950" onClick={onClose} type="button">
-            <CloseIcon className="size-5" />
-          </button>
+          <Dialog.Close onClick={onClose} />
         </div>
 
         <form action={action} className="mt-6 flex min-h-0 flex-1 flex-col">
@@ -132,19 +129,13 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
           </div>
 
           <div className="shrink-0 space-y-4 border-t border-zinc-200 pt-4">
-            {state.error ? (
-              <p aria-live="polite" className="text-sm text-red-600">
-                {state.error}
-              </p>
-            ) : null}
+            <ActionFeedback error={state.error} message={state.message} />
             <div className="flex justify-end">
-              <button className="cursor-pointer rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
-                {pending ? "Guardando…" : "Guardar cambios"}
-              </button>
+              <SubmitButton pendingLabel="Guardando…">Guardar cambios</SubmitButton>
             </div>
           </div>
         </form>
-      </section>
-    </div>
+      </Dialog.Panel>
+    </Dialog>
   );
 }

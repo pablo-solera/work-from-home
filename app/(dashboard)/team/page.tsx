@@ -1,19 +1,18 @@
 import { redirect } from "next/navigation";
 import { AdminCalendar } from "@/components/admin/admin-calendar";
 import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-filter";
-import { MonthCalendar } from "@/components/calendar/month-calendar";
+import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
 import { requireUser } from "@/lib/auth/guards";
 import { getCoordinatorCalendarOverview, getCoordinatorCalendarUsers, getCoordinatorEmployeeCalendar, getTeamCalendarForViewer } from "@/lib/calendar/calendar-service";
 import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
+import { createCalendarHref } from "@/lib/calendar/links";
 
 type TeamPageProps = {
   searchParams?: Promise<{ year?: string; month?: string; employeeId?: string }>;
 };
 
 function teamHref(year: number, month: number, employeeId?: string) {
-  const employeeParam = employeeId && employeeId !== "all" ? `&employeeId=${employeeId}` : "";
-
-  return `/team?year=${year}&month=${month}${employeeParam}`;
+  return createCalendarHref("/team", { employeeId, month, year });
 }
 
 export default async function TeamPage({ searchParams }: TeamPageProps) {
@@ -69,8 +68,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
             <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Teletrabajo de {employeeCalendar.employee.name}</h1>
           </div>
           <EmployeeCalendarFilter basePath="/team" employees={employees} month={month} selectedEmployeeId={selectedEmployeeId} year={year} />
-          <MonthCalendar
-            canEdit
+          <EditableMonthCalendar
             cells={employeeCalendar.cells}
             currentMonthHref={teamHref(currentMonth.year, currentMonth.month, selectedEmployeeId)}
             month={month}

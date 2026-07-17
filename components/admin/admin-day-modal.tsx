@@ -1,13 +1,12 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { GeneratedAvatar } from "@/components/common/generated-avatar";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
-import { CloseIcon } from "@/components/icons/close-icon";
+import { Dialog } from "@/components/common/dialog";
 import { ABSENCE_SECTIONS, type AbsenceSectionKey } from "@/lib/absences/absence-sections";
 import type { DaySections } from "@/lib/absences/absence-service";
 import { formatDateKeyForDisplay } from "@/lib/calendar/dates";
-import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
 import type { AdminCalendarDay } from "./admin-calendar";
 
 type AdminDayModalProps = {
@@ -19,8 +18,6 @@ type AdminDayModalProps = {
 };
 
 export function AdminDayModal({ day, detail, error, loading, onClose }: AdminDayModalProps) {
-  const dialogRef = useModalDismiss<HTMLElement>(onClose);
-  const titleId = useId();
   const [openSections, setOpenSections] = useState<Set<AbsenceSectionKey>>(new Set());
 
   const sections = detail ? ABSENCE_SECTIONS.map((section) => ({
@@ -45,24 +42,14 @@ export function AdminDayModal({ day, detail, error, loading, onClose }: AdminDay
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4" onClick={onClose}>
-      <section
-        aria-labelledby={titleId}
-        aria-modal="true"
-        className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
-        onClick={(event) => event.stopPropagation()}
-        ref={dialogRef}
-        role="dialog"
-        tabIndex={-1}
-      >
+    <Dialog onDismiss={onClose}>
+      <Dialog.Panel>
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-zinc-500">Detalle del día</p>
-            <h2 className="mt-1 text-xl font-semibold text-zinc-950" id={titleId}>{formatDateKeyForDisplay(day.date)}</h2>
+            <Dialog.Title>{formatDateKeyForDisplay(day.date)}</Dialog.Title>
           </div>
-          <button aria-label="Cerrar" className="inline-flex cursor-pointer items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950" onClick={onClose} type="button">
-            <CloseIcon className="size-5" />
-          </button>
+          <Dialog.Close onClick={onClose} />
         </div>
 
         <div className="mt-6 max-h-[28rem] space-y-3 overflow-auto overscroll-contain">
@@ -113,7 +100,7 @@ export function AdminDayModal({ day, detail, error, loading, onClose }: AdminDay
             <p className="text-sm text-zinc-500">Sin registros para este día.</p>
           )}
         </div>
-      </section>
-    </div>
+      </Dialog.Panel>
+    </Dialog>
   );
 }

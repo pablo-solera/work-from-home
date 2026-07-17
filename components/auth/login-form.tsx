@@ -2,11 +2,12 @@
 
 import { useActionState } from "react";
 import { loginAction, type LoginFormState } from "@/app/(auth)/login/actions";
+import { SubmitButton } from "@/components/common/submit-button";
 
 const initialState: LoginFormState = {};
 
 export function LoginForm() {
-  const [state, action, pending] = useActionState(loginAction, initialState);
+  const [state, action] = useActionState(loginAction, initialState);
 
   return (
     <form action={action} className="space-y-4">
@@ -23,9 +24,7 @@ export function LoginForm() {
           {state.error}
         </p>
       ) : null}
-      <button className="w-full cursor-pointer rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60" disabled={pending}>
-        {pending ? "Entrando…" : "Entrar"}
-      </button>
+      <SubmitButton className="w-full" pendingLabel="Entrando…">Entrar</SubmitButton>
     </form>
   );
 }

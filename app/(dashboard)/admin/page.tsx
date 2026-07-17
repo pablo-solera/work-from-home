@@ -2,19 +2,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminCalendar } from "@/components/admin/admin-calendar";
 import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-filter";
-import { MonthCalendar } from "@/components/calendar/month-calendar";
+import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
 import { requireAdmin } from "@/lib/auth/guards";
 import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
 import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
+import { createCalendarHref } from "@/lib/calendar/links";
 
 type AdminPageProps = {
   searchParams?: Promise<{ year?: string; month?: string; employeeId?: string }>;
 };
 
 function adminHref(year: number, month: number, employeeId?: string) {
-  const employeeParam = employeeId && employeeId !== "all" ? `&employeeId=${employeeId}` : "";
-
-  return `/admin?year=${year}&month=${month}${employeeParam}`;
+  return createCalendarHref("/admin", { employeeId, month, year });
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
@@ -63,8 +62,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             selectedEmployeeId={selectedUserId}
             year={year}
           />
-          <MonthCalendar
-            canEdit
+          <EditableMonthCalendar
             cells={userCalendar.cells}
             currentMonthHref={adminHref(currentMonth.year, currentMonth.month, selectedUserId)}
             month={month}
