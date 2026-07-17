@@ -4,7 +4,7 @@ import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-
 import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
 import { requireUser } from "@/lib/auth/guards";
 import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
-import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
+import { createMonthHref, getCurrentCalendarMonth, getMadridTodayDateKey, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
 import { findUserById } from "@/lib/users/user-repository";
 import { createCalendarHref } from "@/lib/calendar/links";
 
@@ -61,6 +61,7 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
             selectedDates={userCalendar.selectedDates}
             showCurrentMonthLink={showCurrentMonthLink}
             targetUserId={userCalendar.user.id}
+            minimumEditableDate={userCalendar.user.id === user.id && user.role === "coordinator" ? getMadridTodayDateKey() : undefined}
             year={year}
           />
         </section>
@@ -82,6 +83,7 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
         cells={overview.cells}
         currentMonthHref={createMonthHref("/coverage", currentMonth)}
         daySummariesByDate={overview.daySummariesByDate}
+        dayDetailEndpoint="/api/calendar/coverage/day"
         monthName={overview.monthName}
         nextMonthHref={createMonthHref("/coverage", getNextMonth(year, month))}
         previousMonthHref={createMonthHref("/coverage", getPreviousMonth(year, month))}

@@ -2,7 +2,7 @@ import { EditableMonthCalendar, RequestableMonthCalendar } from "@/components/ca
 import { PageHeader } from "@/components/common/page-header";
 import { requireUser } from "@/lib/auth/guards";
 import { getUserCalendar } from "@/lib/calendar/calendar-service";
-import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
+import { createMonthHref, getCurrentCalendarMonth, getMadridTodayDateKey, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
 
 type CalendarPageProps = {
   searchParams?: Promise<{ year?: string; month?: string }>;
@@ -32,6 +32,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
           pendingDates={calendar.pendingDates}
         showCurrentMonthLink={showCurrentMonthLink}
         targetUserId={user.id}
+        minimumEditableDate={user.role === "coordinator" ? getMadridTodayDateKey() : undefined}
         year={year}
       />
     </section>

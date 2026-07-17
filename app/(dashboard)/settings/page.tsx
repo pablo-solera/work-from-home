@@ -16,7 +16,7 @@ export default async function SettingsPage() {
           <div className="max-w-2xl space-y-2">
             <h2 className="text-lg font-semibold text-zinc-950">Visibilidad del teletrabajo del equipo</h2>
             <p className="text-sm leading-6 text-zinc-600">
-              Permite que los integrantes de tu equipo vean el calendario de teletrabajo del grupo. El calendario incluye tus días y los de tus empleados.
+              Permite que tus empleados vean quién está en teletrabajo dentro de su propio equipo. No se muestran ausencias ni otros datos personales.
             </p>
           </div>
           <TeamVisibilityToggle initialEnabled={dbUser?.teamWfhVisible ?? false} />

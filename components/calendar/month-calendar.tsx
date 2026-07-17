@@ -23,6 +23,7 @@ export type MonthCalendarProps = {
   targetUserId: string;
   year: number;
   month: number;
+  minimumEditableDate?: string;
 };
 
 export function MonthCalendar({
@@ -39,6 +40,7 @@ export function MonthCalendar({
   targetUserId,
   year,
   month,
+  minimumEditableDate,
 }: MonthCalendarProps) {
   const selected = new Set(selectedDates);
   const pending = new Set(pendingDates);
@@ -127,6 +129,7 @@ export function MonthCalendar({
             isToday={cell.isToday}
             isWeekend={cell.isWeekend}
             month={month}
+            minimumEditableDate={minimumEditableDate}
             pending={pending.has(cell.date)}
             requestMode={mode && mode !== "chooser" ? mode : null}
             requestSelected={additionalDates.includes(cell.date) || replacementTarget === cell.date}

@@ -4,7 +4,7 @@ import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-
 import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
 import { requireUser } from "@/lib/auth/guards";
 import { getCoordinatorCalendarOverview, getCoordinatorCalendarUsers, getCoordinatorEmployeeCalendar, getTeamCalendarForViewer } from "@/lib/calendar/calendar-service";
-import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
+import { createMonthHref, getCurrentCalendarMonth, getMadridTodayDateKey, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
 import { createCalendarHref } from "@/lib/calendar/links";
 
 type TeamPageProps = {
@@ -45,6 +45,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
           cells={overview.cells}
           currentMonthHref={createMonthHref("/team", currentMonth)}
           daySummariesByDate={overview.daySummariesByDate}
+          dayDetailEndpoint="/api/calendar/team/day"
           monthName={overview.monthName}
           nextMonthHref={createMonthHref("/team", getNextMonth(year, month))}
           previousMonthHref={createMonthHref("/team", getPreviousMonth(year, month))}
@@ -78,6 +79,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
             selectedDates={employeeCalendar.selectedDates}
             showCurrentMonthLink={showCurrentMonthLink}
             targetUserId={employeeCalendar.employee.id}
+            minimumEditableDate={employeeCalendar.employee.id === user.id ? getMadridTodayDateKey() : undefined}
             year={year}
           />
         </section>

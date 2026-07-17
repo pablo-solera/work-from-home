@@ -17,6 +17,7 @@ type AdminCalendarProps = {
   cells: CalendarCell[];
   currentMonthHref: string;
   daySummariesByDate: Record<string, AdminCalendarDaySummary>;
+  dayDetailEndpoint?: string;
   monthName: string;
   nextMonthHref: string;
   previousMonthHref: string;
@@ -27,6 +28,7 @@ export function AdminCalendar({
   cells,
   currentMonthHref,
   daySummariesByDate,
+  dayDetailEndpoint = "/api/calendar/day",
   monthName,
   nextMonthHref,
   previousMonthHref,
@@ -43,7 +45,7 @@ export function AdminCalendar({
     if (details[day.date]) return;
 
     setLoadingDate(day.date);
-    fetch(`/api/calendar/day?date=${encodeURIComponent(day.date)}`, { cache: "no-store" })
+    fetch(`${dayDetailEndpoint}?date=${encodeURIComponent(day.date)}`, { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("No se pudo cargar el detalle del día.");
         return response.json() as Promise<{ sections: import("@/lib/absences/absence-service").DaySections }>;

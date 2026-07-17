@@ -5,7 +5,7 @@ import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { filterVisibleStaff } from "@/lib/employees/staff-service";
 import { findAllUsers, findEmployeeByCoordinatorId, findEmployeesByCoordinatorId, findEmployeeTeamVisibility, findUserById } from "@/lib/users/user-repository";
 import { createWorkFromHomeDay, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds, replaceWorkFromHomeDays } from "./calendar-repository";
-import { getCalendarDays, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
+import { getCalendarDays, getMadridTodayDateKey, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
 import { getPendingRequestedDates } from "@/lib/requests/request-service";
 
 export type ReplicateWorkFromHomeScope = "next" | "untilYearEnd";
@@ -127,6 +127,33 @@ function buildDaySummaries(sectionsByDate: Record<string, DaySections>, calendar
   return summaries;
 }
 
+function buildWfhOnlySections(
+  entries: Awaited<ReturnType<typeof findWorkFromHomeDaysByUserIds>>,
+  users: Awaited<ReturnType<typeof findAllUsers>>,
+  identities: Awaited<ReturnType<typeof resolveUserIdentities>>,
+  calendar: ReturnType<typeof getCalendarDays>,
+) {
+  const visibleUserIds = new Set(users.map((user) => user.id));
+  const sectionsByDate: Record<string, DaySections> = {};
+
+  for (const entry of entries) {
+    if (!visibleUserIds.has(entry.userId)) continue;
+    const identity = identities.get(entry.userId) ?? UNKNOWN_IDENTITY;
+    sectionsByDate[entry.date] = sectionsByDate[entry.date] ?? createEmptySections();
+    sectionsByDate[entry.date].teletrabajo.push({
+      userId: entry.userId,
+      userName: identity.name,
+      userEmail: null,
+    });
+  }
+
+  for (const cell of calendar.cells) {
+    if (cell && !sectionsByDate[cell.date]) sectionsByDate[cell.date] = createEmptySections();
+  }
+
+  return sectionsByDate;
+}
+
 export async function getUserCalendar(userId: string, year: number, month: number) {
   const range = getMonthRange(year, month);
   const [entries, pendingDates] = await Promise.all([
@@ -188,8 +215,21 @@ async function getCalendarUsersForViewer(viewer: SessionUser) {
   return filterVisibleStaff(await findEmployeesByCoordinatorId(visibility.coordinatorId));
 }
 
-export async function getCalendarDayDetail(viewer: SessionUser, date: string) {
+export async function getEmployeeTeamWfhDayDetail(viewer: SessionUser, date: string) {
   if (!isValidDateKey(date)) return null;
+  if (viewer.role !== "employee") return null;
+  const visibility = await findEmployeeTeamVisibility(viewer.id);
+  if (!visibility?.teamWfhVisible) return null;
+
+  const users = await filterVisibleStaff(await findEmployeesByCoordinatorId(visibility.coordinatorId));
+  const entries = await findWorkFromHomeDaysByUserIds(users.map((user) => user.id), date, date);
+  const identities = await resolveUserIdentities(users);
+  const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)));
+  return buildWfhOnlySections(entries, users, identities, calendar)[date] ?? createEmptySections();
+}
+
+export async function getCalendarDayDetail(viewer: SessionUser, date: string) {
+  if (!isValidDateKey(date) || viewer.role === "employee") return null;
   const users = await getCalendarUsersForViewer(viewer);
   if (!users) return null;
 
@@ -292,7 +332,19 @@ export async function getTeamCalendarForViewer(viewer: SessionUser, year: number
     return null;
   }
 
-  return getCoordinatorCalendarOverview(teamVisibility.coordinatorId, year, month);
+  const employees = await filterVisibleStaff(await findEmployeesByCoordinatorId(teamVisibility.coordinatorId));
+  const range = getMonthRange(year, month);
+  const calendar = getCalendarDays(year, month);
+  const [entries, identities] = await Promise.all([
+    findWorkFromHomeDaysByUserIds(employees.map((employee) => employee.id), range.start, range.end),
+    resolveUserIdentities(employees),
+  ]);
+  const sectionsByDate = buildWfhOnlySections(entries, employees, identities, calendar);
+
+  return {
+    ...calendar,
+    daySummariesByDate: buildDaySummaries(sectionsByDate, calendar),
+  };
 }
 
 export async function getCoordinatorEmployeeCalendar(coordinatorId: string, employeeId: string, year: number, month: number) {
@@ -333,6 +385,10 @@ export async function setWorkFromHomeDay(userId: string, date: string, enabled: 
 }
 
 export async function setWorkFromHomeDayForActor(actor: SessionUser, targetUserId: string, date: string, enabled: boolean) {
+  if (actor.role === "coordinator" && targetUserId === actor.id && date < getMadridTodayDateKey()) {
+    throw new Error("No puedes modificar días de teletrabajo anteriores a hoy.");
+  }
+
   await assertCanEditWorkFromHomeDays(actor, targetUserId);
   await setWorkFromHomeDay(targetUserId, date, enabled);
 }
@@ -376,6 +432,8 @@ export async function replicateWorkFromHomeDays(
   await assertCanEditWorkFromHomeDays(actor, input.targetUserId);
 
   const sourceRange = getMonthRange(input.year, input.month);
+  const preserveOwnHistory = actor.role === "coordinator" && input.targetUserId === actor.id;
+  const effectiveStart = preserveOwnHistory ? (sourceRange.start > getMadridTodayDateKey() ? sourceRange.start : getMadridTodayDateKey()) : sourceRange.start;
   const sourceEntries = await findUserWorkFromHomeDays(input.targetUserId, sourceRange.start, sourceRange.end);
   const sourceWeekdays = new Set(sourceEntries.map((entry) => getWeekdayFromDateKey(entry.date)));
 
@@ -389,7 +447,7 @@ export async function replicateWorkFromHomeDays(
   ];
   const values = targetMonths.flatMap(({ year, month }) =>
     getCalendarDays(year, month).cells.flatMap((cell) => {
-      if (!cell || cell.isWeekend || cell.isHoliday || !sourceWeekdays.has(getWeekdayFromDateKey(cell.date))) {
+      if (!cell || cell.date < effectiveStart || cell.isWeekend || cell.isHoliday || !sourceWeekdays.has(getWeekdayFromDateKey(cell.date))) {
         return [];
       }
 
@@ -399,5 +457,7 @@ export async function replicateWorkFromHomeDays(
 
   const lastMonth = targetMonths[targetMonths.length - 1];
   const targetRange = getMonthRange(lastMonth.year, lastMonth.month);
-  await replaceWorkFromHomeDays(input.targetUserId, sourceRange.start, targetRange.end, values);
+  if (effectiveStart <= targetRange.end) {
+    await replaceWorkFromHomeDays(input.targetUserId, effectiveStart, targetRange.end, values);
+  }
 }

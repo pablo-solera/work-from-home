@@ -16,6 +16,7 @@ type DayCellProps = {
   isToday: boolean;
   isWeekend: boolean;
   month: number;
+  minimumEditableDate?: string;
   pending: boolean;
   requestMode: RequestMode | null;
   requestSelected: boolean;
@@ -25,7 +26,7 @@ type DayCellProps = {
   onRequestClick: (date: string) => void;
 };
 
-export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isToday, isWeekend, month, pending, requestMode, requestSelected, selected, targetUserId, year, onRequestClick }: DayCellProps) {
+export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isToday, isWeekend, month, minimumEditableDate, pending, requestMode, requestSelected, selected, targetUserId, year, onRequestClick }: DayCellProps) {
   if (isWeekend || isHoliday) {
     return <div className={`min-h-24 rounded-xl border p-3 text-zinc-400 ${isToday ? "border-zinc-950 bg-zinc-100 ring-2 ring-zinc-950/10" : "border-zinc-200 bg-zinc-50"}`}><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold"}>{dayNumber}</span><p className="mt-4 text-xs">{holidayName ?? "Fin de semana"}</p></div>;
   }
@@ -36,7 +37,7 @@ export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isTo
     return <button aria-label={`${formatDateKeyForDisplay(date)}, ${label}`} className={`cursor-pointer min-h-24 w-full rounded-xl border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 ${requestSelected ? "border-sky-500 bg-sky-100/70" : selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""} disabled:cursor-not-allowed disabled:opacity-60`} disabled={!canSelect} onClick={() => onRequestClick(date)} type="button"><div className="flex h-full flex-col justify-between gap-3"><div className="flex items-start justify-between"><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>{pending ? <PendingIndicator /> : null}</div><span className="rounded-lg border border-zinc-300 px-2 py-1 text-center text-xs font-medium text-zinc-700">{label}</span></div></button>;
   }
 
-  if (!canEdit) {
+  if (!canEdit || (minimumEditableDate && date < minimumEditableDate)) {
     return <div className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}><div className="flex h-full flex-col justify-between gap-4"><div className="flex items-start justify-between"><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>{pending ? <PendingIndicator /> : null}</div><p className={selected ? "text-xs font-medium text-emerald-800" : "text-xs text-zinc-500"}>{selected ? "Teletrabajo" : "Sin asignar"}</p></div></div>;
   }
 
