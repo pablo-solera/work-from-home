@@ -1,5 +1,5 @@
-import { PanelSkeleton } from "@/components/common/panel-skeleton";
+import { CalendarSkeleton } from "@/components/common/calendar-skeleton";
 
 export default function CoverageLoading() {
-  return <PanelSkeleton label="Cargando cobertura" />;
+  return <CalendarSkeleton label="Cargando cobertura" withFilter />;
 }

@@ -5,6 +5,7 @@ import { formatDateKeyForDisplay, getMadridTodayDateKey } from "@/lib/calendar/d
 import { MarkSubstitutionReadButton } from "@/components/requests/mark-substitution-read-button";
 import { RequestDecisionForm } from "@/components/requests/request-decision-form";
 import { CancelRequestDateButton } from "@/components/requests/cancel-request-date-button";
+import { RequestCardSkeleton } from "@/components/common/request-skeleton";
 import type { RequestFilters, RequestPage } from "@/lib/requests/request-service";
 
 const statusLabels = { accepted: "Aceptado", pending: "Pendiente", rejected: "Rechazado", cancelled: "Cancelado" } as const;
@@ -94,8 +95,9 @@ function RequestList({ initialPage, coordinatorView = false, filtered = false, f
           ) : null}
         </article>
       ))}
+      {loading ? <div aria-label="Cargando más solicitudes" className="space-y-3" role="status"><RequestCardSkeleton coordinatorView={coordinatorView} /><RequestCardSkeleton coordinatorView={coordinatorView} /></div> : null}
       <div aria-live="polite" className="py-3 text-center text-sm text-zinc-500" ref={sentinelRef}>
-        {loading ? "Cargando más solicitudes..." : error ? <button className="cursor-pointer font-medium text-zinc-950 underline" onClick={() => { setError(null); setRetryCount((count) => count + 1); }} type="button">Reintentar</button> : nextCursor ? "Cargando más solicitudes..." : "No hay más solicitudes."}
+        {error ? <button className="cursor-pointer font-medium text-zinc-950 underline" onClick={() => { setError(null); setRetryCount((count) => count + 1); }} type="button">Reintentar</button> : nextCursor ? "" : "No hay más solicitudes."}
         {error ? <span className="ml-2 text-red-600">{error}</span> : null}
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { GeneratedAvatar } from "@/components/common/generated-avatar";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
 import { Dialog } from "@/components/common/dialog";
+import { DayDetailSkeleton } from "@/components/common/day-detail-skeleton";
 import { ABSENCE_SECTIONS, type AbsenceSectionKey } from "@/lib/absences/absence-sections";
 import type { DaySections } from "@/lib/absences/absence-service";
 import { formatDateKeyForDisplay } from "@/lib/calendar/dates";
@@ -54,7 +55,7 @@ export function AdminDayModal({ day, detail, error, loading, onClose }: AdminDay
 
         <div className="mt-6 max-h-[28rem] space-y-3 overflow-auto overscroll-contain">
           {loading ? (
-            <p aria-live="polite" className="text-sm text-zinc-500">Cargando detalle…</p>
+            <DayDetailSkeleton />
           ) : error ? (
             <p aria-live="polite" className="text-sm text-red-600">{error}</p>
           ) : hasPeople ? (

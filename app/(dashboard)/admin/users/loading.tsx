@@ -1,5 +1,5 @@
-import { PanelSkeleton } from "@/components/common/panel-skeleton";
+import { UsersSkeleton } from "@/components/common/users-skeleton";
 
 export default function AdminUsersLoading() {
-  return <PanelSkeleton label="Cargando usuarios" />;
+  return <UsersSkeleton />;
 }

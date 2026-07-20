@@ -1,5 +1,5 @@
-import { PanelSkeleton } from "@/components/common/panel-skeleton";
+import { CalendarSkeleton } from "@/components/common/calendar-skeleton";
 
 export default function AdminLoading() {
-  return <PanelSkeleton label="Cargando calendario" />;
+  return <CalendarSkeleton label="Cargando calendario" withFilter withLinks />;
 }
