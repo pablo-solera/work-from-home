@@ -2,6 +2,7 @@ import Link from "next/link";
 import { UserMenu } from "@/components/layout/user-menu";
 import { RequestBadges } from "@/components/layout/request-badges";
 import { EmployeeRequestSync } from "@/components/layout/employee-request-sync";
+import { ActiveNavLink } from "@/components/layout/active-nav-link";
 import type { SessionUser } from "@/lib/auth/session";
 import type { RequestNotificationSummary } from "@/lib/requests/request-service";
 
@@ -14,11 +15,11 @@ export function AppHeader({ canCover = false, canViewTeam = false, notificationS
 
         </div>
         <nav className="flex items-center gap-4 text-sm">
-          <Link className="cursor-pointer text-zinc-700 hover:text-zinc-950" href="/calendar">Mi calendario</Link>
-          {user.role !== "admin" ? <Link className="inline-flex cursor-pointer items-center text-zinc-700 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" href="/requests"><span>Solicitudes</span>{user.role === "coordinator" && notificationSummary ? <RequestBadges key={notificationSummary.revision ?? "empty"} {...notificationSummary} /> : null}</Link> : null}
-          {user.role === "coordinator" || canViewTeam ? <Link className="cursor-pointer text-zinc-700 hover:text-zinc-950" href="/team">Mi equipo</Link> : null}
-          {canCover ? <Link className="cursor-pointer text-zinc-700 hover:text-zinc-950" href="/coverage">Cobertura</Link> : null}
-          {user.role === "admin" ? <Link className="cursor-pointer text-zinc-700 hover:text-zinc-950" href="/admin">Admin</Link> : null}
+          <ActiveNavLink href="/calendar">Mi calendario</ActiveNavLink>
+          {user.role !== "admin" ? <ActiveNavLink href="/requests"><span>Solicitudes</span>{user.role === "coordinator" && notificationSummary ? <RequestBadges key={notificationSummary.revision ?? "empty"} {...notificationSummary} /> : null}</ActiveNavLink> : null}
+          {user.role === "coordinator" || canViewTeam ? <ActiveNavLink href="/team">Mi equipo</ActiveNavLink> : null}
+          {canCover ? <ActiveNavLink href="/coverage">Cobertura</ActiveNavLink> : null}
+          {user.role === "admin" ? <ActiveNavLink href="/admin" section>Admin</ActiveNavLink> : null}
           <UserMenu user={user} />
           {user.role === "employee" ? <EmployeeRequestSync /> : null}
         </nav>
