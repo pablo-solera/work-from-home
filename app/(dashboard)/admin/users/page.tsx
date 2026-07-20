@@ -10,7 +10,8 @@ type AdminUsersPageProps = {
 
 export default async function AdminUsersPage({ searchParams }: AdminUsersPageProps) {
   const params = await searchParams;
-  const query = params?.query?.trim().toLowerCase() ?? "";
+  const queryParam = params?.query?.trim() ?? "";
+  const query = queryParam.toLowerCase();
   const requestedPage = Number.parseInt(params?.page ?? "1", 10);
   const admin = await requireAdmin();
   const [allCoordinators, allUsers] = await Promise.all([findCoordinators(), findUsersForAdmin()]);
@@ -69,7 +70,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
         </p>
       </div>
 
-      <UsersTable coordinators={coordinatorOptions} currentUserId={admin.id} page={page} query={query} totalPages={totalPages} totalUsers={filteredUsers.length} users={managedUsers} />
+       <UsersTable coordinators={coordinatorOptions} currentUserId={admin.id} page={page} query={queryParam} totalPages={totalPages} totalUsers={filteredUsers.length} users={managedUsers} />
     </section>
   );
 }

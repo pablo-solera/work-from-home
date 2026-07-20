@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { ChevronLeftIcon } from "@/components/icons/chevron-left-icon";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import { SyncUsersButton } from "./sync-users-button";
 import { UserFormModal } from "./user-form-modal";
 
@@ -54,7 +56,29 @@ const roleBadgeClasses: Record<ManagedUser["role"], string> = {
 
 export function UsersTable({ coordinators, currentUserId, page, query, totalPages, totalUsers, users }: UsersTableProps) {
   const [modal, setModal] = useState<ModalState>(null);
+  const [search, setSearch] = useState(query);
+  const debouncedSearch = useDebouncedValue(search);
+  const pathname = usePathname();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const pageHref = (nextPage: number) => `/admin/users?query=${encodeURIComponent(query)}&page=${nextPage}`;
+
+  useEffect(() => {
+    if (debouncedSearch === query) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const trimmedSearch = debouncedSearch.trim();
+
+    if (trimmedSearch) {
+      params.set("query", trimmedSearch);
+    } else {
+      params.delete("query");
+    }
+
+    params.delete("page");
+    const nextQuery = params.toString();
+    startTransition(() => router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false }));
+  }, [debouncedSearch, pathname, query, router]);
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -67,12 +91,11 @@ export function UsersTable({ coordinators, currentUserId, page, query, totalPage
         <SyncUsersButton />
       </div>
 
-      <form action="/admin/users" className="mt-5 flex max-w-md items-end gap-2" method="get">
+      <form aria-busy={isPending} className="mt-5 max-w-md" onSubmit={(event) => event.preventDefault()}>
         <label className="block flex-1 space-y-2">
           <span className="text-sm font-medium text-zinc-700">Buscar</span>
-          <input className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950 focus-visible:ring-2 focus-visible:ring-zinc-950" defaultValue={query} name="query" placeholder="Nombre, email, rol o coordinador…" type="search" />
+          <input className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950 focus-visible:ring-2 focus-visible:ring-zinc-950" onChange={(event) => setSearch(event.target.value)} placeholder="Nombre, email, rol o coordinador…" type="search" value={search} />
         </label>
-        <button className="rounded-lg bg-zinc-950 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" type="submit">Buscar</button>
       </form>
 
       <div className="mt-6 overflow-x-auto">
