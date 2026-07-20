@@ -15,11 +15,13 @@ export function AppHeader({ canCover = false, canViewTeam = false, notificationS
 
         </div>
         <nav className="flex items-center gap-4 text-sm">
-          <ActiveNavLink href="/calendar">Mi calendario</ActiveNavLink>
-          {user.role !== "admin" ? <ActiveNavLink href="/requests"><span>Solicitudes</span>{user.role === "coordinator" && notificationSummary ? <RequestBadges key={notificationSummary.revision ?? "empty"} {...notificationSummary} /> : null}</ActiveNavLink> : null}
-          {user.role === "coordinator" || canViewTeam ? <ActiveNavLink href="/team">Mi equipo</ActiveNavLink> : null}
-          {canCover ? <ActiveNavLink href="/coverage">Cobertura</ActiveNavLink> : null}
-          {user.role === "admin" ? <ActiveNavLink href="/admin" section>Admin</ActiveNavLink> : null}
+          <div className="flex items-center gap-2">
+            <ActiveNavLink href="/calendar">Mi calendario</ActiveNavLink>
+            {user.role !== "admin" ? <ActiveNavLink href="/requests"><span>Solicitudes</span>{user.role === "coordinator" && notificationSummary ? <RequestBadges key={notificationSummary.revision ?? "empty"} {...notificationSummary} /> : null}</ActiveNavLink> : null}
+            {user.role === "coordinator" || canViewTeam ? <ActiveNavLink href="/team">Mi equipo</ActiveNavLink> : null}
+            {canCover ? <ActiveNavLink href="/coverage">Cobertura</ActiveNavLink> : null}
+            {user.role === "admin" ? <ActiveNavLink href="/admin" section>Admin</ActiveNavLink> : null}
+          </div>
           <UserMenu user={user} />
           {user.role === "employee" ? <EmployeeRequestSync /> : null}
         </nav>
