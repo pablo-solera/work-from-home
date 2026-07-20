@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { UserMenu } from "@/components/layout/user-menu";
 import { RequestBadges } from "@/components/layout/request-badges";
+import { EmployeeRequestSync } from "@/components/layout/employee-request-sync";
 import type { SessionUser } from "@/lib/auth/session";
 import type { RequestNotificationSummary } from "@/lib/requests/request-service";
 
@@ -19,6 +20,7 @@ export function AppHeader({ canCover = false, canViewTeam = false, notificationS
           {canCover ? <Link className="cursor-pointer text-zinc-700 hover:text-zinc-950" href="/coverage">Cobertura</Link> : null}
           {user.role === "admin" ? <Link className="cursor-pointer text-zinc-700 hover:text-zinc-950" href="/admin">Admin</Link> : null}
           <UserMenu user={user} />
+          {user.role === "employee" ? <EmployeeRequestSync /> : null}
         </nav>
       </div>
     </header>

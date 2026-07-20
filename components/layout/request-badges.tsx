@@ -9,7 +9,7 @@ type RequestBadgeSummary = {
   revision: string | null;
 };
 
-const POLL_INTERVAL_MS = 20_000;
+const POLL_INTERVAL_MS = 120_000;
 
 export function RequestBadges(initialSummary: RequestBadgeSummary) {
   const pathname = usePathname();
@@ -18,7 +18,7 @@ export function RequestBadges(initialSummary: RequestBadgeSummary) {
   const summaryRef = useRef(initialSummary);
   const requestRef = useRef<AbortController | null>(null);
   const refreshScheduledRef = useRef(false);
-  const hasPolledRef = useRef(false);
+  const hasPolledRef = useRef(true);
 
   const fetchSummary = useCallback(async (refreshPage: boolean) => {
     if (document.visibilityState !== "visible" || requestRef.current) return;
@@ -51,6 +51,9 @@ export function RequestBadges(initialSummary: RequestBadgeSummary) {
 
   useEffect(() => {
     const poll = () => { void fetchSummary(true); };
+    const events = new EventSource("/api/requests/events");
+    events.addEventListener("ready", poll);
+    events.addEventListener("requests-changed", poll);
     const interval = window.setInterval(poll, POLL_INTERVAL_MS);
     const handleVisibility = () => {
       if (document.visibilityState === "visible") poll();
@@ -60,6 +63,7 @@ export function RequestBadges(initialSummary: RequestBadgeSummary) {
 
     return () => {
       window.clearInterval(interval);
+      events.close();
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("focus", poll);
       requestRef.current?.abort();
