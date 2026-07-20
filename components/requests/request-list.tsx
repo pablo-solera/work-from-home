@@ -1,7 +1,11 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { formatDateKeyForDisplay, getMadridTodayDateKey } from "@/lib/calendar/dates";
 import { MarkSubstitutionReadButton } from "@/components/requests/mark-substitution-read-button";
 import { RequestDecisionForm } from "@/components/requests/request-decision-form";
 import { CancelRequestDateButton } from "@/components/requests/cancel-request-date-button";
+import type { RequestFilters, RequestPage } from "@/lib/requests/request-service";
 
 const statusLabels = { accepted: "Aceptado", pending: "Pendiente", rejected: "Rechazado", cancelled: "Cancelado" } as const;
 const statusStyles = {
@@ -24,7 +28,41 @@ type RequestListItem = {
   coordinatorAcknowledgedAt?: Date | string | null;
 };
 
-export function RequestList({ requests, coordinatorView = false, filtered = false }: { coordinatorView?: boolean; filtered?: boolean; requests: RequestListItem[] }) {
+function RequestList({ initialPage, coordinatorView = false, filtered = false, filters }: { coordinatorView?: boolean; filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
+  const [requests, setRequests] = useState(initialPage.requests);
+  const [nextCursor, setNextCursor] = useState(initialPage.nextCursor);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !nextCursor || error) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries[0]?.isIntersecting || loading) return;
+
+      setLoading(true);
+      setError(null);
+      const params = new URLSearchParams({ date: filters.date, status: filters.status, cursor: nextCursor });
+      fetch(`/api/requests/list?${params.toString()}`, { cache: "no-store" })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("No se pudieron cargar más solicitudes.");
+          return response.json() as Promise<RequestPage<RequestListItem>>;
+        })
+        .then((page) => {
+          setRequests((current) => [...current, ...page.requests]);
+          setNextCursor(page.nextCursor);
+        })
+        .catch((cause) => setError(cause instanceof Error ? cause.message : "No se pudieron cargar más solicitudes."))
+        .finally(() => setLoading(false));
+    }, { rootMargin: "320px 0px" });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [error, filters.date, filters.status, loading, nextCursor, retryCount]);
+
   if (requests.length === 0) {
     return <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-600">{filtered ? "No hay solicitudes que coincidan con los filtros seleccionados." : "No hay solicitudes."}</p>;
   }
@@ -56,14 +94,22 @@ export function RequestList({ requests, coordinatorView = false, filtered = fals
           ) : null}
         </article>
       ))}
+      <div aria-live="polite" className="py-3 text-center text-sm text-zinc-500" ref={sentinelRef}>
+        {loading ? "Cargando más solicitudes..." : error ? <button className="cursor-pointer font-medium text-zinc-950 underline" onClick={() => { setError(null); setRetryCount((count) => count + 1); }} type="button">Reintentar</button> : nextCursor ? "Cargando más solicitudes..." : "No hay más solicitudes."}
+        {error ? <span className="ml-2 text-red-600">{error}</span> : null}
+      </div>
     </div>
   );
 }
 
-export function CoordinatorRequestList({ filtered = false, requests }: { filtered?: boolean; requests: RequestListItem[] }) {
-  return <RequestList coordinatorView filtered={filtered} requests={requests} />;
+export function CoordinatorRequestList({ filtered = false, initialPage, filters }: { filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
+  return <RequestList key={getPageKey(initialPage)} coordinatorView filtered={filtered} filters={filters} initialPage={initialPage} />;
 }
 
-export function RequesterRequestList({ filtered = false, requests }: { filtered?: boolean; requests: RequestListItem[] }) {
-  return <RequestList filtered={filtered} requests={requests} />;
+export function RequesterRequestList({ filtered = false, initialPage, filters }: { filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
+  return <RequestList key={getPageKey(initialPage)} filtered={filtered} filters={filters} initialPage={initialPage} />;
+}
+
+function getPageKey(page: RequestPage<RequestListItem>) {
+  return page.requests.map((request) => `${request.id}:${request.status}:${request.decisionComment ?? ""}:${request.coordinatorAcknowledgedAt ?? ""}`).join("|") || "empty";
 }

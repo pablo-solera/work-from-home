@@ -10,6 +10,10 @@ export type RequestFormState = { error?: string; message?: string; ok?: boolean 
 export type RequestKind = "additional" | "substitution";
 export type RequestStatusFilter = "all" | "pending" | "accepted" | "rejected" | "cancelled";
 export type RequestFilters = { date: RequestDateFilter; status: RequestStatusFilter };
+export type RequestCursor = { createdAt: string; id: string };
+export type RequestPage<T> = { requests: T[]; nextCursor: string | null };
+
+export const REQUEST_PAGE_SIZE = 10;
 
 type RequestInput = {
   kind: RequestKind;
@@ -179,14 +183,60 @@ function requestWhere(filters: RequestFilters, userColumn: typeof wfhChangeReque
   return and(...conditions);
 }
 
-export async function getRequestsForRequester(userId: string, filters: RequestFilters) {
+function decodeCursor(value: string | undefined): RequestCursor | undefined {
+  if (!value) return undefined;
+
+  try {
+    const decoded = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<RequestCursor>;
+    if (typeof decoded.createdAt !== "string" || typeof decoded.id !== "string" || !decoded.id) return undefined;
+    const createdAt = new Date(decoded.createdAt);
+    if (Number.isNaN(createdAt.getTime())) return undefined;
+    return { createdAt: createdAt.toISOString(), id: decoded.id };
+  } catch {
+    return undefined;
+  }
+}
+
+function encodeCursor(request: { createdAt: Date; id: string }) {
+  return Buffer.from(JSON.stringify({ createdAt: request.createdAt.toISOString(), id: request.id })).toString("base64url");
+}
+
+function requestPageWhere(
+  filters: RequestFilters,
+  userColumn: typeof wfhChangeRequests.requesterId | typeof wfhChangeRequests.coordinatorId,
+  userId: string,
+  cursor?: RequestCursor,
+) {
+  const baseWhere = requestWhere(filters, userColumn, userId);
+  if (!cursor) return baseWhere;
+
+  return and(
+    baseWhere,
+    sql`(${wfhChangeRequests.createdAt} < ${cursor.createdAt} OR (${wfhChangeRequests.createdAt} = ${cursor.createdAt} AND ${wfhChangeRequests.id} < ${cursor.id}))`,
+  );
+}
+
+export async function getRequestsForRequester(userId: string, filters: RequestFilters, cursorValue?: string) {
+  const cursor = decodeCursor(cursorValue);
   const requests = await getDb().query.wfhChangeRequests.findMany({
-    where: requestWhere(filters, wfhChangeRequests.requesterId, userId),
-    orderBy: desc(wfhChangeRequests.createdAt),
+    where: requestPageWhere(filters, wfhChangeRequests.requesterId, userId, cursor),
+    orderBy: [desc(wfhChangeRequests.createdAt), desc(wfhChangeRequests.id)],
+    limit: REQUEST_PAGE_SIZE + 1,
     with: { dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) } },
   });
 
-  return requests;
+  return toRequestPage(requests);
+}
+
+function toRequestPage<T extends { id: string; createdAt: Date }>(requests: T[]): RequestPage<T> {
+  const hasNextPage = requests.length > REQUEST_PAGE_SIZE;
+  const page = hasNextPage ? requests.slice(0, REQUEST_PAGE_SIZE) : requests;
+  const lastRequest = page.at(-1);
+
+  return {
+    requests: page,
+    nextCursor: hasNextPage && lastRequest ? encodeCursor(lastRequest) : null,
+  };
 }
 
 export async function getPendingRequestedDates(userId: string, start: string, end: string) {
@@ -253,22 +303,34 @@ export async function markSubstitutionAsRead(coordinatorId: string, requestId: s
   return updated.length > 0;
 }
 
-export async function getRequestsForCoordinator(coordinatorId: string, filters: RequestFilters) {
+export async function getRequestsForCoordinator(coordinatorId: string, filters: RequestFilters, cursorValue?: string): Promise<RequestPage<Awaited<ReturnType<typeof getCoordinatorRequests>>[number] & { requesterName: string; requesterEmail: string }>> {
+  const cursor = decodeCursor(cursorValue);
+  const requests = await getCoordinatorRequests(coordinatorId, filters, cursor);
+  const page = toRequestPage(requests);
+  const identities = await resolveUserIdentities(page.requests.map((request) => request.requester));
+
+  return {
+    ...page,
+    requests: page.requests.map((request) => ({
+      ...request,
+      requesterName: identities.get(request.requester.id)?.name ?? request.requester.fallbackName ?? "Usuario",
+      requesterEmail: identities.get(request.requester.id)?.email ?? request.requester.fallbackEmail ?? "",
+    })),
+  };
+}
+
+async function getCoordinatorRequests(coordinatorId: string, filters: RequestFilters, cursor?: RequestCursor) {
   const requests = await getDb().query.wfhChangeRequests.findMany({
-    where: requestWhere(filters, wfhChangeRequests.coordinatorId, coordinatorId),
-    orderBy: desc(wfhChangeRequests.createdAt),
+    where: requestPageWhere(filters, wfhChangeRequests.coordinatorId, coordinatorId, cursor),
+    orderBy: [desc(wfhChangeRequests.createdAt), desc(wfhChangeRequests.id)],
+    limit: REQUEST_PAGE_SIZE + 1,
     with: {
       dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) },
       requester: true,
     },
   });
-  const identities = await resolveUserIdentities(requests.map((request) => request.requester));
 
-  return requests.map((request) => ({
-    ...request,
-    requesterName: identities.get(request.requester.id)?.name ?? request.requester.fallbackName ?? "Usuario",
-    requesterEmail: identities.get(request.requester.id)?.email ?? request.requester.fallbackEmail ?? "",
-  }));
+  return requests;
 }
 
 async function getRequestWithDates(id: string) {

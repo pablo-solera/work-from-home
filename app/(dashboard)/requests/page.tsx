@@ -24,7 +24,7 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
   }
 
   if (user.role === "coordinator") {
-    const requests = await getRequestsForCoordinator(user.id, filters);
+     const requests = await getRequestsForCoordinator(user.id, filters);
     return (
       <section className="space-y-6">
         <div>
@@ -33,7 +33,7 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
           <p className="mt-2 text-sm text-zinc-600">Revisa y decide las solicitudes de tu equipo.</p>
         </div>
         <RequestFilters {...filters} />
-        <CoordinatorRequestList filtered={filters.date !== "all" || filters.status !== "all"} requests={requests} />
+         <CoordinatorRequestList filtered={filters.date !== "all" || filters.status !== "all"} initialPage={requests} filters={filters} />
       </section>
     );
   }
@@ -47,7 +47,7 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
         <p className="mt-2 text-sm text-zinc-600">Consulta el estado de tus solicitudes. Puedes crear nuevas solicitudes desde tu calendario.</p>
       </div>
       <RequestFilters {...filters} />
-      <RequesterRequestList filtered={filters.date !== "all" || filters.status !== "all"} requests={requests} />
+       <RequesterRequestList filtered={filters.date !== "all" || filters.status !== "all"} initialPage={requests} filters={filters} />
     </section>
   );
 }
