@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) return new Response("No autenticado", { status: 401 });
-  if (user.role !== "coordinator" && user.role !== "employee") return new Response("No autorizado", { status: 403 });
+  if (user.role !== "admin" && user.role !== "coordinator" && user.role !== "employee") return new Response("No autorizado", { status: 403 });
   const currentUser = await findUserById(user.id);
   if (!currentUser || currentUser.role !== user.role) return new Response("No autorizado", { status: 403 });
 

@@ -94,7 +94,7 @@ export function MonthCalendar({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-sky-950">¿Necesitas cambiar tu planificación?</p>
-              <p className="mt-1 text-xs text-sky-800">Solicita días adicionales a tu coordinador o aplica una sustitución inmediatamente.</p>
+                <p className="mt-1 text-xs text-sky-800">Solicita días adicionales a tu coordinador o aplica una sustitución inmediatamente.</p>
               </div>
               <button className="cursor-pointer rounded-lg bg-sky-700 px-3 py-2 text-sm font-medium text-white hover:bg-sky-800" onClick={() => setMode("chooser")} type="button">Solicitar cambio</button>
             </div>
@@ -153,6 +153,10 @@ function SelectionBanner({ mode, additionalCount, replacementSource, replacement
 function RequestReviewModal({ dates, kind, replacedDate, onClose }: { dates: string[]; kind: "additional" | "substitution"; replacedDate: string | null; onClose: () => void }) {
   const { showToast } = useToast();
   const [state, action, pending] = useActionState(async (previousState: { error?: string; message?: string; ok?: boolean }, formData: FormData) => {
+    if (formData.get("kind") === "additional" && !String(formData.get("comment") ?? "").trim()) {
+      return { error: "Debes indicar un comentario para solicitar días adicionales." };
+    }
+
     const result = await createWfhRequestAction(previousState, formData);
     if (result.ok) {
       showToast(result.message ?? "Solicitud enviada correctamente.");
@@ -162,10 +166,22 @@ function RequestReviewModal({ dates, kind, replacedDate, onClose }: { dates: str
   const visibleDates = dates.map(formatDateKeyForDisplay).join(", ");
 
   useEffect(() => {
+    const textarea = document.querySelector<HTMLTextAreaElement>('textarea[name="comment"]');
+    const marker = textarea?.parentElement?.querySelector("span");
+
+    if (!textarea || !marker) return;
+
+    const required = kind === "additional";
+    textarea.required = required;
+    textarea.setAttribute("aria-required", String(required));
+    marker.textContent = required ? "*" : "(opcional)";
+  }, [kind]);
+
+  useEffect(() => {
     if (state.ok) {
       onClose();
     }
   }, [onClose, state.ok]);
 
-  return <Dialog onDismiss={onClose}><Dialog.Panel className="max-w-md"><form action={action} className="space-y-4"><div className="flex items-start justify-between gap-4"><div><Dialog.Title>Revisar solicitud</Dialog.Title><p className="mt-1 text-sm text-zinc-600">{kind === "substitution" ? "El cambio se aplicará inmediatamente y quedará registrado." : "Tu coordinador tendrá que aprobarla antes de aplicarla."}</p></div><Dialog.Close onClick={onClose} /></div><div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-700">{kind === "substitution" ? <p>Cambiar <strong>{formatDateKeyForDisplay(replacedDate ?? "")}</strong> por <strong>{visibleDates}</strong></p> : <p>Días adicionales: <strong>{visibleDates}</strong></p>}</div><input name="kind" type="hidden" value={kind} /><input name="requestedDates" type="hidden" value={dates.join(",")} />{kind === "substitution" ? <input name="replacedDates" type="hidden" value={replacedDate ?? ""} /> : null}<label className="block text-sm font-medium text-zinc-800">Comentario <span className="font-normal text-zinc-500">(opcional)</span><textarea className="mt-1 min-h-20 w-full rounded-lg border border-zinc-300 px-3 py-2 font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" name="comment" /></label>{state.error ? <p aria-live="polite" className="text-sm text-red-600">{state.error}</p> : null}{state.message ? <p aria-live="polite" className="text-sm text-emerald-700">{state.message}</p> : null}<div className="flex justify-end gap-2"><button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} onClick={onClose} type="button">Cancelar</button><button className="cursor-pointer rounded-lg bg-zinc-950 px-3 py-2 text-sm font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} type="submit">{pending ? "Aplicando…" : kind === "substitution" ? "Aplicar sustitución" : "Enviar solicitud"}</button></div></form></Dialog.Panel></Dialog>;
+  return <Dialog onDismiss={onClose}><Dialog.Panel className="max-w-md"><form action={action} className="space-y-4"><div className="flex items-start justify-between gap-4"><div><Dialog.Title>Revisar solicitud</Dialog.Title><p className="mt-1 text-sm text-zinc-600">{kind === "substitution" ? "El cambio se aplicará inmediatamente y quedará registrado." : "Un administrador tendrá que aprobarla antes de aplicarla."}</p></div><Dialog.Close onClick={onClose} /></div><div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-700">{kind === "substitution" ? <p>Cambiar <strong>{formatDateKeyForDisplay(replacedDate ?? "")}</strong> por <strong>{visibleDates}</strong></p> : <p>Días adicionales: <strong>{visibleDates}</strong></p>}</div><input name="kind" type="hidden" value={kind} /><input name="requestedDates" type="hidden" value={dates.join(",")} />{kind === "substitution" ? <input name="replacedDates" type="hidden" value={replacedDate ?? ""} /> : null}<label className="block text-sm font-medium text-zinc-800">Comentario <span className="font-normal text-zinc-500">(opcional)</span><textarea className="mt-1 min-h-20 w-full rounded-lg border border-zinc-300 px-3 py-2 font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" name="comment" /></label>{state.error ? <p aria-live="polite" className="text-sm text-red-600">{state.error}</p> : null}{state.message ? <p aria-live="polite" className="text-sm text-emerald-700">{state.message}</p> : null}<div className="flex justify-end gap-2"><button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} onClick={onClose} type="button">Cancelar</button><button className="cursor-pointer rounded-lg bg-zinc-950 px-3 py-2 text-sm font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} type="submit">{pending ? "Aplicando…" : kind === "substitution" ? "Aplicar sustitución" : "Enviar solicitud"}</button></div></form></Dialog.Panel></Dialog>;
 }

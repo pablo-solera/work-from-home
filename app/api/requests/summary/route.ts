@@ -9,10 +9,10 @@ export async function GET() {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
-  if (user.role !== "coordinator") {
+  if (user.role !== "admin" && user.role !== "coordinator") {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const summary = await getRequestNotificationSummary(user.id);
+  const summary = await getRequestNotificationSummary(user.id, user.role);
   return NextResponse.json(summary, { headers: { "Cache-Control": "private, no-store" } });
 }

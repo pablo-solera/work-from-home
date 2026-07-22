@@ -20,7 +20,7 @@ export function AppHeader({ canCover = false, canViewTeam = false, notificationS
             {user.role !== "admin" ? <ActiveNavLink href="/requests"><span>Solicitudes</span>{user.role === "coordinator" && notificationSummary ? <RequestBadges key={notificationSummary.revision ?? "empty"} {...notificationSummary} /> : null}</ActiveNavLink> : null}
             {user.role === "coordinator" || canViewTeam ? <ActiveNavLink href="/team">Mi equipo</ActiveNavLink> : null}
             {canCover ? <ActiveNavLink href="/coverage">Cobertura</ActiveNavLink> : null}
-            {user.role === "admin" ? <ActiveNavLink href="/admin" section>Admin</ActiveNavLink> : null}
+            {user.role === "admin" ? <><ActiveNavLink href="/admin/requests" section><span>Solicitudes</span>{notificationSummary ? <RequestBadges key={notificationSummary.revision ?? "empty"} {...notificationSummary} /> : null}</ActiveNavLink><ActiveNavLink href="/admin">Admin</ActiveNavLink></> : null}
           </div>
           <UserMenu user={user} />
           {user.role === "employee" ? <EmployeeRequestSync /> : null}

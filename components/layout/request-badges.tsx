@@ -4,8 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type RequestBadgeSummary = {
-  pendingRequestCount: number;
-  unreadSubstitutionCount: number;
+  actionableRequestCount: number;
+  informationalRequestCount: number;
   revision: string | null;
 };
 
@@ -28,14 +28,14 @@ export function RequestBadges(initialSummary: RequestBadgeSummary) {
       const response = await fetch("/api/requests/summary", { cache: "no-store", signal: requestRef.current.signal });
       if (!response.ok) return;
       const next = await response.json() as RequestBadgeSummary;
-      if (!Number.isInteger(next.pendingRequestCount) || !Number.isInteger(next.unreadSubstitutionCount)) return;
+       if (!Number.isInteger(next.actionableRequestCount) || !Number.isInteger(next.informationalRequestCount)) return;
 
       const changed = hasPolledRef.current && next.revision !== summaryRef.current.revision;
       summaryRef.current = next;
       setSummary(next);
       hasPolledRef.current = true;
 
-      if (refreshPage && changed && pathname === "/requests" && !refreshScheduledRef.current) {
+       if (refreshPage && changed && (pathname === "/requests" || pathname === "/admin/requests") && !refreshScheduledRef.current) {
         refreshScheduledRef.current = true;
         window.setTimeout(() => {
           refreshScheduledRef.current = false;
@@ -70,6 +70,6 @@ export function RequestBadges(initialSummary: RequestBadgeSummary) {
     };
   }, [fetchSummary]);
 
-  const accessibleSummary = `${summary.pendingRequestCount} solicitudes pendientes. ${summary.unreadSubstitutionCount} sustituciones nuevas.`;
-  return <span aria-atomic="true" aria-label={accessibleSummary} className="ml-1 inline-flex items-center gap-0.5 align-top" aria-live="polite"><span aria-hidden="true">{summary.pendingRequestCount > 0 ? <span className="inline-flex min-w-4 -translate-y-1 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-4 text-white">{summary.pendingRequestCount}</span> : null}{summary.unreadSubstitutionCount > 0 ? <span className="inline-flex min-w-4 -translate-y-1 items-center justify-center rounded-full bg-sky-600 px-1 text-[10px] font-bold leading-4 text-white">{summary.unreadSubstitutionCount}</span> : null}</span></span>;
+  const accessibleSummary = `${summary.actionableRequestCount} solicitudes pendientes que requieren acción. ${summary.informationalRequestCount} avisos informativos.`;
+  return <span aria-atomic="true" aria-label={accessibleSummary} className="ml-1 inline-flex items-center gap-0.5 align-top" aria-live="polite"><span aria-hidden="true">{summary.actionableRequestCount > 0 ? <span className="inline-flex min-w-4 -translate-y-1 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-4 text-white">{summary.actionableRequestCount}</span> : null}{summary.informationalRequestCount > 0 ? <span className="inline-flex min-w-4 -translate-y-1 items-center justify-center rounded-full bg-sky-600 px-1 text-[10px] font-bold leading-4 text-white">{summary.informationalRequestCount}</span> : null}</span></span>;
 }

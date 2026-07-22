@@ -45,9 +45,12 @@ function broadcast(userId: string) {
 
 function broadcastNotification(payload: string) {
   try {
-    const event = JSON.parse(payload) as { coordinatorId?: string; requesterId?: string; notifyRequester?: boolean };
+    const event = JSON.parse(payload) as { coordinatorId?: string; requesterId?: string; notifyRequester?: boolean; adminIds?: string[]; notifyAdmins?: boolean };
     if (event.coordinatorId) broadcast(event.coordinatorId);
     if (event.notifyRequester && event.requesterId) broadcast(event.requesterId);
+    if (event.notifyAdmins) {
+      for (const adminId of event.adminIds ?? []) broadcast(adminId);
+    }
   } catch {
     // Support the UUID-only payload emitted by older database triggers.
     broadcast(payload.trim());

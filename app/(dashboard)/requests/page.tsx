@@ -20,7 +20,7 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
   const filters = parseFilters(await searchParams);
 
   if (user.role === "admin") {
-    redirect("/admin");
+    redirect("/admin/requests");
   }
 
   if (user.role === "coordinator") {

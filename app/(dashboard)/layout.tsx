@@ -9,7 +9,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   const [dbUser, teamVisibility, notificationSummary] = await Promise.all([
     findUserById(user.id),
     user.role === "employee" ? findEmployeeTeamVisibility(user.id) : Promise.resolve(null),
-    user.role === "coordinator" ? getRequestNotificationSummary(user.id) : Promise.resolve(null),
+    user.role === "admin" || user.role === "coordinator" ? getRequestNotificationSummary(user.id, user.role) : Promise.resolve(null),
   ]);
 
   return (

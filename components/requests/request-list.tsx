@@ -29,7 +29,7 @@ type RequestListItem = {
   coordinatorAcknowledgedAt?: Date | string | null;
 };
 
-function RequestList({ initialPage, coordinatorView = false, filtered = false, filters }: { coordinatorView?: boolean; filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
+function RequestList({ initialPage, coordinatorView = false, adminView = false, filtered = false, filters }: { coordinatorView?: boolean; adminView?: boolean; filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
   const [requests, setRequests] = useState(initialPage.requests);
   const [nextCursor, setNextCursor] = useState(initialPage.nextCursor);
   const [loading, setLoading] = useState(false);
@@ -47,7 +47,7 @@ function RequestList({ initialPage, coordinatorView = false, filtered = false, f
       setLoading(true);
       setError(null);
       const params = new URLSearchParams({ date: filters.date, status: filters.status, cursor: nextCursor });
-      fetch(`/api/requests/list?${params.toString()}`, { cache: "no-store" })
+      fetch(`${adminView ? "/api/admin/requests/list" : "/api/requests/list"}?${params.toString()}`, { cache: "no-store" })
         .then(async (response) => {
           if (!response.ok) throw new Error("No se pudieron cargar más solicitudes.");
           return response.json() as Promise<RequestPage<RequestListItem>>;
@@ -62,7 +62,7 @@ function RequestList({ initialPage, coordinatorView = false, filtered = false, f
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [error, filters.date, filters.status, loading, nextCursor, retryCount]);
+  }, [adminView, error, filters.date, filters.status, loading, nextCursor, retryCount]);
 
   if (requests.length === 0) {
     return <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-600">{filtered ? "No hay solicitudes que coincidan con los filtros seleccionados." : "No hay solicitudes."}</p>;
@@ -71,10 +71,10 @@ function RequestList({ initialPage, coordinatorView = false, filtered = false, f
   return (
     <div className="space-y-3">
       {requests.map((request) => (
-        <article className={`rounded-xl border bg-white p-5 ${coordinatorView && request.coordinatorNotifiedAt && !request.coordinatorAcknowledgedAt ? "border-sky-300 bg-sky-50/40" : "border-zinc-200"}`} key={request.id}>
+        <article className={`rounded-xl border bg-white p-5 ${coordinatorView && ((request.kind === "additional" && request.status === "pending") || (request.coordinatorNotifiedAt && !request.coordinatorAcknowledgedAt)) ? "border-sky-300 bg-sky-50/40" : "border-zinc-200"}`} key={request.id}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              {coordinatorView ? <p className="font-semibold text-zinc-950">{request.requesterName} <span className="font-normal text-zinc-500">({request.requesterEmail})</span></p> : null}
+              {coordinatorView || adminView ? <p className="font-semibold text-zinc-950">{request.requesterName} <span className="font-normal text-zinc-500">({request.requesterEmail})</span></p> : null}
               <p className="mt-1 text-sm text-zinc-700">{request.kind === "substitution" ? "Sustitución" : "Días adicionales"}</p>
               <div className="mt-1 space-y-1 text-sm text-zinc-600">
                 {request.dates.map((date) => {
@@ -90,8 +90,8 @@ function RequestList({ initialPage, coordinatorView = false, filtered = false, f
           {request.requesterComment ? <p className="mt-3 text-sm text-zinc-600">Comentario: {request.requesterComment}</p> : null}
           {request.decisionComment ? <p className="mt-2 text-sm text-zinc-600">Respuesta: {request.decisionComment}</p> : null}
           {coordinatorView && request.coordinatorNotifiedAt && !request.coordinatorAcknowledgedAt ? <div className="mt-3 flex items-center justify-between gap-3"><span className="rounded-full bg-sky-100 px-2 py-1 text-xs font-semibold text-sky-800">Nueva</span><MarkSubstitutionReadButton requestId={request.id} /></div> : null}
-          {coordinatorView && request.status === "pending" ? (
-            <RequestDecisionForm requestId={request.id} />
+          {(adminView && request.kind === "additional" && request.status === "pending") || (coordinatorView && request.kind === "substitution" && request.status === "pending") ? (
+            <RequestDecisionForm adminView={adminView} requestId={request.id} />
           ) : null}
         </article>
       ))}
@@ -106,6 +106,10 @@ function RequestList({ initialPage, coordinatorView = false, filtered = false, f
 
 export function CoordinatorRequestList({ filtered = false, initialPage, filters }: { filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
   return <RequestList key={getPageKey(initialPage)} coordinatorView filtered={filtered} filters={filters} initialPage={initialPage} />;
+}
+
+export function AdminRequestList({ filtered = false, initialPage, filters }: { filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
+  return <RequestList adminView filtered={filtered} filters={filters} initialPage={initialPage} key={getPageKey(initialPage)} />;
 }
 
 export function RequesterRequestList({ filtered = false, initialPage, filters }: { filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {

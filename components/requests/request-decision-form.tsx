@@ -3,8 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { decideWfhRequestAction } from "@/app/(dashboard)/requests/actions";
+import { decideAdminWfhRequestAction } from "@/app/(dashboard)/admin/requests/actions";
 
-export function RequestDecisionForm({ requestId }: { requestId: string }) {
+export function RequestDecisionForm({ requestId, adminView = false }: { requestId: string; adminView?: boolean }) {
   const router = useRouter();
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export function RequestDecisionForm({ requestId }: { requestId: string }) {
         formData.append("id", requestId);
         formData.append("status", status);
         formData.append("comment", comment);
-        await decideWfhRequestAction(formData);
+        await (adminView ? decideAdminWfhRequestAction(formData) : decideWfhRequestAction(formData));
         router.refresh();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "No se pudo resolver la solicitud.");
