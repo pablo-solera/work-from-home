@@ -13,6 +13,7 @@
     "db:seed": "bun run db/seed.ts",
     "sync:users": "bun run scripts/sync-users-timertask.ts",
     "sync:users:apply": "bun run scripts/sync-users-timertask.ts --apply",
+    "generate:wfh-import": "bun run scripts/generate-wfh-import.ts",
     "docker:build": "docker build -t work-from-home-web:latest .",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
@@ -40,6 +41,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "exceljs": "^4.4.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

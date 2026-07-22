@@ -30,6 +30,7 @@ yarn-error.log*
 
 # generated files with temporary credentials
 /scripts/sync-users-passwords.csv
+/import-wfh.sql
 
 # vercel
 .vercel
