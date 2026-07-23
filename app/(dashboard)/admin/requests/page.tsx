@@ -1,22 +1,16 @@
 import { AdminRequestList } from "@/components/requests/request-list";
 import { RequestFilters } from "@/components/requests/request-filters";
 import { requireAdmin } from "@/lib/auth/guards";
-import { type RequestDateFilter } from "@/lib/calendar/dates";
-import { getRequestsForAdmin, type RequestFilters as RequestFilterValues, type RequestStatusFilter } from "@/lib/requests/request-service";
+import { getRequestsForAdmin } from "@/lib/requests/request-service";
+import { parseRequestFilters } from "@/lib/requests/request-filters";
 
 type AdminRequestsPageProps = {
   searchParams?: Promise<{ date?: string; status?: string }>;
 };
 
-function parseFilters(params?: { date?: string; status?: string }): RequestFilterValues {
-  const date = params?.date === "month" || params?.date === "week" ? params.date : "all";
-  const status = params?.status === "accepted" || params?.status === "rejected" || params?.status === "cancelled" ? params.status : "pending";
-  return { date: date as RequestDateFilter, status: status as RequestStatusFilter };
-}
-
 export default async function AdminRequestsPage({ searchParams }: AdminRequestsPageProps) {
   await requireAdmin();
-  const filters = parseFilters(await searchParams);
+  const filters = parseRequestFilters(await searchParams, "pending");
   const requests = await getRequestsForAdmin(filters);
 
   return (
@@ -26,7 +20,7 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
         <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Solicitudes de días adicionales</h1>
         <p className="mt-2 text-sm text-zinc-600">Aprueba o rechaza las solicitudes pendientes de los empleados.</p>
       </div>
-      <RequestFilters {...filters} />
+      <RequestFilters defaultStatus="pending" {...filters} />
       <AdminRequestList filtered={filters.date !== "all" || filters.status !== "pending"} filters={filters} initialPage={requests} />
     </section>
   );

@@ -2,22 +2,16 @@ import { redirect } from "next/navigation";
 import { RequestFilters } from "@/components/requests/request-filters";
 import { CoordinatorRequestList, RequesterRequestList } from "@/components/requests/request-list";
 import { requireUser } from "@/lib/auth/guards";
-import { type RequestDateFilter } from "@/lib/calendar/dates";
-import { getRequestsForCoordinator, getRequestsForRequester, type RequestFilters as RequestFilterValues, type RequestStatusFilter } from "@/lib/requests/request-service";
+import { getRequestsForCoordinator, getRequestsForRequester } from "@/lib/requests/request-service";
+import { parseRequestFilters } from "@/lib/requests/request-filters";
 
 type RequestsPageProps = {
   searchParams?: Promise<{ date?: string; status?: string }>;
 };
 
-function parseFilters(params?: { date?: string; status?: string }): RequestFilterValues {
-  const date = params?.date === "month" || params?.date === "week" ? params.date : "all";
-  const status = params?.status === "pending" || params?.status === "accepted" || params?.status === "rejected" || params?.status === "cancelled" ? params.status : "all";
-  return { date: date as RequestDateFilter, status: status as RequestStatusFilter };
-}
-
 export default async function RequestsPage({ searchParams }: RequestsPageProps) {
   const user = await requireUser();
-  const filters = parseFilters(await searchParams);
+  const filters = parseRequestFilters(await searchParams);
 
   if (user.role === "admin") {
     redirect("/admin/requests");

@@ -5,18 +5,19 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 type RequestFiltersProps = {
   date: "all" | "month" | "week";
   status: "all" | "pending" | "accepted" | "rejected" | "cancelled";
+  defaultStatus?: "all" | "pending" | "accepted" | "rejected" | "cancelled";
 };
 
-export function RequestFilters({ date, status }: RequestFiltersProps) {
+export function RequestFilters({ date, status, defaultStatus = "all" }: RequestFiltersProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const hasFilters = date !== "all" || status !== "all";
+  const hasFilters = date !== "all" || status !== defaultStatus;
 
   function updateFilter(name: "date" | "status", value: string) {
     const params = new URLSearchParams(searchParams.toString());
 
-    if (value === "all") {
+    if (value === "all" && (name !== "status" || defaultStatus === "all")) {
       params.delete(name);
     } else {
       params.set(name, value);
