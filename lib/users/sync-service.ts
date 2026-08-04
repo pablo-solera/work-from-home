@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { workFromHomeDays } from "@/db/schema";
 import { hashPassword } from "@/lib/auth/password";
 import { findAllActiveEmployees } from "@/lib/employees/employee-repository";
+import { getTestAccountEmpIds } from "@/lib/employees/test-accounts";
 import { generateTemporaryPassword } from "@/lib/users/password-generator";
 import type { SyncPassword } from "@/lib/users/sync-state";
 import { createUsers, deleteUsers, findUsersWithOracleEmpId } from "@/lib/users/user-repository";
@@ -38,7 +39,8 @@ export async function buildSyncPlan(): Promise<SyncPlan> {
     .filter((employee) => !IGNORED_EMP_IDS.has(employee.empId) && !mappedEmpIds.has(employee.empId))
     .map((employee) => ({ empId: employee.empId, name: employee.name, email: employee.email }));
 
-  const usersToDelete = mappedUsers.filter((user) => !activeEmpIds.has(user.oracleEmpId as number));
+  const testAccountEmpIds = getTestAccountEmpIds();
+  const usersToDelete = mappedUsers.filter((user) => !testAccountEmpIds.has(user.oracleEmpId as number) && !activeEmpIds.has(user.oracleEmpId as number));
 
   // Count WFH days that would be lost per user to be deleted.
   const deleteIds = usersToDelete.map((user) => user.id);
@@ -78,8 +80,7 @@ export async function runUserSync(): Promise<SyncResult> {
         newUser: {
           oracleEmpId: employee.empId,
           passwordHash: await hashPassword(password),
-          role: "employee" as const,
-          hasWfh: false,
+           hasWfh: false,
         },
       };
     })

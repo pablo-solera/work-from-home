@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { RequestFilters } from "@/components/requests/request-filters";
-import { CoordinatorRequestList, RequesterRequestList } from "@/components/requests/request-list";
+import { CoordinatorOwnRequestList, CoordinatorRequestList, RequesterRequestList } from "@/components/requests/request-list";
 import { requireUser } from "@/lib/auth/guards";
 import { getRequestsForCoordinator, getRequestsForRequester } from "@/lib/requests/request-service";
 import { parseRequestFilters } from "@/lib/requests/request-filters";
@@ -18,7 +18,7 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
   }
 
   if (user.role === "coordinator") {
-     const requests = await getRequestsForCoordinator(user.id, filters);
+     const [requests, ownRequests] = await Promise.all([getRequestsForCoordinator(user.id, filters), getRequestsForRequester(user.id, filters)]);
     return (
       <section className="space-y-6">
         <div>
@@ -26,8 +26,11 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
           <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Solicitudes de teletrabajo</h1>
           <p className="mt-2 text-sm text-zinc-600">Revisa y decide las solicitudes de tu equipo.</p>
         </div>
-        <RequestFilters {...filters} />
-         <CoordinatorRequestList filtered={filters.date !== "all" || filters.status !== "all"} initialPage={requests} filters={filters} />
+         <RequestFilters {...filters} />
+          <h2 className="text-xl font-semibold text-zinc-950">Mis solicitudes</h2>
+          <CoordinatorOwnRequestList filtered={filters.date !== "all" || filters.status !== "all"} initialPage={ownRequests} filters={filters} />
+          <h2 className="pt-4 text-xl font-semibold text-zinc-950">Solicitudes del equipo</h2>
+          <CoordinatorRequestList filtered={filters.date !== "all" || filters.status !== "all"} initialPage={requests} filters={filters} />
       </section>
     );
   }

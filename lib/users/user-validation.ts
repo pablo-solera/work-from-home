@@ -1,8 +1,6 @@
 import { z } from "zod";
 import type { UserRole } from "@/db/schema";
 
-const optionalUuid = z.preprocess((value) => (value === null || (typeof value === "string" && value.trim() === "") ? undefined : value), z.string().uuid().optional());
-
 const optionalPassword = z.preprocess((value) => (value === null || (typeof value === "string" && value.trim() === "") ? undefined : value), z.string().min(8).optional());
 
 const checkboxBoolean = z.preprocess((value) => value === "on", z.boolean());
@@ -23,10 +21,8 @@ export const loginSchema = z.object({
 
 export const updateUserSchema = z.object({
   canEditAllWfh: checkboxBoolean,
-  coordinatorId: optionalUuid,
   hasWfh: checkboxBoolean,
   id: z.string().uuid(),
-  role: z.enum(["admin", "coordinator", "employee"]),
   wfhDaysAllowance: optionalNonNegativeInt,
 });
 

@@ -138,6 +138,21 @@ export function getWeekdayFromDateKey(date: string) {
   return new Date(`${date}T00:00:00.000Z`).getUTCDay();
 }
 
+export function getWeekRange(date: string) {
+  const weekday = getWeekdayFromDateKey(date);
+  const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+
+  return {
+    start: addDateKey(date, mondayOffset),
+    end: addDateKey(date, mondayOffset + 6),
+  };
+}
+
+export function isDateInWeek(date: string, referenceDate: string) {
+  const range = getWeekRange(referenceDate);
+  return date >= range.start && date <= range.end;
+}
+
 function getEasterSundayDateKey(year: number) {
   const a = year % 19;
   const b = Math.floor(year / 100);

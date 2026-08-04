@@ -1,17 +1,16 @@
-import type { UserRole } from "@/db/schema";
-import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { hashPassword } from "@/lib/auth/password";
 import { findLdapUserDn, verifyLdapCredentials } from "@/lib/auth/ldap";
 import type { SessionUser } from "@/lib/auth/session";
 import { findActiveEmployeeByEmail } from "@/lib/employees/employee-repository";
+import { resolveUserRole } from "@/lib/employees/org-service";
+import { findTestAccountByEmail, verifyTestAccountPassword } from "@/lib/employees/test-accounts";
 import { generateTemporaryPassword } from "./password-generator";
 import { deleteUser, findUserByFallbackEmail, findUserById, findUserByOracleEmpId, updateUser, updateUserPassword } from "./user-repository";
 
 type UpdateUserInput = {
   canEditAllWfh: boolean;
-  coordinatorId?: string;
   hasWfh: boolean;
   id: string;
-  role: UserRole;
   wfhDaysAllowance: number | null;
 };
 
@@ -25,9 +24,8 @@ type ChangePasswordInput = {
  * Authenticates by email + password. Identity lives in Oracle (TIMERTASK):
  * the email is resolved against the active staff to obtain the employee.
  * Corporate employees' credentials are verified against LDAP (Active
- * Directory); system accounts (no Oracle employee) authenticate via
- * fallback_email against their local password hash so they do not depend on
- * Oracle nor LDAP.
+ * Directory); explicitly configured test accounts use the shared local test
+ * password instead.
  */
 export async function authenticateUser(email: string, password: string): Promise<SessionUser | null> {
   const normalizedEmail = email.trim().toLowerCase();
@@ -58,14 +56,17 @@ export async function authenticateUser(email: string, password: string): Promise
       id: user.id,
       name: oracleEmployee.name,
       email: oracleEmployee.email,
-      role: user.role,
+       role: await resolveUserRole(user),
     };
   }
 
-  // 2. Fall back to a system account (admin, etc.).
+  // 2. Test accounts are the only local accounts allowed to bypass AD.
+  const testAccount = findTestAccountByEmail(normalizedEmail);
+  if (!testAccount || !verifyTestAccountPassword(password)) return null;
+
   const systemUser = await findUserByFallbackEmail(normalizedEmail);
 
-  if (!systemUser || !(await verifyPassword(password, systemUser.passwordHash))) {
+  if (!systemUser || systemUser.oracleEmpId !== testAccount.empId) {
     return null;
   }
 
@@ -73,49 +74,21 @@ export async function authenticateUser(email: string, password: string): Promise
     id: systemUser.id,
     name: systemUser.fallbackName ?? normalizedEmail,
     email: systemUser.fallbackEmail ?? normalizedEmail,
-    role: systemUser.role,
+    role: await resolveUserRole(systemUser),
   };
 }
 
-async function resolveCoordinatorId(role: UserRole, coordinatorId?: string) {
-  if (role !== "employee") {
-    return null;
-  }
-
-  if (!coordinatorId) {
-    return null;
-  }
-
-  const coordinator = await findUserById(coordinatorId);
-
-  if (!coordinator || coordinator.role !== "coordinator") {
-    throw new Error("El coordinador seleccionado no es válido.");
-  }
-
-  return coordinator.id;
-}
-
-export async function updateUserById(actor: SessionUser, input: UpdateUserInput) {
+export async function updateUserById(_actor: SessionUser, input: Omit<UpdateUserInput, "coordinatorId" | "role">) {
   const user = await findUserById(input.id);
 
   if (!user) {
     return { error: "El usuario no existe." };
   }
 
-  if (actor.id === input.id && input.role !== "admin") {
-    return { error: "No puedes quitarte a ti mismo el rol admin." };
-  }
-
-  if (input.coordinatorId === input.id) {
-    return { error: "Un usuario no puede ser su propio coordinador." };
-  }
-
   try {
     await updateUser(input.id, {
       canEditAllWfh: input.canEditAllWfh,
-      coordinatorId: await resolveCoordinatorId(input.role, input.coordinatorId),
       hasWfh: input.hasWfh,
-      role: input.role,
       wfhDaysAllowance: input.wfhDaysAllowance,
     });
 

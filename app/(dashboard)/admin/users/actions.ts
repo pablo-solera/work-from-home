@@ -6,21 +6,19 @@ import { runUserSync } from "@/lib/users/sync-service";
 import type { UserManagementState } from "@/lib/users/user-management-state";
 import type { SyncUsersState } from "@/lib/users/sync-state";
 import { changeUserPassword, deleteUserById, updateUserById } from "@/lib/users/user-service";
-import { changePasswordSchema, deleteUserSchema, isUserRole, updateUserSchema } from "@/lib/users/user-validation";
+import { changePasswordSchema, deleteUserSchema, updateUserSchema } from "@/lib/users/user-validation";
 
 export async function updateUserAction(_state: UserManagementState, formData: FormData): Promise<UserManagementState> {
   const admin = await requireAdmin();
 
   const parsed = updateUserSchema.safeParse({
     canEditAllWfh: formData.get("canEditAllWfh"),
-    coordinatorId: formData.get("coordinatorId"),
     hasWfh: formData.get("hasWfh"),
     id: formData.get("id"),
-    role: formData.get("role"),
     wfhDaysAllowance: formData.get("wfhDaysAllowance"),
   });
 
-  if (!parsed.success || !isUserRole(parsed.data.role)) {
+  if (!parsed.success) {
     return { error: "Revisa los datos del formulario." };
   }
 

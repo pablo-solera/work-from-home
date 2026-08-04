@@ -1,30 +1,20 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect } from "react";
 import { updateUserAction } from "@/app/(dashboard)/admin/users/actions";
 import { Dialog } from "@/components/common/dialog";
 import { useToast } from "@/components/common/toast-provider";
 import { ActionFeedback } from "@/components/common/action-feedback";
 import { SubmitButton } from "@/components/common/submit-button";
 import { initialUserManagementState } from "@/lib/users/user-management-state";
-import type { ManagedUser, UserCoordinatorOption } from "./users-table";
+import type { ManagedUser } from "./users-table";
 
 type UserFormModalProps = {
-  coordinators: UserCoordinatorOption[];
-  currentUserId: string;
   onClose: () => void;
   user: ManagedUser;
 };
 
-const roleLabels: Record<ManagedUser["role"], string> = {
-  admin: "Admin",
-  coordinator: "Coordinador",
-  employee: "Employee",
-};
-
-export function UserFormModal({ coordinators, currentUserId, onClose, user }: UserFormModalProps) {
-  const isCurrentUser = user.id === currentUserId;
-  const [role, setRole] = useState<ManagedUser["role"]>(user.role);
+export function UserFormModal({ onClose, user }: UserFormModalProps) {
   const { showToast } = useToast();
   const [state, action] = useActionState(async (previousState: typeof initialUserManagementState, formData: FormData) => {
     const result = await updateUserAction(previousState, formData);
@@ -33,8 +23,6 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
     }
     return result;
   }, initialUserManagementState);
-  const availableCoordinators = coordinators.filter((coordinator) => coordinator.id !== user.id);
-
   useEffect(() => {
     if (state.ok && !state.generatedPassword) {
       onClose();
@@ -55,7 +43,6 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
         <form action={action} className="mt-6 flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain">
             <input name="id" type="hidden" value={user.id} />
-            {isCurrentUser ? <input name="role" type="hidden" value="admin" /> : null}
 
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
               <p className="text-sm font-medium text-zinc-950">{user.name}</p>
@@ -64,39 +51,11 @@ export function UserFormModal({ coordinators, currentUserId, onClose, user }: Us
               <p className="mt-2 text-xs text-zinc-500">La identidad (nombre, email y WD) se gestiona en TimerTask.</p>
             </div>
 
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-zinc-700">Rol</span>
-              <select
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-950 disabled:bg-zinc-100 disabled:text-zinc-500"
-                disabled={isCurrentUser}
-                name="role"
-                onChange={(event) => setRole(event.target.value as ManagedUser["role"])}
-                value={role}
-              >
-                {Object.entries(roleLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              {isCurrentUser ? <span className="text-xs text-zinc-500">No puedes quitarte a ti mismo el rol admin.</span> : null}
-            </label>
-
-            {role === "employee" ? (
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-zinc-700">Coordinador</span>
-                <select className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-950" defaultValue={user.coordinatorId ?? ""} name="coordinatorId">
-                  <option value="">Sin coordinador</option>
-                  {availableCoordinators.map((coordinator) => (
-                    <option key={coordinator.id} value={coordinator.id}>
-                      {coordinator.name} ({coordinator.email})
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <input name="coordinatorId" type="hidden" value="" />
-            )}
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
+              <p><strong>Rol:</strong> {user.role === "admin" ? "Admin" : user.role === "coordinator" ? "Coordinador" : "Empleado"}</p>
+              <p className="mt-1"><strong>Coordinador:</strong> {user.coordinator?.name ?? "Sin coordinador"}</p>
+              <p className="mt-2 text-xs text-blue-700">El rol y la jerarquía se gestionan en TimerTask y se sincronizan al iniciar sesión.</p>
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block space-y-2">

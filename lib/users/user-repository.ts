@@ -33,51 +33,26 @@ export function findUserById(id: string) {
   });
 }
 
-export function findEmployeesByCoordinatorId(coordinatorId: string) {
-  return getDb().query.users.findMany({
-    where: eq(users.coordinatorId, coordinatorId),
-  });
+export async function findEmployeesByCoordinatorId(coordinatorId: string) {
+  const { findUsersForCoordinator } = await import("@/lib/employees/org-service");
+  return findUsersForCoordinator(coordinatorId);
 }
 
 export async function findEmployeeTeamVisibility(employeeId: string) {
-  const employee = await getDb().query.users.findFirst({
-    columns: {
-      coordinatorId: true,
-      id: true,
-      role: true,
-    },
-    where: eq(users.id, employeeId),
-    with: {
-      coordinator: {
-        columns: {
-          id: true,
-          teamWfhVisible: true,
-        },
-      },
-    },
-  });
-
-  if (!employee || employee.role !== "employee" || !employee.coordinator) {
-    return null;
-  }
-
-  return {
-    coordinatorId: employee.coordinator.id,
-    teamWfhVisible: employee.coordinator.teamWfhVisible,
-  };
+  const employee = await findUserById(employeeId);
+  if (!employee) return null;
+  const { findCoordinatorUser } = await import("@/lib/employees/org-service");
+  const coordinator = await findCoordinatorUser(employee);
+  if (!coordinator) return null;
+  return { coordinatorId: coordinator.id, teamWfhVisible: coordinator.teamWfhVisible };
 }
 
-export function findCoordinators() {
-  return getDb().query.users.findMany({
-    columns: {
-      id: true,
-      oracleEmpId: true,
-      fallbackName: true,
-      fallbackEmail: true,
-    },
-    where: eq(users.role, "coordinator"),
-  });
+export async function findEmployeeByCoordinatorId(employeeId: string, coordinatorId: string) {
+  const { isUserInCoordinatorTeam } = await import("@/lib/employees/org-service");
+  if (!(await isUserInCoordinatorTeam(employeeId, coordinatorId))) return undefined;
+  return findUserById(employeeId);
 }
+
 
 export function findAllUsers() {
   return getDb().query.users.findMany({
@@ -99,32 +74,14 @@ export function findUsersForAdmin() {
   return getDb().query.users.findMany({
     columns: {
       canEditAllWfh: true,
-      coordinatorId: true,
       createdAt: true,
       hasWfh: true,
       id: true,
       oracleEmpId: true,
       fallbackName: true,
       fallbackEmail: true,
-      role: true,
       wfhDaysAllowance: true,
     },
-    with: {
-      coordinator: {
-        columns: {
-          id: true,
-          oracleEmpId: true,
-          fallbackName: true,
-          fallbackEmail: true,
-        },
-      },
-    },
-  });
-}
-
-export function findEmployeeByCoordinatorId(employeeId: string, coordinatorId: string) {
-  return getDb().query.users.findFirst({
-    where: (users, { and, eq }) => and(eq(users.id, employeeId), eq(users.coordinatorId, coordinatorId)),
   });
 }
 
@@ -154,7 +111,31 @@ export function createUser(value: NewUser) {
   return getDb().insert(users).values(value).returning();
 }
 
-export function updateUser(id: string, values: Partial<Pick<NewUser, "canEditAllWfh" | "coordinatorId" | "hasWfh" | "role" | "wfhDaysAllowance">>) {
+export async function upsertTestUser(value: NewUser & { oracleEmpId: number }) {
+  const inserted = await getDb()
+    .insert(users)
+    .values(value)
+    .onConflictDoNothing({
+      target: users.oracleEmpId,
+      where: isNotNull(users.oracleEmpId),
+    })
+    .returning();
+
+  if (inserted.length > 0) return inserted;
+
+  return getDb()
+    .update(users)
+    .set({
+      fallbackEmail: value.fallbackEmail,
+      fallbackName: value.fallbackName,
+      hasWfh: value.hasWfh,
+      passwordHash: value.passwordHash,
+    })
+    .where(eq(users.oracleEmpId, value.oracleEmpId))
+    .returning();
+}
+
+export function updateUser(id: string, values: Partial<Pick<NewUser, "canEditAllWfh" | "hasWfh" | "wfhDaysAllowance">>) {
   return getDb().update(users).set(values).where(eq(users.id, id)).returning();
 }
 

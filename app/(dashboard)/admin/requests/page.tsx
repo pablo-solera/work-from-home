@@ -1,7 +1,7 @@
-import { AdminRequestList } from "@/components/requests/request-list";
+import { AdminRequestList, AdminSubstitutionNotificationList } from "@/components/requests/request-list";
 import { RequestFilters } from "@/components/requests/request-filters";
 import { requireAdmin } from "@/lib/auth/guards";
-import { getRequestsForAdmin } from "@/lib/requests/request-service";
+import { getAdminSubstitutionNotifications, getRequestsForAdmin } from "@/lib/requests/request-service";
 import { parseRequestFilters } from "@/lib/requests/request-filters";
 
 type AdminRequestsPageProps = {
@@ -11,7 +11,7 @@ type AdminRequestsPageProps = {
 export default async function AdminRequestsPage({ searchParams }: AdminRequestsPageProps) {
   await requireAdmin();
   const filters = parseRequestFilters(await searchParams, "pending");
-  const requests = await getRequestsForAdmin(filters);
+  const [requests, substitutions] = await Promise.all([getRequestsForAdmin(filters), getAdminSubstitutionNotifications()]);
 
   return (
     <section className="space-y-6">
@@ -22,6 +22,8 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
       </div>
       <RequestFilters defaultStatus="pending" {...filters} />
       <AdminRequestList filtered={filters.date !== "all" || filters.status !== "pending"} filters={filters} initialPage={requests} />
+      <h2 className="pt-4 text-xl font-semibold text-zinc-950">Sustituciones de coordinadores</h2>
+      <AdminSubstitutionNotificationList initialPage={substitutions} />
     </section>
   );
 }

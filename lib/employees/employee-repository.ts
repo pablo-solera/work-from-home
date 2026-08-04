@@ -46,26 +46,6 @@ function getSchema(): string {
 // Only real, active employees are considered part of the staff.
 const ACTIVE_EMPLOYEE_FILTER = "e.emp_esempleado = 1 AND e.emp_fec_baja IS NULL";
 
-// Lines (TLINEAS.linea_id) whose active employees are shown/counted in the app.
-// Defaults to INT (100), VIN_MAN (1600), Global DDCs (1606), Data Accuracy (1611).
-// Configurable via ORACLE_STAFF_LINE_IDS (comma-separated list of line ids).
-const DEFAULT_STAFF_LINE_IDS = [100, 1600, 1606, 1611];
-
-function getStaffLineIds(): number[] {
-  const raw = process.env.ORACLE_STAFF_LINE_IDS;
-
-  if (!raw || raw.trim() === "") {
-    return DEFAULT_STAFF_LINE_IDS;
-  }
-
-  const ids = raw
-    .split(",")
-    .map((value) => Number(value.trim()))
-    .filter((value) => Number.isInteger(value));
-
-  return ids.length > 0 ? ids : DEFAULT_STAFF_LINE_IDS;
-}
-
 function buildName(row: EmployeeRow): string {
   const parts = [row.EMP_NOMBRE, row.EMP_APELLIDO1, row.EMP_APELLIDO2].filter((part) => Boolean(part && part.trim()));
 
@@ -132,33 +112,4 @@ export async function findEmployeesByIds(empIds: number[]): Promise<Map<number, 
   const rows = await queryOracle<EmployeeRow>(sql(`WHERE e.emp_id IN (${placeholders.join(", ")})`), binds);
 
   return new Map(rows.map((row) => [row.EMP_ID, mapRow(row)]));
-}
-
-/**
- * Returns the set of active employee ids that belong (via a current group,
- * TEMPLEADO_GRUPOS.fecha_baja IS NULL) to one of the configured staff lines.
- * This is the "visible staff": the employees shown and counted in the app.
- */
-export async function findStaffEmpIds(): Promise<Set<number>> {
-  const lineIds = getStaffLineIds();
-
-  const binds: BindParameters = {};
-  const placeholders = lineIds.map((id, index) => {
-    (binds as Record<string, unknown>)[`line${index}`] = id;
-    return `:line${index}`;
-  });
-
-  const schema = getSchema();
-  const rows = await queryOracle<{ EMP_ID: number }>(
-    `
-    SELECT DISTINCT e.emp_id AS emp_id
-      FROM ${schema}.templeados e
-      JOIN ${schema}.templeado_grupos eg ON eg.emp_id = e.emp_id AND eg.fecha_baja IS NULL
-      JOIN ${schema}.tgrupos g ON g.grupo_id = eg.grupo_id
-     WHERE ${ACTIVE_EMPLOYEE_FILTER} AND g.linea_id IN (${placeholders.join(", ")})
-    `,
-    binds
-  );
-
-  return new Set(rows.map((row) => row.EMP_ID));
 }

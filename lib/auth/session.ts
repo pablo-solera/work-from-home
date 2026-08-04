@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import type { UserRole } from "@/db/schema";
 
 const SESSION_COOKIE = "session";
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 
 export type SessionUser = {
   id: string;
@@ -29,7 +29,7 @@ function shouldUseSecureSessionCookie() {
 }
 
 export function createSessionToken(user: SessionUser) {
-  return jwt.sign(user, getSessionSecret(), { expiresIn: "7d" });
+  return jwt.sign(user, getSessionSecret(), { expiresIn: "1d" });
 }
 
 export function verifySessionToken(token: string): SessionUser | null {

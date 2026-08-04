@@ -29,7 +29,6 @@ export type ManagedUser = {
 };
 
 type UsersTableProps = {
-  coordinators: UserCoordinatorOption[];
   currentUserId: string;
   page: number;
   query: string;
@@ -54,7 +53,7 @@ const roleBadgeClasses: Record<ManagedUser["role"], string> = {
   employee: "bg-zinc-100 text-zinc-700",
 };
 
-export function UsersTable({ coordinators, currentUserId, page, query, totalPages, totalUsers, users }: UsersTableProps) {
+export function UsersTable({ currentUserId, page, query, totalPages, totalUsers, users }: UsersTableProps) {
   const [modal, setModal] = useState<ModalState>(null);
   const [search, setSearch] = useState(query);
   const debouncedSearch = useDebouncedValue(search);
@@ -85,7 +84,7 @@ export function UsersTable({ coordinators, currentUserId, page, query, totalPage
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-zinc-950">Usuarios</h2>
-          <p className="mt-1 text-sm text-zinc-600">Gestiona roles, coordinadores y opciones de teletrabajo. Las altas y bajas se sincronizan desde TimerTask.</p>
+         <p className="mt-1 text-sm text-zinc-600">Los roles y coordinadores vienen de TimerTask. Aquí administras únicamente opciones de teletrabajo.</p>
         </div>
 
         <SyncUsersButton />
@@ -203,7 +202,7 @@ export function UsersTable({ coordinators, currentUserId, page, query, totalPage
         </div>
       ) : null}
 
-      {modal?.type === "edit" ? <UserFormModal coordinators={coordinators} currentUserId={currentUserId} onClose={() => setModal(null)} user={modal.user} /> : null}
+       {modal?.type === "edit" ? <UserFormModal onClose={() => setModal(null)} user={modal.user} /> : null}
     </div>
   );
 }

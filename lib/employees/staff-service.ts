@@ -1,4 +1,4 @@
-import { findStaffEmpIds } from "./employee-repository";
+import { findStaffEmpIds } from "./org-service";
 
 type WithOracleEmpId = {
   oracleEmpId: number | null;

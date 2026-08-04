@@ -11,7 +11,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const filters = parseRequestFilters(url.searchParams);
   const cursor = url.searchParams.get("cursor") ?? undefined;
-  const page = user.role === "coordinator"
+  const own = url.searchParams.get("own") === "true";
+  const page = user.role === "coordinator" && !own
     ? await getRequestsForCoordinator(user.id, filters, cursor)
     : await getRequestsForRequester(user.id, filters, cursor);
 

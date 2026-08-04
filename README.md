@@ -43,18 +43,16 @@ You can also run the SQL directly:
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f -' < scripts/setup-database.sql
 ```
 
-To override the default admin credentials, pass `psql` variables:
+The application accepts Active Directory users and, when explicitly enabled,
+the three test users configured by `TEST_ACCOUNTS_*`. Test users are seeded
+with:
 
 ```bash
-docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v admin_email="admin@example.com" -v admin_name="Admin" -v admin_password="admin123" -f -' < scripts/setup-database.sql
+bun run db:seed
 ```
 
-Default credentials are:
-
-```text
-admin@example.com
-admin123
-```
+Their shared local password is read from `TEST_ACCOUNTS_PASSWORD`; it is never
+stored in the database. Set `TEST_ACCOUNTS_ENABLED=false` to disable them.
 
 ## DockerHub
 

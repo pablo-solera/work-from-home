@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth/guards";
+import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { type ReplicateWorkFromHomeScope, replicateWorkFromHomeDays, setWorkFromHomeDayForActor } from "@/lib/calendar/calendar-service";
 
 export async function toggleWorkFromHomeDayAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireAuthorizedUser();
   const date = String(formData.get("date") ?? "");
   const enabled = formData.get("enabled") === "true";
   const targetUserId = String(formData.get("targetUserId") ?? "");
@@ -24,7 +24,7 @@ export async function toggleWorkFromHomeDayAction(formData: FormData) {
 }
 
 export async function replicateWorkFromHomeDaysAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireAuthorizedUser();
   const targetUserId = String(formData.get("targetUserId") ?? "");
   const year = Number(formData.get("year"));
   const month = Number(formData.get("month"));

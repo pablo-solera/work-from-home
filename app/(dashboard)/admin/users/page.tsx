@@ -2,7 +2,8 @@ import { UsersTable } from "@/components/admin/users-table";
 import { requireAdmin } from "@/lib/auth/guards";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { filterVisibleStaff } from "@/lib/employees/staff-service";
-import { findCoordinators, findUsersForAdmin } from "@/lib/users/user-repository";
+import { findUsersForAdmin } from "@/lib/users/user-repository";
+import { resolveOrganizationForUsers } from "@/lib/employees/org-service";
 
 type AdminUsersPageProps = {
   searchParams?: Promise<{ page?: string; query?: string }>;
@@ -14,39 +15,35 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
   const query = queryParam.toLowerCase();
   const requestedPage = Number.parseInt(params?.page ?? "1", 10);
   const admin = await requireAdmin();
-  const [allCoordinators, allUsers] = await Promise.all([findCoordinators(), findUsersForAdmin()]);
+  const allUsers = await findUsersForAdmin();
 
   // Only show employees from the configured staff lines. System accounts (admin,
   // etc.) are kept so they can still be managed. The staff filter and identity
   // resolution both hit Oracle and are independent, so run them together.
-  const [coordinators, users, identities] = await Promise.all([
-    filterVisibleStaff(allCoordinators, { includeSystemUsers: true }),
+  const [users, identities, organization] = await Promise.all([
     filterVisibleStaff(allUsers, { includeSystemUsers: true }),
-    resolveUserIdentities([...allUsers, ...allCoordinators]),
+    resolveUserIdentities(allUsers),
+    resolveOrganizationForUsers(allUsers),
   ]);
 
   function identityOf(id: string) {
     return identities.get(id) ?? { name: "Usuario", email: null, wdNumber: null };
   }
 
-  const coordinatorOptions = coordinators.map((coordinator) => {
-    const identity = identityOf(coordinator.id);
-    return { id: coordinator.id, name: identity.name, email: identity.email ?? "" };
-  });
-
   const allManagedUsers = users.map((user) => {
     const identity = identityOf(user.id);
-    const coordinatorIdentity = user.coordinator ? identityOf(user.coordinator.id) : null;
+    const organizationUser = organization.get(user.id);
+    const coordinatorIdentity = organizationUser?.coordinator ? identityOf(organizationUser.coordinator.id) : null;
 
     return {
       canEditAllWfh: user.canEditAllWfh,
-      coordinator: user.coordinator && coordinatorIdentity ? { id: user.coordinator.id, name: coordinatorIdentity.name, email: coordinatorIdentity.email ?? "" } : null,
-      coordinatorId: user.coordinatorId,
+      coordinator: organizationUser?.coordinator && coordinatorIdentity ? { id: organizationUser.coordinator.id, name: coordinatorIdentity.name, email: coordinatorIdentity.email ?? "" } : null,
+      coordinatorId: organizationUser?.coordinator?.id ?? null,
       email: identity.email ?? "",
       hasWfh: user.hasWfh,
       id: user.id,
       name: identity.name,
-      role: user.role,
+      role: organizationUser?.role ?? "employee",
       wfhDaysAllowance: user.wfhDaysAllowance,
       wdNumber: identity.wdNumber,
     };
@@ -66,11 +63,11 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
         <p className="text-sm font-medium text-zinc-500">Dashboard admin</p>
         <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Gestión de usuarios</h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-          La identidad de los empleados (nombre y email) se gestiona en TimerTask. Aquí administras roles, coordinadores y opciones de teletrabajo.
+           La identidad, los roles y la jerarquía se gestionan en TimerTask. Aquí administras opciones de teletrabajo.
         </p>
       </div>
 
-       <UsersTable coordinators={coordinatorOptions} currentUserId={admin.id} page={page} query={queryParam} totalPages={totalPages} totalUsers={filteredUsers.length} users={managedUsers} />
+        <UsersTable currentUserId={admin.id} page={page} query={queryParam} totalPages={totalPages} totalUsers={filteredUsers.length} users={managedUsers} />
     </section>
   );
 }

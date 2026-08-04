@@ -4,6 +4,7 @@ const CHANNEL = "wfh_request_changed";
 const encoder = new TextEncoder();
 
 type Connection = {
+  role: "admin" | "coordinator" | "employee";
   userId: string;
   controller: ReadableStreamDefaultController<Uint8Array>;
 };
@@ -43,13 +44,21 @@ function broadcast(userId: string) {
   }
 }
 
+function broadcastAdmins() {
+  for (const connections of hub.connections.values()) {
+    for (const connection of connections) {
+      if (connection.role === "admin") send(connection, "requests-changed");
+    }
+  }
+}
+
 function broadcastNotification(payload: string) {
   try {
-    const event = JSON.parse(payload) as { coordinatorId?: string; requesterId?: string; notifyRequester?: boolean; adminIds?: string[]; notifyAdmins?: boolean };
-    if (event.coordinatorId) broadcast(event.coordinatorId);
+    const event = JSON.parse(payload) as { coordinatorId?: string; requesterId?: string; notifyRequester?: boolean; notifyAdmins?: boolean };
+    if (event.coordinatorId && event.coordinatorId !== event.requesterId) broadcast(event.coordinatorId);
     if (event.notifyRequester && event.requesterId) broadcast(event.requesterId);
     if (event.notifyAdmins) {
-      for (const adminId of event.adminIds ?? []) broadcast(adminId);
+      broadcastAdmins();
     }
   } catch {
     // Support the UUID-only payload emitted by older database triggers.
@@ -74,9 +83,9 @@ async function ensureListener() {
   return hub.listenerPromise;
 }
 
-export async function subscribeToRequestNotifications(userId: string, controller: ReadableStreamDefaultController<Uint8Array>) {
+export async function subscribeToRequestNotifications(userId: string, role: Connection["role"], controller: ReadableStreamDefaultController<Uint8Array>) {
   await ensureListener();
-  const connection = { userId, controller };
+  const connection = { role, userId, controller };
   const connections = hub.connections.get(userId) ?? new Set<Connection>();
   connections.add(connection);
   hub.connections.set(userId, connections);

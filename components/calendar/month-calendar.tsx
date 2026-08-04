@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { createWfhRequestAction } from "@/app/(dashboard)/requests/actions";
 import { useToast } from "@/components/common/toast-provider";
-import { formatDateKeyForDisplay, type CalendarCell } from "@/lib/calendar/dates";
+import { formatDateKeyForDisplay, getMadridTodayDateKey, getWeekRange, type CalendarCell } from "@/lib/calendar/dates";
 import { DayCell, type RequestMode } from "./day-cell";
 import { ReplicateControls } from "./replicate-controls";
 import { Dialog } from "@/components/common/dialog";
@@ -52,6 +52,7 @@ export function MonthCalendar({
 
   const requestDates = mode === "additional" ? additionalDates : replacementTarget ? [replacementTarget] : [];
   const canContinue = mode === "additional" ? additionalDates.length > 0 : Boolean(replacementSource && replacementTarget);
+  const substitutionWeek = replacementSource ? getWeekRange(replacementSource) : undefined;
 
   function resetRequest() {
     setMode(null);
@@ -66,6 +67,10 @@ export function MonthCalendar({
   }
 
   function handleDayClick(date: string) {
+    if (date < getMadridTodayDateKey()) {
+      return;
+    }
+
     if (mode === "additional") {
       toggleAdditionalDate(date);
       return;
@@ -134,6 +139,7 @@ export function MonthCalendar({
             requestMode={mode && mode !== "chooser" ? mode : null}
             requestSelected={additionalDates.includes(cell.date) || replacementTarget === cell.date}
             selected={selected.has(cell.date)}
+            substitutionWeek={substitutionWeek}
             targetUserId={targetUserId}
             year={year}
             onRequestClick={handleDayClick}
@@ -146,7 +152,7 @@ export function MonthCalendar({
 }
 
 function SelectionBanner({ mode, additionalCount, replacementSource, replacementTarget, onContinue, onCancel, canContinue }: { mode: RequestMode; additionalCount: number; replacementSource: string | null; replacementTarget: string | null; onContinue: () => void; onCancel: () => void; canContinue: boolean }) {
-  const text = mode === "additional" ? `${additionalCount} día(s) seleccionado(s)` : mode === "substitution-source" ? "Selecciona en el calendario el día WFH que quieres cambiar" : replacementTarget ? `${formatDateKeyForDisplay(replacementSource ?? "")} → ${formatDateKeyForDisplay(replacementTarget)}` : `Ahora selecciona el nuevo día para ${formatDateKeyForDisplay(replacementSource ?? "")}`;
+  const text = mode === "additional" ? `${additionalCount} día(s) seleccionado(s)` : mode === "substitution-source" ? "Selecciona en el calendario el día WFH que quieres cambiar" : replacementTarget ? `${formatDateKeyForDisplay(replacementSource ?? "")} → ${formatDateKeyForDisplay(replacementTarget)}` : `Ahora selecciona un día de la misma semana que ${formatDateKeyForDisplay(replacementSource ?? "")}`;
   return <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-300 bg-sky-50 p-4"><div><p className="text-sm font-semibold text-sky-950">{mode === "additional" ? "Selecciona días adicionales" : "Cambiar un día de teletrabajo"}</p><p className="mt-1 text-xs text-sky-800">{text}</p></div><div className="flex gap-2"><button className="cursor-pointer rounded-lg px-3 py-2 text-sm text-sky-800 hover:bg-sky-100" onClick={onCancel} type="button">Cancelar</button>{mode !== "substitution-source" ? <button className="cursor-pointer rounded-lg bg-sky-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={!canContinue} onClick={onContinue} type="button">Revisar solicitud</button> : null}</div></div>;
 }
 

@@ -1,10 +1,11 @@
-import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users, wfhChangeRequestDates, wfhChangeRequests, workFromHomeDays } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/session";
 import { getAbsenceSectionsByDateStrict } from "@/lib/absences/absence-service";
-import { getHolidayName, getMadridTodayDateKey, getRequestDateRange, isValidDateKey, isWeekendDateKey, type RequestDateFilter } from "@/lib/calendar/dates";
+import { getHolidayName, getMadridTodayDateKey, getRequestDateRange, isDateInWeek, isValidDateKey, isWeekendDateKey, type RequestDateFilter } from "@/lib/calendar/dates";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
+import { findCoordinatorUser, isUserInCoordinatorTeam } from "@/lib/employees/org-service";
 
 export type RequestFormState = { error?: string; message?: string; ok?: boolean };
 export type RequestKind = "additional" | "substitution";
@@ -56,18 +57,25 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
       }
 
       validateDates(input.replacedDates);
+      if (input.requestedDates.some((date, index) => !isDateInWeek(date, input.replacedDates[index]))) {
+        throw new Error("El día de sustitución debe pertenecer a la misma semana que el día original.");
+      }
       if (input.replacedDates.some((date, index) => date === input.requestedDates[index])) {
         throw new Error("La fecha nueva debe ser distinta de la fecha sustituida.");
       }
     }
 
     const db = getDb();
+    const requesterUser = await getRequester(user.id);
+    if (!requesterUser) throw new Error("Solo usuarios activos pueden crear solicitudes.");
+    const coordinator = user.role === "coordinator" ? requesterUser : await findCoordinatorUser(requesterUser);
+
     await db.transaction(async (tx) => {
       await tx.execute(sql`SELECT id FROM users WHERE id = ${user.id} FOR UPDATE`);
       const requester = await tx.query.users.findFirst({ where: eq(users.id, user.id) });
 
-      if (!requester || requester.role !== "employee" || !requester.coordinatorId) {
-        throw new Error("Solo los empleados con coordinador pueden crear solicitudes.");
+      if (!requester || user.role === "admin") {
+        throw new Error("Solo empleados y coordinadores pueden crear solicitudes.");
       }
 
       const pendingDates = await tx
@@ -113,12 +121,13 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
           .insert(wfhChangeRequests)
           .values({
             requesterId: user.id,
-            coordinatorId: requester.coordinatorId,
+            coordinatorId: coordinator?.id ?? null,
             kind: input.kind,
             status: "accepted",
             decisionComment: "Aplicada automáticamente por el sistema.",
             decidedAt: new Date(),
             coordinatorNotifiedAt: new Date(),
+            adminNotifiedAt: user.role === "coordinator" ? new Date() : null,
           })
           .returning({ id: wfhChangeRequests.id });
 
@@ -147,7 +156,7 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
         .insert(wfhChangeRequests)
         .values({
           requesterId: user.id,
-          coordinatorId: requester.coordinatorId!,
+          coordinatorId: coordinator?.id ?? null,
           kind: input.kind,
           requesterComment: input.comment,
         })
@@ -301,11 +310,11 @@ export async function getRequestNotificationSummary(userId: string, role: "admin
         : sql<number>`0`,
       informationalRequestCount: role === "coordinator"
         ? sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'additional' and ${wfhChangeRequests.status} = 'pending') + count(*) filter (where ${wfhChangeRequests.kind} = 'substitution' and ${wfhChangeRequests.coordinatorNotifiedAt} is not null and ${wfhChangeRequests.coordinatorAcknowledgedAt} is null)`
-        : sql<number>`0`,
+        : sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'substitution' and ${wfhChangeRequests.adminNotifiedAt} is not null and ${wfhChangeRequests.adminAcknowledgedAt} is null)`,
       revision: sql<string | null>`max(greatest(${wfhChangeRequests.createdAt}, coalesce(${wfhChangeRequests.decidedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorNotifiedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorAcknowledgedAt}, ${wfhChangeRequests.createdAt}), coalesce((select max(d.cancelled_at) from wfh_change_request_dates d where d.request_id = ${wfhChangeRequests.id}), ${wfhChangeRequests.createdAt})))`,
     })
     .from(wfhChangeRequests)
-    .where(role === "admin" ? sql`${wfhChangeRequests.kind} = 'additional'` : eq(wfhChangeRequests.coordinatorId, userId));
+    .where(role === "admin" ? sql`${wfhChangeRequests.kind} = 'additional' OR (${wfhChangeRequests.kind} = 'substitution' AND ${wfhChangeRequests.adminNotifiedAt} IS NOT NULL)` : and(eq(wfhChangeRequests.coordinatorId, userId), ne(wfhChangeRequests.requesterId, userId)));
 
   return {
     actionableRequestCount: Number(result?.actionableRequestCount ?? 0),
@@ -324,6 +333,22 @@ export async function markSubstitutionAsRead(coordinatorId: string, requestId: s
       eq(wfhChangeRequests.kind, "substitution"),
       sql`${wfhChangeRequests.coordinatorNotifiedAt} IS NOT NULL`,
       sql`${wfhChangeRequests.coordinatorAcknowledgedAt} IS NULL`,
+    ))
+    .returning({ id: wfhChangeRequests.id });
+
+  return updated.length > 0;
+}
+
+export async function markAdminSubstitutionAsRead(requestId: string) {
+  const updated = await getDb()
+    .update(wfhChangeRequests)
+    .set({ adminAcknowledgedAt: new Date() })
+    .where(and(
+      eq(wfhChangeRequests.id, requestId),
+      eq(wfhChangeRequests.kind, "substitution"),
+      sql`${wfhChangeRequests.adminNotifiedAt} IS NOT NULL`,
+      sql`${wfhChangeRequests.adminAcknowledgedAt} IS NULL`,
+      sql`${wfhChangeRequests.adminNotifiedAt} IS NOT NULL`,
     ))
     .returning({ id: wfhChangeRequests.id });
 
@@ -383,6 +408,28 @@ export async function getRequestsForAdmin(filters: RequestFilters, cursorValue?:
   };
 }
 
+export async function getAdminSubstitutionNotifications(cursorValue?: string) {
+  const cursor = decodeCursor(cursorValue);
+  const conditions = [
+    eq(wfhChangeRequests.kind, "substitution"),
+    sql`${wfhChangeRequests.adminNotifiedAt} IS NOT NULL`,
+    sql`${wfhChangeRequests.adminNotifiedAt} IS NOT NULL`,
+  ];
+  if (cursor) {
+    conditions.push(sql`(${wfhChangeRequests.createdAt} < ${cursor.createdAt} OR (${wfhChangeRequests.createdAt} = ${cursor.createdAt} AND ${wfhChangeRequests.id} < ${cursor.id}))`);
+  }
+  const requests = await getDb().query.wfhChangeRequests.findMany({
+    where: and(...conditions),
+    orderBy: [desc(wfhChangeRequests.createdAt), desc(wfhChangeRequests.id)],
+    limit: REQUEST_PAGE_SIZE + 1,
+    columns: { id: true, requesterId: true, kind: true, status: true, requesterComment: true, decisionComment: true, createdAt: true, adminNotifiedAt: true, adminAcknowledgedAt: true },
+    with: { dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) }, requester: { columns: { id: true, oracleEmpId: true, fallbackName: true, fallbackEmail: true } } },
+  });
+  const page = toRequestPage(requests);
+  const identities = await resolveUserIdentities(page.requests.map((request) => request.requester));
+  return { ...page, requests: page.requests.map((request) => ({ ...request, requesterName: identities.get(request.requesterId)?.name ?? "Usuario", requesterEmail: identities.get(request.requesterId)?.email ?? "" })) };
+}
+
 function adminRequestPageWhere(filters: RequestFilters, cursor?: RequestCursor) {
   const baseWhere = adminRequestWhere(filters);
   if (!cursor) return baseWhere;
@@ -395,7 +442,7 @@ function adminRequestPageWhere(filters: RequestFilters, cursor?: RequestCursor) 
 
 async function getCoordinatorRequests(coordinatorId: string, filters: RequestFilters, cursor?: RequestCursor) {
   const requests = await getDb().query.wfhChangeRequests.findMany({
-    where: requestPageWhere(filters, wfhChangeRequests.coordinatorId, coordinatorId, cursor),
+    where: and(requestPageWhere(filters, wfhChangeRequests.coordinatorId, coordinatorId, cursor), ne(wfhChangeRequests.requesterId, coordinatorId)),
     orderBy: [desc(wfhChangeRequests.createdAt), desc(wfhChangeRequests.id)],
     limit: REQUEST_PAGE_SIZE + 1,
     with: {
@@ -423,7 +470,7 @@ async function validateApproval(request: NonNullable<Awaited<ReturnType<typeof g
   }
 
   const requester = await getRequester(request.requesterId);
-  if (!requester || (!isAdmin && requester.coordinatorId !== actor.id)) {
+  if (!requester || (!isAdmin && !(await isUserInCoordinatorTeam(requester.id, actor.id)))) {
     throw new Error("El empleado ya no pertenece a tu equipo.");
   }
 

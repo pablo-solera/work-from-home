@@ -16,7 +16,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   const showCurrentMonthLink = year !== currentMonth.year || month !== currentMonth.month;
 
   const calendar = await getUserCalendar(user.id, year, month);
-  const CalendarComponent = user.role === "employee" ? RequestableMonthCalendar : EditableMonthCalendar;
+  const CalendarComponent = user.role === "employee" || user.role === "coordinator" ? RequestableMonthCalendar : EditableMonthCalendar;
 
   return (
     <section className="space-y-6">

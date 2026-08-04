@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/auth/session";
-import { findUserById } from "@/lib/users/user-repository";
+import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { subscribeToRequestNotifications } from "@/lib/requests/request-notification-hub";
 
 export const runtime = "nodejs";
@@ -7,10 +7,12 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) return new Response("No autenticado", { status: 401 });
-  if (user.role !== "admin" && user.role !== "coordinator" && user.role !== "employee") return new Response("No autorizado", { status: 403 });
-  const currentUser = await findUserById(user.id);
-  if (!currentUser || currentUser.role !== user.role) return new Response("No autorizado", { status: 403 });
-
+  let authorizedUser;
+  try {
+    authorizedUser = await requireAuthorizedUser();
+  } catch {
+    return new Response("No autorizado", { status: 403 });
+  }
   let cleanup = () => undefined;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -24,7 +26,7 @@ export async function GET(request: Request) {
       };
 
       try {
-        unsubscribe = await subscribeToRequestNotifications(user.id, controller);
+        unsubscribe = await subscribeToRequestNotifications(authorizedUser.id, authorizedUser.role, controller);
         heartbeat = setInterval(() => {
           try {
             controller.enqueue(new TextEncoder().encode(": heartbeat\n\n"));

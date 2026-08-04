@@ -1,29 +1,36 @@
 import { hashPassword } from "@/lib/auth/password";
-import { createUser } from "@/lib/users/user-repository";
+import { findEmployeesByIds } from "@/lib/employees/employee-repository";
+import { getTestAccounts } from "@/lib/employees/test-accounts";
+import { generateTemporaryPassword } from "@/lib/users/password-generator";
+import { upsertTestUser } from "@/lib/users/user-repository";
 
-// System accounts have no Oracle employee; they log in via fallback_email.
 async function main() {
-  await createUser({
-    fallbackName: "Admin",
-    fallbackEmail: "admin@example.com",
-    passwordHash: await hashPassword("admin123"),
-    role: "admin",
-  });
+  const accounts = getTestAccounts();
+  if (!accounts) throw new Error("Set TEST_ACCOUNTS_ENABLED=true before seeding test users.");
 
-  const [coordinator] = await createUser({
-    fallbackName: "Coordinador",
-    fallbackEmail: "coordinator@example.com",
-    passwordHash: await hashPassword("coordinator123"),
-    role: "coordinator",
-  });
+  let identities = new Map<number, { name: string }>();
+  try {
+    identities = await findEmployeesByIds(accounts.map((account) => account.empId));
+  } catch (error) {
+    console.warn("Oracle identities unavailable; using test account names.", error);
+  }
 
-  await createUser({
-    fallbackName: "Employee",
-    fallbackEmail: "employee@example.com",
-    passwordHash: await hashPassword("employee123"),
-    role: "employee",
-    coordinatorId: coordinator?.id,
-  });
+  for (const account of accounts) {
+    const identity = identities.get(account.empId);
+    await upsertTestUser({
+      oracleEmpId: account.empId,
+      fallbackEmail: account.email,
+      fallbackName: identity?.name ?? (
+        account.role === "admin"
+          ? "Test Manager"
+          : account.role === "coordinator"
+            ? "Test Coordinator"
+            : "Test Employee"
+      ),
+      passwordHash: await hashPassword(generateTemporaryPassword()),
+      hasWfh: true,
+    });
+  }
 }
 
 main()

@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth/guards";
-import { cancelWfhRequestDate, createWfhRequest, decideWfhRequest, markSubstitutionAsRead, type RequestFormState } from "@/lib/requests/request-service";
+import { requireAuthorizedUser } from "@/lib/auth/guards";
+import { cancelWfhRequestDate, createWfhRequest, decideWfhRequest, markAdminSubstitutionAsRead, markSubstitutionAsRead, type RequestFormState } from "@/lib/requests/request-service";
 
 function parseDates(value: FormDataEntryValue | null) {
   return String(value ?? "")
@@ -12,7 +12,7 @@ function parseDates(value: FormDataEntryValue | null) {
 }
 
 export async function createWfhRequestAction(_state: RequestFormState, formData: FormData) {
-  const user = await requireUser();
+  const user = await requireAuthorizedUser();
   const result = await createWfhRequest(user, {
     kind: formData.get("kind") === "substitution" ? "substitution" : "additional",
     requestedDates: parseDates(formData.get("requestedDates")),
@@ -33,7 +33,7 @@ export async function createWfhRequestAction(_state: RequestFormState, formData:
 }
 
 export async function decideWfhRequestAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireAuthorizedUser();
 
   if (user.role !== "coordinator") {
     throw new Error("No tienes permiso para gestionar solicitudes.");
@@ -60,7 +60,7 @@ export async function decideWfhRequestAction(formData: FormData) {
 }
 
 export async function markSubstitutionAsReadAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireAuthorizedUser();
 
   if (user.role !== "coordinator") {
     throw new Error("No tienes permiso para marcar notificaciones.");
@@ -71,8 +71,16 @@ export async function markSubstitutionAsReadAction(formData: FormData) {
   revalidatePath("/(dashboard)", "layout");
 }
 
+export async function markAdminSubstitutionAsReadAction(formData: FormData) {
+  const user = await requireAuthorizedUser();
+  if (user.role !== "admin") throw new Error("No tienes permiso para marcar notificaciones.");
+  await markAdminSubstitutionAsRead(String(formData.get("id") ?? ""));
+  revalidatePath("/admin/requests");
+  revalidatePath("/(dashboard)", "layout");
+}
+
 export async function cancelWfhRequestDateAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireAuthorizedUser();
   const result = await cancelWfhRequestDate(user, String(formData.get("requestId") ?? ""), String(formData.get("dateId") ?? ""));
 
   if (!result.ok) {

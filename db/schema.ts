@@ -1,20 +1,15 @@
 import { relations } from "drizzle-orm";
-import { boolean, index, type AnyPgColumn, date, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, date, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
-export const userRole = pgEnum("user_role", ["admin", "coordinator", "employee"]);
 export const wfhRequestKind = pgEnum("wfh_request_kind", ["additional", "substitution"]);
 export const wfhRequestStatus = pgEnum("wfh_request_status", ["pending", "accepted", "rejected", "cancelled"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   passwordHash: text("password_hash").notNull(),
-  role: userRole("role").notNull().default("employee"),
-  coordinatorId: uuid("coordinator_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
   oracleEmpId: integer("oracle_emp_id").unique(),
-  // Identity (name/email/wd number) lives in Oracle (TIMERTASK). These fallback
-  // fields are only used for system accounts that have no Oracle employee
-  // (oracleEmpId null), e.g. the app admin, so they can still log in without
-  // depending on Oracle.
+  // Identity (name/email/wd number) normally lives in Oracle (TIMERTASK).
+  // fallback_* also identifies explicitly configured local test accounts.
   fallbackEmail: text("fallback_email").unique(),
   fallbackName: text("fallback_name"),
   hasWfh: boolean("has_wfh"),
@@ -37,13 +32,7 @@ export const workFromHomeDays = pgTable(
   (table) => [uniqueIndex("work_from_home_days_user_date_idx").on(table.userId, table.date)]
 );
 
-export const usersRelations = relations(users, ({ many, one }) => ({
-  coordinator: one(users, {
-    fields: [users.coordinatorId],
-    references: [users.id],
-    relationName: "coordinatorEmployees",
-  }),
-  employees: many(users, { relationName: "coordinatorEmployees" }),
+export const usersRelations = relations(users, ({ many }) => ({
   workFromHomeDays: many(workFromHomeDays),
 }));
 
@@ -57,7 +46,7 @@ export const workFromHomeDaysRelations = relations(workFromHomeDays, ({ one }) =
 export const wfhChangeRequests = pgTable("wfh_change_requests", {
   id: uuid("id").defaultRandom().primaryKey(),
   requesterId: uuid("requester_id").notNull().references(() => users.id, { onDelete: "restrict" }),
-  coordinatorId: uuid("coordinator_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  coordinatorId: uuid("coordinator_id").references(() => users.id, { onDelete: "restrict" }),
   kind: wfhRequestKind("kind").notNull(),
   status: wfhRequestStatus("status").notNull().default("pending"),
   requesterComment: text("requester_comment"),
@@ -67,12 +56,15 @@ export const wfhChangeRequests = pgTable("wfh_change_requests", {
   decidedAt: timestamp("decided_at", { withTimezone: true }),
   coordinatorNotifiedAt: timestamp("coordinator_notified_at", { withTimezone: true }),
   coordinatorAcknowledgedAt: timestamp("coordinator_acknowledged_at", { withTimezone: true }),
+  adminNotifiedAt: timestamp("admin_notified_at", { withTimezone: true }),
+  adminAcknowledgedAt: timestamp("admin_acknowledged_at", { withTimezone: true }),
 }, (table) => [
   index("wfh_change_requests_requester_status_idx").on(table.requesterId, table.status),
   index("wfh_change_requests_requester_created_idx").on(table.requesterId, table.createdAt, table.id),
   index("wfh_change_requests_coordinator_status_idx").on(table.coordinatorId, table.status),
   index("wfh_change_requests_coordinator_created_idx").on(table.coordinatorId, table.createdAt, table.id),
   index("wfh_change_requests_coordinator_notification_idx").on(table.coordinatorId, table.coordinatorNotifiedAt, table.coordinatorAcknowledgedAt),
+  index("wfh_change_requests_admin_notification_idx").on(table.adminNotifiedAt, table.adminAcknowledgedAt),
 ]);
 
 export const wfhChangeRequestDates = pgTable(
@@ -99,6 +91,6 @@ export const wfhChangeRequestDatesRelations = relations(wfhChangeRequestDates, (
   request: one(wfhChangeRequests, { fields: [wfhChangeRequestDates.requestId], references: [wfhChangeRequests.id] }),
 }));
 
-export type UserRole = (typeof userRole.enumValues)[number];
+export type UserRole = "admin" | "coordinator" | "employee";
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
