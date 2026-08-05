@@ -1,32 +1,12 @@
 import type { BindParameters } from "oracledb";
-import { queryOracle } from "@/db/oracle";
+import { getOracleSchema, queryOracle } from "@/db/oracle";
 
 const DEFAULT_STAFF_LINE_IDS = [100, 1600, 1606, 1608, 1611];
 export const DEFAULT_EXCLUDED_GROUP_IDS = [1040, 1057, 1060, 1066];
-const ALLOWED_SCHEMAS = new Set([
-  "TIMERTASK_ES",
-  "TIMERTASK_BR",
-  "TIMERTASK_CN",
-  "TIMERTASK_DE",
-  "TIMERTASK_FR",
-  "TIMERTASK_MX",
-  "TIMERTASK_US",
-  "TIMERTASK_UKAD",
-  "TIMERTASK_HPI",
-  "TIMERTASK_ESSE",
-  "TIMERTASK_MXUS",
-]);
-
 export type OrganizationOracleRows = {
   hierarchy: { EMP_ID: number; COORDINATOR_EMP_ID: number | null }[];
   roles: { EMP_ID: number; GROUP_ID: number }[];
 };
-
-function getSchema() {
-  const schema = (process.env.ORACLE_TIMERTASK_SCHEMA ?? "TIMERTASK_ES").toUpperCase();
-  if (!ALLOWED_SCHEMAS.has(schema)) throw new Error(`Unsupported ORACLE_TIMERTASK_SCHEMA: ${schema}`);
-  return schema;
-}
 
 function getLineIds() {
   const values = (process.env.ORACLE_STAFF_LINE_IDS ?? "")
@@ -58,7 +38,7 @@ const ACTIVE_EMPLOYEE_FILTER = "e.emp_esempleado = 1 AND e.emp_fec_baja IS NULL"
 
 /** Loads the complete organization in two Oracle queries. */
 export async function findOrganizationRows(adminGroupId: number, coordinatorGroupId: number): Promise<OrganizationOracleRows> {
-  const schema = getSchema();
+  const schema = getOracleSchema();
   const groupList = bindList("group", [adminGroupId, coordinatorGroupId, ...getExcludedGroupIds()]);
   const lineList = bindList("line", getLineIds());
 

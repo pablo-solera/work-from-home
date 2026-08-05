@@ -1,5 +1,5 @@
 import type { BindParameters } from "oracledb";
-import { queryOracle } from "@/db/oracle";
+import { getOracleSchema, queryOracle } from "@/db/oracle";
 
 export type OracleEmployee = {
   empId: number;
@@ -16,32 +16,6 @@ type EmployeeRow = {
   EMP_EMAIL: string | null;
   EMP_TEL1: string | null;
 };
-
-// Allow-list of schemas. The schema name cannot be a bind variable, so it is
-// validated to avoid SQL injection through configuration.
-const ALLOWED_SCHEMAS = new Set([
-  "TIMERTASK_ES",
-  "TIMERTASK_BR",
-  "TIMERTASK_CN",
-  "TIMERTASK_DE",
-  "TIMERTASK_FR",
-  "TIMERTASK_MX",
-  "TIMERTASK_US",
-  "TIMERTASK_UKAD",
-  "TIMERTASK_HPI",
-  "TIMERTASK_ESSE",
-  "TIMERTASK_MXUS",
-]);
-
-function getSchema(): string {
-  const schema = (process.env.ORACLE_TIMERTASK_SCHEMA ?? "TIMERTASK_ES").toUpperCase();
-
-  if (!ALLOWED_SCHEMAS.has(schema)) {
-    throw new Error(`Unsupported ORACLE_TIMERTASK_SCHEMA: ${schema}`);
-  }
-
-  return schema;
-}
 
 // Only real, active employees are considered part of the staff.
 const ACTIVE_EMPLOYEE_FILTER = "e.emp_esempleado = 1 AND e.emp_fec_baja IS NULL";
@@ -72,7 +46,7 @@ const SELECT_EMPLOYEE = `
 `;
 
 function sql(body: string): string {
-  return SELECT_EMPLOYEE.replace("{schema}", getSchema()) + body;
+  return SELECT_EMPLOYEE.replace("{schema}", getOracleSchema()) + body;
 }
 
 /** Finds an active employee by email (case-insensitive). Used for login. */

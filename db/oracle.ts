@@ -1,5 +1,26 @@
 import oracledb from "oracledb";
 
+const ALLOWED_SCHEMAS = new Set([
+  "TIMERTASK_ES",
+  "TIMERTASK_BR",
+  "TIMERTASK_CN",
+  "TIMERTASK_DE",
+  "TIMERTASK_FR",
+  "TIMERTASK_MX",
+  "TIMERTASK_US",
+  "TIMERTASK_UKAD",
+  "TIMERTASK_HPI",
+  "TIMERTASK_ESSE",
+  "TIMERTASK_MXUS",
+]);
+
+/** Returns the validated Oracle schema used in interpolated SQL identifiers. */
+export function getOracleSchema() {
+  const schema = (process.env.ORACLE_TIMERTASK_SCHEMA ?? "TIMERTASK_ES").toUpperCase();
+  if (!ALLOWED_SCHEMAS.has(schema)) throw new Error(`Unsupported ORACLE_TIMERTASK_SCHEMA: ${schema}`);
+  return schema;
+}
+
 type OracleState = {
   pool: oracledb.Pool | null;
   poolPromise: Promise<oracledb.Pool> | null;
