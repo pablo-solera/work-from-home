@@ -2,6 +2,7 @@ import type { BindParameters } from "oracledb";
 import { queryOracle } from "@/db/oracle";
 
 const DEFAULT_STAFF_LINE_IDS = [100, 1600, 1606, 1608, 1611];
+export const DEFAULT_EXCLUDED_GROUP_IDS = [1040, 1057, 1060, 1066];
 const ALLOWED_SCHEMAS = new Set([
   "TIMERTASK_ES",
   "TIMERTASK_BR",
@@ -35,6 +36,14 @@ function getLineIds() {
   return values.length > 0 ? values : DEFAULT_STAFF_LINE_IDS;
 }
 
+export function getExcludedGroupIds() {
+  const values = (process.env.ORACLE_EXCLUDED_GROUP_IDS ?? "")
+    .split(",")
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isInteger(value) && value > 0);
+  return values.length > 0 ? [...new Set(values)] : DEFAULT_EXCLUDED_GROUP_IDS;
+}
+
 function bindList(prefix: string, values: number[]) {
   const binds: BindParameters = {};
   const placeholders = values.map((value, index) => {
@@ -50,7 +59,7 @@ const ACTIVE_EMPLOYEE_FILTER = "e.emp_esempleado = 1 AND e.emp_fec_baja IS NULL"
 /** Loads the complete organization in two Oracle queries. */
 export async function findOrganizationRows(adminGroupId: number, coordinatorGroupId: number): Promise<OrganizationOracleRows> {
   const schema = getSchema();
-  const groupList = bindList("group", [adminGroupId, coordinatorGroupId]);
+  const groupList = bindList("group", [adminGroupId, coordinatorGroupId, ...getExcludedGroupIds()]);
   const lineList = bindList("line", getLineIds());
 
   const [roles, hierarchy] = await Promise.all([

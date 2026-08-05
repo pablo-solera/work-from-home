@@ -5,6 +5,7 @@ const oracleQuery = vi.fn(async (sql: string) => {
     return [
       { EMP_ID: 220, GROUP_ID: 1024 },
       { EMP_ID: 415, GROUP_ID: 1017 },
+      { EMP_ID: 700, GROUP_ID: 1057 },
     ];
   }
 
@@ -40,6 +41,7 @@ describe("organización Oracle", () => {
   it("carga el snapshot una vez, deriva roles, personal y equipos", async () => {
     const {
       findStaffEmpIds,
+      findExcludedEmpIds,
       findUsersForCoordinator,
       getOrganizationSnapshot,
       isUserInCoordinatorTeam,
@@ -56,6 +58,7 @@ describe("organización Oracle", () => {
     expect(await resolveUserRole({ oracleEmpId: null })).toBe("employee");
     expect(await resolveUserRole({ oracleEmpId: null })).toBe("employee");
     expect(await findStaffEmpIds()).toEqual(new Set([415, 500, 501, 502]));
+    expect(await findExcludedEmpIds()).toEqual(new Set([700]));
     expect(await findUsersForCoordinator("coordinator")).toEqual([localUsers[2]]);
     expect(await isUserInCoordinatorTeam("employee", "coordinator")).toBe(true);
     expect(await isUserInCoordinatorTeam("coordinator", "employee")).toBe(false);

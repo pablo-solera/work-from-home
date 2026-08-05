@@ -1,5 +1,5 @@
 import type { UserRole } from "@/db/schema";
-import { findOrganizationRows } from "@/lib/employees/org-repository";
+import { findOrganizationRows, getExcludedGroupIds } from "@/lib/employees/org-repository";
 import { findTestAccountByEmpId, getTestAccounts } from "@/lib/employees/test-accounts";
 import { findUserById, findUsersByOracleEmpIds } from "@/lib/users/user-repository";
 
@@ -11,6 +11,7 @@ type OrganizationSnapshot = {
   adminEmpIds: Set<number>;
   coordinatorEmpIds: Set<number>;
   coordinatorByEmpId: Map<number, number | null>;
+  excludedEmpIds: Set<number>;
   staffEmpIds: Set<number>;
   teamByCoordinatorEmpId: Map<number, Set<number>>;
 };
@@ -57,6 +58,10 @@ function buildSnapshot(rows: Awaited<ReturnType<typeof findOrganizationRows>>): 
     : rows;
   const adminEmpIds = new Set(organizationRows.roles.filter((row) => row.GROUP_ID === adminGroupId).map((row) => row.EMP_ID));
   const coordinatorEmpIds = new Set(organizationRows.roles.filter((row) => row.GROUP_ID === coordinatorGroupId).map((row) => row.EMP_ID));
+  const excludedGroupIds = new Set(getExcludedGroupIds());
+  const excludedEmpIds = new Set(organizationRows.roles
+    .filter((row) => excludedGroupIds.has(row.GROUP_ID))
+    .map((row) => row.EMP_ID));
   const coordinatorByEmpId = new Map(organizationRows.hierarchy.map((row) => [row.EMP_ID, row.COORDINATOR_EMP_ID]));
   const teamByCoordinatorEmpId = new Map<number, Set<number>>();
 
@@ -71,6 +76,7 @@ function buildSnapshot(rows: Awaited<ReturnType<typeof findOrganizationRows>>): 
     adminEmpIds,
     coordinatorEmpIds,
     coordinatorByEmpId,
+    excludedEmpIds,
     staffEmpIds: new Set(coordinatorByEmpId.keys()),
     teamByCoordinatorEmpId,
   };
@@ -190,4 +196,8 @@ export async function isUserInCoordinatorTeam(employeeId: string, coordinatorId:
 
 export async function findStaffEmpIds() {
   return (await getOrganizationSnapshot()).staffEmpIds;
+}
+
+export async function findExcludedEmpIds() {
+  return (await getOrganizationSnapshot()).excludedEmpIds;
 }

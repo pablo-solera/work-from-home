@@ -4,6 +4,7 @@ import { ABSENCE_SECTIONS } from "@/lib/absences/absence-sections";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { filterVisibleStaff } from "@/lib/employees/staff-service";
 import { findAllUsers, findEmployeeByCoordinatorId, findEmployeesByCoordinatorId, findEmployeeTeamVisibility, findUserById } from "@/lib/users/user-repository";
+import { findExcludedEmpIds } from "@/lib/employees/org-service";
 import { createWorkFromHomeDay, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds, replaceWorkFromHomeDays } from "./calendar-repository";
 import { getCalendarDays, getMadridTodayDateKey, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
 import { getPendingRequestedDates } from "@/lib/requests/request-service";
@@ -30,9 +31,13 @@ function buildSectionsByDate(
   identities: Awaited<ReturnType<typeof resolveUserIdentities>>,
   absenceSectionsByDate: Record<string, DaySections>,
   calendar: ReturnType<typeof getCalendarDays>,
+  excludedEmpIds: Set<number>,
   minimumDate?: string,
 ) {
   const visibleUserIds = new Set(users.map((user) => user.id));
+  const excludedUserIds = new Set(users
+    .filter((user) => user.oracleEmpId !== null && excludedEmpIds.has(user.oracleEmpId))
+    .map((user) => user.id));
   const sectionsByDate: Record<string, DaySections> = {};
   const absentUserIdsByDate: Record<string, Set<string>> = {};
 
@@ -43,7 +48,7 @@ function buildSectionsByDate(
 
     for (const key of Object.keys(sections) as (keyof DaySections)[]) {
       filtered[key] = sections[key]
-        .filter((entry) => entry.userId !== null && visibleUserIds.has(entry.userId))
+        .filter((entry) => entry.userId !== null && visibleUserIds.has(entry.userId) && !excludedUserIds.has(entry.userId))
         .map((entry) => {
           const identity = entry.userId ? identities.get(entry.userId) : undefined;
           return identity ? { ...entry, userName: identity.name, userEmail: identity.email } : entry;
@@ -62,7 +67,7 @@ function buildSectionsByDate(
 
   for (const entry of entries) {
     if (minimumDate && entry.date < minimumDate) continue;
-    if (!visibleUserIds.has(entry.userId) || absentUserIdsByDate[entry.date]?.has(entry.userId)) {
+    if (!visibleUserIds.has(entry.userId) || excludedUserIds.has(entry.userId) || absentUserIdsByDate[entry.date]?.has(entry.userId)) {
       continue;
     }
 
@@ -75,7 +80,7 @@ function buildSectionsByDate(
     });
   }
 
-  const officeStaff = users.filter((user) => user.oracleEmpId !== null && user.oracleEmpId !== undefined);
+  const officeStaff = users.filter((user) => user.oracleEmpId !== null && user.oracleEmpId !== undefined && !excludedUserIds.has(user.id));
 
   for (const cell of calendar.cells) {
     if (!cell || cell.isWeekend || cell.isHoliday) {
@@ -85,6 +90,16 @@ function buildSectionsByDate(
 
     const sections = sectionsByDate[cell.date];
     const outOfOfficeUserIds = new Set<string>();
+
+    const excludedEntries = users
+      .filter((user) => excludedUserIds.has(user.id))
+      .map((user) => {
+        const identity = identities.get(user.id) ?? UNKNOWN_IDENTITY;
+        return { userId: user.id, userName: identity.name, userEmail: identity.email };
+      });
+
+    sectionsByDate[cell.date] = sectionsByDate[cell.date] ?? createEmptySections();
+    sectionsByDate[cell.date].noComprende = excludedEntries;
 
     if (sections) {
       for (const key of OUT_OF_OFFICE_SECTION_KEYS) {
@@ -105,7 +120,6 @@ function buildSectionsByDate(
       .sort((a, b) => a.userName.localeCompare(b.userName, "es"));
 
     if (inOffice.length > 0) {
-      sectionsByDate[cell.date] = sectionsByDate[cell.date] ?? createEmptySections();
       sectionsByDate[cell.date].enOficina = inOffice;
     }
   }
@@ -120,7 +134,7 @@ function buildDaySummaries(sectionsByDate: Record<string, DaySections>, calendar
     if (!cell) continue;
     const sections = sectionsByDate[cell.date] ?? createEmptySections();
     const isPast = Boolean(minimumDate && cell.date < minimumDate);
-    const absenceCount = ABSENCE_SECTIONS.filter((section) => section.key !== "enOficina" && section.key !== "teletrabajo")
+    const absenceCount = ABSENCE_SECTIONS.filter((section) => section.key !== "enOficina" && section.key !== "teletrabajo" && section.key !== "noComprende")
       .reduce((total, section) => total + (isPast ? 0 : sections[section.key].length), 0);
     summaries[cell.date] = {
       date: cell.date,
@@ -158,12 +172,13 @@ export async function getAdminCalendarOverview(year: number, month: number) {
   // Only show/count employees that belong to the configured staff lines.
   // Absences reuse `allUsers` (no extra query); identities and the staff filter
   // both hit Oracle and are independent, so run them together.
-  const [absenceSectionsByDate, users, identities] = await Promise.all([
+  const [absenceSectionsByDate, users, identities, excludedEmpIds] = await Promise.all([
     getAbsenceSectionsByDate(range.start, range.end, allUsers),
     filterVisibleStaff(allUsers),
     resolveUserIdentities(allUsers),
+    findExcludedEmpIds(),
   ]);
-  const sectionsByDate = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar);
+  const sectionsByDate = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar, excludedEmpIds);
 
   const userList = users
     .map((user) => {
@@ -203,13 +218,14 @@ export async function getEmployeeTeamWfhDayDetail(viewer: SessionUser, date: str
   if (!visibility?.teamWfhVisible) return null;
 
   const users = await filterVisibleStaff(await findEmployeesByCoordinatorId(visibility.coordinatorId));
-  const [entries, identities, absenceSectionsByDate] = await Promise.all([
+  const [entries, identities, absenceSectionsByDate, excludedEmpIds] = await Promise.all([
     findWorkFromHomeDaysByUserIds(users.map((user) => user.id), date, date),
     resolveUserIdentities(users),
     getAbsenceSectionsByDate(date, date, users),
+    findExcludedEmpIds(),
   ]);
   const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)));
-  return buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar, date)[date] ?? createEmptySections();
+  return buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar, excludedEmpIds, date)[date] ?? createEmptySections();
 }
 
 export async function getCalendarDayDetail(viewer: SessionUser, date: string) {
@@ -218,12 +234,13 @@ export async function getCalendarDayDetail(viewer: SessionUser, date: string) {
   if (!users) return null;
 
   const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)));
-  const [entries, absenceSectionsByDate, identities] = await Promise.all([
+  const [entries, absenceSectionsByDate, identities, excludedEmpIds] = await Promise.all([
     findWorkFromHomeDaysByUserIds(users.map((user) => user.id), date, date),
     getAbsenceSectionsByDate(date, date, users),
     resolveUserIdentities(users),
+    findExcludedEmpIds(),
   ]);
-  const sectionsByDate = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar);
+  const sectionsByDate = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar, excludedEmpIds);
 
   return sectionsByDate[date] ?? createEmptySections();
 }
@@ -267,12 +284,13 @@ export async function getCoordinatorCalendarOverview(coordinatorId: string, year
   const range = getMonthRange(year, month);
   const calendar = getCalendarDays(year, month);
 
-  const [entries, identities, absenceSectionsByDate] = await Promise.all([
+  const [entries, identities, absenceSectionsByDate, excludedEmpIds] = await Promise.all([
     findWorkFromHomeDaysByUserIds(visibleUserIds, range.start, range.end),
     resolveUserIdentities(employees),
     getAbsenceSectionsByDate(range.start, range.end, employees),
+    findExcludedEmpIds(),
   ]);
-  const sectionsByDate = buildSectionsByDate(entries, visibleEmployees, identities, absenceSectionsByDate, calendar);
+  const sectionsByDate = buildSectionsByDate(entries, visibleEmployees, identities, absenceSectionsByDate, calendar, excludedEmpIds);
 
   const employeeList = employees
     .map((employee) => {
@@ -321,12 +339,13 @@ export async function getTeamCalendarForViewer(viewer: SessionUser, year: number
   const calendar = getCalendarDays(year, month);
   const today = getMadridTodayDateKey();
   const start = range.start > today ? range.start : today;
-  const [entries, identities, absenceSectionsByDate] = await Promise.all([
+  const [entries, identities, absenceSectionsByDate, excludedEmpIds] = await Promise.all([
     start <= range.end ? findWorkFromHomeDaysByUserIds(employees.map((employee) => employee.id), start, range.end) : Promise.resolve([]),
     resolveUserIdentities(employees),
     start <= range.end ? getAbsenceSectionsByDate(start, range.end, employees) : Promise.resolve({}),
+    findExcludedEmpIds(),
   ]);
-  const sectionsByDate = buildSectionsByDate(entries, employees, identities, absenceSectionsByDate, calendar, today);
+  const sectionsByDate = buildSectionsByDate(entries, employees, identities, absenceSectionsByDate, calendar, excludedEmpIds, today);
 
   return {
     ...calendar,

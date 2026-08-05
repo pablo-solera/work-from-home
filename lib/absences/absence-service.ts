@@ -23,6 +23,7 @@ function createEmptySections(): DaySections {
     permisos: [],
     excedencia: [],
     mudanza: [],
+    noComprende: [],
   };
 }
 

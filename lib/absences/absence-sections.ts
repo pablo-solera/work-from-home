@@ -4,7 +4,7 @@
  * Each section maps to one or more Oracle `TTIPOS_DIA.TDIA_ID` values from the
  * TIMERTASK schema. "teletrabajo" has no Oracle type: it comes from Postgres.
  */
-export type AbsenceSectionKey = "enOficina" | "teletrabajo" | "vacaciones" | "ausencias" | "bajas" | "viajes" | "permisos" | "excedencia" | "mudanza";
+export type AbsenceSectionKey = "enOficina" | "teletrabajo" | "vacaciones" | "ausencias" | "bajas" | "viajes" | "permisos" | "excedencia" | "mudanza" | "noComprende";
 
 type AbsenceSectionDefinition = {
   key: AbsenceSectionKey;
@@ -29,6 +29,7 @@ export const ABSENCE_SECTIONS: AbsenceSectionDefinition[] = [
   { key: "permisos", label: "Permisos", tdiaIds: [14] },
   { key: "excedencia", label: "Excedencia", tdiaIds: [16] },
   { key: "mudanza", label: "Mudanza", tdiaIds: [13] },
+  { key: "noComprende", label: "No comprende", tdiaIds: [] },
 ];
 
 const SECTION_BY_TDIA_ID = new Map<number, AbsenceSectionKey>();

@@ -5,7 +5,8 @@ import { createCalendarHref } from "@/lib/calendar/links";
 
 describe("absence sections", () => {
   it("maps every visible Oracle type and returns null for unknown ids", () => {
-    expect(ABSENCE_SECTIONS).toHaveLength(9);
+    expect(ABSENCE_SECTIONS).toHaveLength(10);
+    expect(ABSENCE_SECTIONS.at(-1)?.key).toBe("noComprende");
     expect(ABSENCE_TDIA_IDS).toContain(1);
     expect(getAbsenceSectionKey(1)).toBe("vacaciones");
     expect(getAbsenceSectionKey(14)).toBe("permisos");
