@@ -4,6 +4,9 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/db/oracle", () => ({
   queryOracle: vi.fn(async (query: string) => {
     if (query.includes("templeado_dias")) return [];
+    if (query.includes("e.emp_id IN")) {
+      return [{ EMP_ID: 500, EMP_NOMBRE: "Team Employee", EMP_APELLIDO1: "Test", EMP_APELLIDO2: null, EMP_EMAIL: "team-employee-test@example.com", EMP_TEL1: null }];
+    }
     if (query.includes("eg.grupo_id IN")) {
       return [
         { EMP_ID: 220, GROUP_ID: 1024 },
@@ -19,8 +22,14 @@ import {
   cancelWfhRequestDate,
   createWfhRequest,
   decideWfhRequest,
+  getAdminSubstitutionNotifications,
+  getPendingRequestedDates,
   getRequestNotificationSummary,
+  getRequestsForAdmin,
+  getRequestsForCoordinator,
   getRequestsForRequester,
+  markAdminSubstitutionAsRead,
+  markSubstitutionAsRead,
 } from "@/lib/requests/request-service";
 import type { SessionUser } from "@/lib/auth/session";
 
@@ -219,6 +228,94 @@ describe("request persistence on PostgreSQL", () => {
       RETURNING id
     `;
     expect((await cancelWfhRequestDate(employee, String(pastRequestId), String(pastDateId))).error).toContain("fechas futuras");
+  });
+
+  it("lists coordinator requests without including the coordinator own requests", async () => {
+    const [{ id: teamRequestId }] = await sql`
+      INSERT INTO wfh_change_requests (requester_id, coordinator_id, kind, status, requester_comment)
+      VALUES (${teamEmployee.id}, ${coordinator.id}, 'additional', 'pending', 'Solicitud del equipo.')
+      RETURNING id
+    `;
+    await sql`INSERT INTO wfh_change_request_dates (request_id, requested_date) VALUES (${teamRequestId}, '2099-07-07')`;
+
+    const [{ id: ownRequestId }] = await sql`
+      INSERT INTO wfh_change_requests (requester_id, coordinator_id, kind, status, requester_comment)
+      VALUES (${coordinator.id}, ${coordinator.id}, 'additional', 'pending', 'Solicitud propia.')
+      RETURNING id
+    `;
+    await sql`INSERT INTO wfh_change_request_dates (request_id, requested_date) VALUES (${ownRequestId}, '2099-07-08')`;
+
+    const page = await getRequestsForCoordinator(coordinator.id, { date: "all", status: "pending" });
+    expect(page.requests.map((request) => request.id)).toEqual([String(teamRequestId)]);
+    expect(page.requests[0]).toMatchObject({ requesterName: teamEmployee.name, requesterEmail: teamEmployee.email });
+  });
+
+  it("lists only additional requests for admins", async () => {
+    const [{ id: additionalId }] = await sql`
+      INSERT INTO wfh_change_requests (requester_id, kind, status, requester_comment)
+      VALUES (${teamEmployee.id}, 'additional', 'pending', 'Solicitud adicional.')
+      RETURNING id
+    `;
+    await sql`INSERT INTO wfh_change_request_dates (request_id, requested_date) VALUES (${additionalId}, '2099-07-09')`;
+
+    const [{ id: substitutionId }] = await sql`
+      INSERT INTO wfh_change_requests (requester_id, coordinator_id, kind, status, admin_notified_at)
+      VALUES (${teamEmployee.id}, ${coordinator.id}, 'substitution', 'accepted', now())
+      RETURNING id
+    `;
+    await sql`INSERT INTO wfh_change_request_dates (request_id, requested_date, replaced_date) VALUES (${substitutionId}, '2099-07-10', '2099-07-09')`;
+
+    const page = await getRequestsForAdmin({ date: "all", status: "all" });
+    expect(page.requests.map((request) => request.id)).toEqual([String(additionalId)]);
+  });
+
+  it("lists and acknowledges admin substitution notifications once", async () => {
+    const [{ id }] = await sql`
+      INSERT INTO wfh_change_requests (requester_id, coordinator_id, kind, status, admin_notified_at)
+      VALUES (${teamEmployee.id}, ${coordinator.id}, 'substitution', 'accepted', now())
+      RETURNING id
+    `;
+    await sql`INSERT INTO wfh_change_request_dates (request_id, requested_date, replaced_date) VALUES (${id}, '2099-08-04', '2099-08-03')`;
+
+    const page = await getAdminSubstitutionNotifications();
+    expect(page.requests.map((request) => request.id)).toContain(String(id));
+    expect(await markAdminSubstitutionAsRead(String(id))).toBe(true);
+    expect(await markAdminSubstitutionAsRead(String(id))).toBe(false);
+  });
+
+  it("acknowledges coordinator substitution notifications once", async () => {
+    const [{ id }] = await sql`
+      INSERT INTO wfh_change_requests (requester_id, coordinator_id, kind, status, coordinator_notified_at)
+      VALUES (${teamEmployee.id}, ${coordinator.id}, 'substitution', 'accepted', now())
+      RETURNING id
+    `;
+    await sql`INSERT INTO wfh_change_request_dates (request_id, requested_date, replaced_date) VALUES (${id}, '2099-08-11', '2099-08-08')`;
+
+    expect(await markSubstitutionAsRead(coordinator.id, String(id))).toBe(true);
+    expect(await markSubstitutionAsRead(coordinator.id, String(id))).toBe(false);
+  });
+
+  it("returns active pending requested and replaced dates within the range", async () => {
+    const [{ id }] = await sql`
+      INSERT INTO wfh_change_requests (requester_id, kind, status)
+      VALUES (${teamEmployee.id}, 'substitution', 'pending')
+      RETURNING id
+    `;
+    await sql`
+      INSERT INTO wfh_change_request_dates (request_id, requested_date, replaced_date)
+      VALUES (${id}, '2099-09-10', '2099-09-08')
+    `;
+    await sql`
+      INSERT INTO wfh_change_request_dates (request_id, requested_date, replaced_date, cancelled_at)
+      VALUES (${id}, '2099-09-11', '2099-09-12', now())
+    `;
+    await sql`
+      INSERT INTO wfh_change_request_dates (request_id, requested_date)
+      VALUES (${id}, '2099-10-01')
+    `;
+
+    const dates = await getPendingRequestedDates(teamEmployee.id, "2099-09-01", "2099-09-30");
+    expect(dates.toSorted()).toEqual(["2099-09-08", "2099-09-10"]);
   });
 
   it("enforces the request tables and notification columns after migration", async () => {
