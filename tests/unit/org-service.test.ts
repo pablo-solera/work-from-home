@@ -23,7 +23,7 @@ const localUsers = [
   { id: "employee", oracleEmpId: 500, fallbackEmail: null },
 ];
 
-vi.mock("@/db/oracle", () => ({ queryOracle: oracleQuery }));
+vi.mock("@/db/oracle", () => ({ getOracleSchema: () => "TIMERTASK_ES", queryOracle: oracleQuery }));
 vi.mock("@/lib/users/user-repository", () => ({
   findUserById: vi.fn(async (id: string) => localUsers.find((user) => user.id === id)),
   findUsersByOracleEmpIds: vi.fn(async (ids: number[]) => localUsers.filter((user) => user.oracleEmpId !== null && ids.includes(user.oracleEmpId))),

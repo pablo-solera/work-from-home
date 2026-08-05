@@ -2,6 +2,7 @@ import postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/db/oracle", () => ({
+  getOracleSchema: () => "TIMERTASK_ES",
   queryOracle: vi.fn(async (query: string) => {
     if (query.includes("templeado_dias")) return [];
     if (query.includes("e.emp_id IN")) {
