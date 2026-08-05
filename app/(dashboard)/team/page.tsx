@@ -17,6 +17,7 @@ function teamHref(year: number, month: number, employeeId?: string) {
 
 export default async function TeamPage({ searchParams }: TeamPageProps) {
   const user = await requireUser();
+  if (user.role === "admin") redirect("/admin");
 
   const params = await searchParams;
   const { year, month } = parseCalendarMonth(params?.year, params?.month);
