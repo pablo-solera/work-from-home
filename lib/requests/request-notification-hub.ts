@@ -1,6 +1,5 @@
-import { getPostgresClient } from "@/db";
+import { listenForRequestNotifications } from "./request-repository";
 
-const CHANNEL = "wfh_request_changed";
 const encoder = new TextEncoder();
 
 type Connection = {
@@ -69,8 +68,7 @@ function broadcastNotification(payload: string) {
 async function ensureListener() {
   if (hub.listenerPromise) return hub.listenerPromise;
 
-  hub.listenerPromise = getPostgresClient()
-    .listen(CHANNEL, (payload) => broadcastNotification(payload), () => {
+  hub.listenerPromise = listenForRequestNotifications((payload) => broadcastNotification(payload), () => {
       for (const userId of hub.connections.keys()) broadcast(userId);
     })
     .then(() => undefined)

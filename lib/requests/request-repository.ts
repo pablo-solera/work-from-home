@@ -1,12 +1,18 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, lte, ne, sql } from "drizzle-orm";
-import { getDb } from "@/db";
+import { getDb, getPostgresClient } from "@/db";
 import { users, wfhChangeRequestDates, wfhChangeRequests, workFromHomeDays } from "@/db/schema";
 import { getRequestDateRange } from "@/lib/calendar/dates";
 import type { RequestCursor, RequestFilters } from "./request-service";
 
+export const REQUEST_NOTIFICATION_CHANNEL = "wfh_request_changed";
+
 type Database = ReturnType<typeof getDb>;
 export type RequestTransaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 export type RequestExecutor = Database | RequestTransaction;
+
+export function listenForRequestNotifications(onPayload: (payload: string) => void, onReconnect: () => void): Promise<void> {
+  return getPostgresClient().listen(REQUEST_NOTIFICATION_CHANNEL, onPayload, onReconnect).then(() => undefined);
+}
 
 const dateOrder = asc(wfhChangeRequestDates.requestedDate);
 
