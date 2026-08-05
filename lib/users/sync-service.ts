@@ -1,12 +1,9 @@
-import { inArray } from "drizzle-orm";
-import { getDb } from "@/db";
-import { workFromHomeDays } from "@/db/schema";
 import { hashPassword } from "@/lib/auth/password";
 import { findAllActiveEmployees } from "@/lib/employees/employee-repository";
 import { getTestAccountEmpIds } from "@/lib/employees/test-accounts";
 import { generateTemporaryPassword } from "@/lib/users/password-generator";
 import type { SyncPassword } from "@/lib/users/sync-state";
-import { createUsers, deleteUsers, findUsersWithOracleEmpId } from "@/lib/users/user-repository";
+import { countWorkFromHomeDaysByUserIds, createUsers, deleteUsers, findUsersWithOracleEmpId } from "@/lib/users/user-repository";
 
 // Oracle employees that are not real people and must never become app users.
 const IGNORED_EMP_IDS = new Set<number>([
@@ -47,9 +44,9 @@ export async function buildSyncPlan(): Promise<SyncPlan> {
   const wfhCounts = new Map<string, number>();
 
   if (deleteIds.length > 0) {
-    const rows = await getDb().select({ userId: workFromHomeDays.userId }).from(workFromHomeDays).where(inArray(workFromHomeDays.userId, deleteIds));
+    const rows = await countWorkFromHomeDaysByUserIds(deleteIds);
     for (const row of rows) {
-      wfhCounts.set(row.userId, (wfhCounts.get(row.userId) ?? 0) + 1);
+      wfhCounts.set(row.userId, Number(row.count));
     }
   }
 

@@ -1,6 +1,6 @@
-import { eq, inArray, isNotNull } from "drizzle-orm";
+import { eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { type NewUser, users } from "@/db/schema";
+import { type NewUser, users, workFromHomeDays } from "@/db/schema";
 
 export type AdminUserRow = Awaited<ReturnType<typeof findUsersForAdmin>>[number];
 
@@ -73,6 +73,16 @@ export function findUsersWithOracleEmpId() {
     },
     where: isNotNull(users.oracleEmpId),
   });
+}
+
+export function countWorkFromHomeDaysByUserIds(userIds: string[]) {
+  if (userIds.length === 0) return Promise.resolve([]);
+
+  return getDb()
+    .select({ userId: workFromHomeDays.userId, count: sql<number>`count(*)` })
+    .from(workFromHomeDays)
+    .where(inArray(workFromHomeDays.userId, userIds))
+    .groupBy(workFromHomeDays.userId);
 }
 
 export async function createUsers(values: NewUser[]) {
