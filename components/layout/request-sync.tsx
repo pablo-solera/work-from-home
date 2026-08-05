@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { useRequestNotifications } from "./request-notification-provider";
 
 const SYNC_PATHS = new Set(["/calendar", "/requests", "/team"]);
 
@@ -11,6 +12,7 @@ export function RequestSync() {
   const pathnameRef = useRef(pathname);
   const refreshScheduled = useRef(false);
   const refreshPending = useRef(false);
+  const { subscribe } = useRequestNotifications();
 
   useEffect(() => {
     pathnameRef.current = pathname;
@@ -33,8 +35,9 @@ export function RequestSync() {
       }, 150);
     };
 
-    const source = new EventSource("/api/requests/events");
-    source.addEventListener("requests-changed", scheduleRefresh);
+    const unsubscribe = subscribe((event) => {
+      if (event === "requests-changed") scheduleRefresh();
+    });
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible" && refreshPending.current) scheduleRefresh();
@@ -42,10 +45,10 @@ export function RequestSync() {
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      source.close();
+      unsubscribe();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [router]);
+  }, [router, subscribe]);
 
   return null;
 }

@@ -1,4 +1,5 @@
 import { AppHeader } from "@/components/layout/app-header";
+import { RequestNotificationProvider } from "@/components/layout/request-notification-provider";
 import { ToastProvider } from "@/components/common/toast-provider";
 import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { getUserById } from "@/lib/users/user-service";
@@ -15,10 +16,12 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
   return (
     <ToastProvider>
-      <div className="flex-1 bg-zinc-50">
-        <AppHeader canCover={user.role !== "admin" && (dbUser?.canEditAllWfh ?? false)} canViewTeam={teamVisibility?.teamWfhVisible ?? false} notificationSummary={notificationSummary} user={user} />
-        <main className="mx-auto w-full max-w-6xl px-6 py-8">{children}</main>
-      </div>
+      <RequestNotificationProvider>
+        <div className="flex-1 bg-zinc-50">
+          <AppHeader canCover={user.role !== "admin" && (dbUser?.canEditAllWfh ?? false)} canViewTeam={teamVisibility?.teamWfhVisible ?? false} notificationSummary={notificationSummary} user={user} />
+          <main className="mx-auto w-full max-w-6xl px-6 py-8">{children}</main>
+        </div>
+      </RequestNotificationProvider>
     </ToastProvider>
   );
 }
