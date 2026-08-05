@@ -13,19 +13,24 @@ export type SessionUser = {
 };
 
 function getSessionSecret() {
-  if (!process.env.SESSION_SECRET) {
-    throw new Error("SESSION_SECRET is required to manage sessions.");
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret === "change-me-with-a-long-random-secret" || secret.length < 32) {
+    throw new Error("SESSION_SECRET must be a non-placeholder value of at least 32 characters.");
   }
 
-  return process.env.SESSION_SECRET;
+  return secret;
 }
 
 function shouldUseSecureSessionCookie() {
+  if (process.env.NODE_ENV === "production") {
+    return true;
+  }
+
   if (process.env.SESSION_COOKIE_SECURE) {
     return process.env.SESSION_COOKIE_SECURE === "true";
   }
 
-  return process.env.NODE_ENV === "production";
+  return false;
 }
 
 export function createSessionToken(user: SessionUser) {
@@ -34,7 +39,7 @@ export function createSessionToken(user: SessionUser) {
 
 export function verifySessionToken(token: string): SessionUser | null {
   try {
-    const payload = jwt.verify(token, getSessionSecret());
+    const payload = jwt.verify(token, getSessionSecret(), { algorithms: ["HS256"] });
 
     if (!payload || typeof payload === "string") {
       return null;
