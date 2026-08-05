@@ -1,6 +1,27 @@
 import postgres from "postgres";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createWfhRequest, cancelWfhRequestDate } from "@/lib/requests/request-service";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/db/oracle", () => ({
+  queryOracle: vi.fn(async (query: string) => {
+    if (query.includes("templeado_dias")) return [];
+    if (query.includes("eg.grupo_id IN")) {
+      return [
+        { EMP_ID: 220, GROUP_ID: 1024 },
+        { EMP_ID: 415, GROUP_ID: 1017 },
+      ];
+    }
+
+    return [{ EMP_ID: 500, COORDINATOR_EMP_ID: 415 }];
+  }),
+}));
+
+import {
+  cancelWfhRequestDate,
+  createWfhRequest,
+  decideWfhRequest,
+  getRequestNotificationSummary,
+  getRequestsForRequester,
+} from "@/lib/requests/request-service";
 import type { SessionUser } from "@/lib/auth/session";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -11,14 +32,16 @@ const sql = postgres(databaseUrl, { max: 2 });
 const admin: SessionUser = { id: "00000000-0000-4000-8000-000000000001", name: "Admin Test", email: "admin-test@example.com", role: "admin" };
 const coordinator: SessionUser = { id: "00000000-0000-4000-8000-000000000002", name: "Coordinator Test", email: "coordinator-test@example.com", role: "coordinator" };
 const employee: SessionUser = { id: "00000000-0000-4000-8000-000000000003", name: "Employee Test", email: "employee-test@example.com", role: "employee" };
+const teamEmployee: SessionUser = { id: "00000000-0000-4000-8000-000000000004", name: "Team Employee Test", email: "team-employee-test@example.com", role: "employee" };
 
 async function seedUsers() {
   await sql`
-    INSERT INTO users (id, password_hash, fallback_email, fallback_name)
+    INSERT INTO users (id, password_hash, fallback_email, fallback_name, oracle_emp_id)
     VALUES
-      (${admin.id}, 'test-hash', ${admin.email}, ${admin.name}),
-      (${coordinator.id}, 'test-hash', ${coordinator.email}, ${coordinator.name}),
-      (${employee.id}, 'test-hash', ${employee.email}, ${employee.name})
+      (${admin.id}, 'test-hash', ${admin.email}, ${admin.name}, 220),
+      (${coordinator.id}, 'test-hash', ${coordinator.email}, ${coordinator.name}, 415),
+      (${employee.id}, 'test-hash', ${employee.email}, ${employee.name}, NULL),
+      (${teamEmployee.id}, 'test-hash', ${teamEmployee.email}, ${teamEmployee.name}, 500)
   `;
 }
 
@@ -27,7 +50,7 @@ describe("request persistence on PostgreSQL", () => {
     await sql`DELETE FROM wfh_change_request_dates`;
     await sql`DELETE FROM wfh_change_requests`;
     await sql`DELETE FROM work_from_home_days`;
-    await sql`DELETE FROM users WHERE id IN (${admin.id}, ${coordinator.id}, ${employee.id})`;
+    await sql`DELETE FROM users WHERE id IN (${admin.id}, ${coordinator.id}, ${employee.id}, ${teamEmployee.id})`;
     await seedUsers();
   });
 
@@ -35,7 +58,7 @@ describe("request persistence on PostgreSQL", () => {
     await sql`DELETE FROM wfh_change_request_dates`;
     await sql`DELETE FROM wfh_change_requests`;
     await sql`DELETE FROM work_from_home_days`;
-    await sql`DELETE FROM users WHERE id IN (${admin.id}, ${coordinator.id}, ${employee.id})`;
+    await sql`DELETE FROM users WHERE id IN (${admin.id}, ${coordinator.id}, ${employee.id}, ${teamEmployee.id})`;
     await sql.end();
   });
 
@@ -77,6 +100,125 @@ describe("request persistence on PostgreSQL", () => {
 
     const rows = await sql`SELECT status FROM wfh_change_requests`;
     expect(rows[0].status).toBe("cancelled");
+  });
+
+  it("applies a substitution immediately and replaces the original day", async () => {
+    await sql`INSERT INTO work_from_home_days (user_id, date) VALUES (${teamEmployee.id}, '2099-01-07')`;
+
+    const result = await createWfhRequest(teamEmployee, {
+      kind: "substitution",
+      requestedDates: ["2099-01-08"],
+      replacedDates: ["2099-01-07"],
+      comment: null,
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    const days = await sql`SELECT date FROM work_from_home_days WHERE user_id = ${teamEmployee.id} ORDER BY date`;
+    expect(days.map((row) => row.date instanceof Date ? row.date.toISOString().slice(0, 10) : String(row.date))).toEqual(["2099-01-08"]);
+  });
+
+  it("approves an additional request as an admin and rejects coordinator access", async () => {
+    const created = await createWfhRequest(teamEmployee, {
+      kind: "additional",
+      requestedDates: ["2099-02-03"],
+      replacedDates: [],
+      comment: "Motivo de prueba.",
+    });
+    expect(created.ok).toBe(true);
+
+    const [{ id }] = await sql`SELECT id FROM wfh_change_requests WHERE requester_id = ${teamEmployee.id}`;
+    expect((await decideWfhRequest(coordinator, String(id), "accepted", null)).error).toContain("permiso");
+    expect((await decideWfhRequest(admin, String(id), "accepted", "Aprobada.")).ok).toBe(true);
+
+    const rows = await sql`SELECT status FROM wfh_change_requests WHERE id = ${id}`;
+    const days = await sql`SELECT date FROM work_from_home_days WHERE user_id = ${teamEmployee.id}`;
+    expect(rows[0].status).toBe("accepted");
+    expect(days.map((row) => row.date instanceof Date ? row.date.toISOString().slice(0, 10) : String(row.date))).toContain("2099-02-03");
+  });
+
+  it("approves a pending substitution for the coordinator team", async () => {
+    await sql`INSERT INTO work_from_home_days (user_id, date) VALUES (${teamEmployee.id}, '2099-03-03')`;
+    const [{ id: requestId }] = await sql`
+      INSERT INTO wfh_change_requests (requester_id, coordinator_id, kind, status)
+      VALUES (${teamEmployee.id}, ${coordinator.id}, 'substitution', 'pending')
+      RETURNING id
+    `;
+    const [{ id: dateId }] = await sql`
+      INSERT INTO wfh_change_request_dates (request_id, requested_date, replaced_date)
+      VALUES (${requestId}, '2099-03-05', '2099-03-03')
+      RETURNING id
+    `;
+
+    expect((await decideWfhRequest(coordinator, String(requestId), "accepted", null)).ok).toBe(true);
+    const days = await sql`SELECT date FROM work_from_home_days WHERE user_id = ${teamEmployee.id} ORDER BY date`;
+    expect(days.map((row) => row.date instanceof Date ? row.date.toISOString().slice(0, 10) : String(row.date))).toEqual(["2099-03-05"]);
+    expect(dateId).toBeTruthy();
+  });
+
+  it("does not resolve the same pending request twice", async () => {
+    const [{ id }] = await sql`
+      INSERT INTO wfh_change_requests (requester_id, kind, status, requester_comment)
+      VALUES (${teamEmployee.id}, 'additional', 'pending', 'Motivo de prueba.')
+      RETURNING id
+    `;
+    await sql`INSERT INTO wfh_change_request_dates (request_id, requested_date) VALUES (${id}, '2099-04-07')`;
+
+    const results = await Promise.all([
+      decideWfhRequest(admin, String(id), "accepted", null),
+      decideWfhRequest(admin, String(id), "accepted", null),
+    ]);
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    expect(results.filter((result) => result.error)).toHaveLength(1);
+  });
+
+  it("reports notification counts and paginates requester requests", async () => {
+    for (const day of ["05", "06", "07", "08", "11", "12", "13", "14", "18", "19", "20"]) {
+      expect((await createWfhRequest(teamEmployee, {
+        kind: "additional",
+        requestedDates: [`2099-05-${day}`],
+        replacedDates: [],
+        comment: "Motivo de prueba.",
+      })).ok).toBe(true);
+    }
+
+    const filters = { date: "all" as const, status: "all" as const };
+    const firstPage = await getRequestsForRequester(teamEmployee.id, filters);
+    expect(firstPage.requests).toHaveLength(10);
+    expect(firstPage.nextCursor).not.toBeNull();
+    const secondPage = await getRequestsForRequester(teamEmployee.id, filters, firstPage.nextCursor ?? undefined);
+    expect(secondPage.requests).toHaveLength(1);
+
+    const summary = await getRequestNotificationSummary(coordinator.id, "coordinator");
+    expect(summary.informationalRequestCount).toBe(11);
+    expect(summary.revision).not.toBeNull();
+  });
+
+  it("rejects a cancelled date and a past date", async () => {
+    const [{ id: requestId }] = await sql`
+      INSERT INTO wfh_change_requests (requester_id, kind, status, requester_comment)
+      VALUES (${employee.id}, 'additional', 'pending', 'Motivo de prueba.')
+      RETURNING id
+    `;
+    const [{ id: dateId }] = await sql`
+      INSERT INTO wfh_change_request_dates (request_id, requested_date)
+      VALUES (${requestId}, '2099-06-08')
+      RETURNING id
+    `;
+
+    expect((await cancelWfhRequestDate(employee, String(requestId), String(dateId))).ok).toBe(true);
+    expect((await cancelWfhRequestDate(employee, String(requestId), String(dateId))).error).toContain("Solo se pueden cancelar");
+
+    const [{ id: pastRequestId }] = await sql`
+      INSERT INTO wfh_change_requests (requester_id, kind, status, requester_comment)
+      VALUES (${employee.id}, 'additional', 'pending', 'Motivo de prueba.')
+      RETURNING id
+    `;
+    const [{ id: pastDateId }] = await sql`
+      INSERT INTO wfh_change_request_dates (request_id, requested_date)
+      VALUES (${pastRequestId}, '2000-01-03')
+      RETURNING id
+    `;
+    expect((await cancelWfhRequestDate(employee, String(pastRequestId), String(pastDateId))).error).toContain("fechas futuras");
   });
 
   it("enforces the request tables and notification columns after migration", async () => {
