@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { isNotNull, relations } from "drizzle-orm";
 import { boolean, index, date, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const wfhRequestKind = pgEnum("wfh_request_kind", ["additional", "substitution"]);
@@ -7,17 +7,20 @@ export const wfhRequestStatus = pgEnum("wfh_request_status", ["pending", "accept
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   passwordHash: text("password_hash").notNull(),
-  oracleEmpId: integer("oracle_emp_id").unique(),
+  oracleEmpId: integer("oracle_emp_id"),
   // Identity (name/email/wd number) normally lives in Oracle (TIMERTASK).
   // fallback_* also identifies explicitly configured local test accounts.
-  fallbackEmail: text("fallback_email").unique(),
+  fallbackEmail: text("fallback_email"),
   fallbackName: text("fallback_name"),
   hasWfh: boolean("has_wfh"),
   teamWfhVisible: boolean("team_wfh_visible").notNull().default(false),
   canEditAllWfh: boolean("can_edit_all_wfh").notNull().default(false),
   wfhDaysAllowance: integer("wfh_days_allowance"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("users_oracle_emp_id_unique").on(table.oracleEmpId).where(isNotNull(table.oracleEmpId)),
+  uniqueIndex("users_fallback_email_unique").on(table.fallbackEmail).where(isNotNull(table.fallbackEmail)),
+]);
 
 export const workFromHomeDays = pgTable(
   "work_from_home_days",
@@ -29,7 +32,10 @@ export const workFromHomeDays = pgTable(
     date: date("date").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("work_from_home_days_user_date_idx").on(table.userId, table.date)]
+  (table) => [
+    uniqueIndex("work_from_home_days_user_date_idx").on(table.userId, table.date),
+    index("work_from_home_days_date_user_idx").on(table.date, table.userId),
+  ]
 );
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -63,6 +69,7 @@ export const wfhChangeRequests = pgTable("wfh_change_requests", {
   index("wfh_change_requests_requester_created_idx").on(table.requesterId, table.createdAt, table.id),
   index("wfh_change_requests_coordinator_status_idx").on(table.coordinatorId, table.status),
   index("wfh_change_requests_coordinator_created_idx").on(table.coordinatorId, table.createdAt, table.id),
+  index("wfh_change_requests_kind_status_created_idx").on(table.kind, table.status, table.createdAt, table.id),
   index("wfh_change_requests_coordinator_notification_idx").on(table.coordinatorId, table.coordinatorNotifiedAt, table.coordinatorAcknowledgedAt),
   index("wfh_change_requests_admin_notification_idx").on(table.adminNotifiedAt, table.adminAcknowledgedAt),
 ]);
