@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, lte, ne, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users, wfhChangeRequestDates, wfhChangeRequests, workFromHomeDays } from "@/db/schema";
 import { getRequestDateRange } from "@/lib/calendar/dates";
@@ -96,6 +96,16 @@ export function findPendingRequestsWithDates(userId: string) {
 }
 
 export function findNotificationSummary(userId: string, role: "admin" | "coordinator") {
+  const cancellationDates = getDb()
+    .select({
+      cancelledAt: sql<Date>`max(${wfhChangeRequestDates.cancelledAt})`.as("cancelled_at"),
+      requestId: wfhChangeRequestDates.requestId,
+    })
+    .from(wfhChangeRequestDates)
+    .where(isNotNull(wfhChangeRequestDates.cancelledAt))
+    .groupBy(wfhChangeRequestDates.requestId)
+    .as("cancellation_dates");
+
   return getDb()
     .select({
       actionableRequestCount: role === "admin"
@@ -104,9 +114,10 @@ export function findNotificationSummary(userId: string, role: "admin" | "coordin
       informationalRequestCount: role === "coordinator"
         ? sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'additional' and ${wfhChangeRequests.status} = 'pending') + count(*) filter (where ${wfhChangeRequests.kind} = 'substitution' and ${wfhChangeRequests.coordinatorNotifiedAt} is not null and ${wfhChangeRequests.coordinatorAcknowledgedAt} is null)`
         : sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'substitution' and ${wfhChangeRequests.adminNotifiedAt} is not null and ${wfhChangeRequests.adminAcknowledgedAt} is null)`,
-      revision: sql<string | null>`max(greatest(${wfhChangeRequests.createdAt}, coalesce(${wfhChangeRequests.decidedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorNotifiedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorAcknowledgedAt}, ${wfhChangeRequests.createdAt}), coalesce((select max(d.cancelled_at) from wfh_change_request_dates d where d.request_id = ${wfhChangeRequests.id}), ${wfhChangeRequests.createdAt})))`,
+      revision: sql<string | null>`max(greatest(${wfhChangeRequests.createdAt}, coalesce(${wfhChangeRequests.decidedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorNotifiedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorAcknowledgedAt}, ${wfhChangeRequests.createdAt}), coalesce(${cancellationDates.cancelledAt}, ${wfhChangeRequests.createdAt})))`,
     })
     .from(wfhChangeRequests)
+    .leftJoin(cancellationDates, eq(wfhChangeRequests.id, cancellationDates.requestId))
     .where(role === "admin" ? sql`${wfhChangeRequests.kind} = 'additional' OR (${wfhChangeRequests.kind} = 'substitution' AND ${wfhChangeRequests.adminNotifiedAt} IS NOT NULL)` : and(eq(wfhChangeRequests.coordinatorId, userId), ne(wfhChangeRequests.requesterId, userId)));
 }
 
