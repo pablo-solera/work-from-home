@@ -1,0 +1,52 @@
+import { describe, expect, it } from "vitest";
+import { createEmptySections } from "@/lib/absences/absence-service";
+import { assertCanEditWorkFromHomeDays, buildDaySummaries, buildSectionsByDate } from "@/lib/calendar/calendar-service";
+import { getCalendarDays } from "@/lib/calendar/dates";
+
+const identities = new Map([
+  ["office", { name: "Ana Oficina", email: "ana@example.com", wdNumber: null }],
+  ["remote", { name: "Bea Remota", email: "bea@example.com", wdNumber: null }],
+  ["excluded", { name: "Cris Excluida", email: "cris@example.com", wdNumber: null }],
+]);
+
+const users = [
+  { id: "office", oracleEmpId: 1, fallbackName: null, fallbackEmail: null },
+  { id: "remote", oracleEmpId: 2, fallbackName: null, fallbackEmail: null },
+  { id: "excluded", oracleEmpId: 3, fallbackName: null, fallbackEmail: null },
+];
+
+describe("calendar service", () => {
+  it("keeps excluded employees in No comprende and out of all counts", () => {
+    const date = "2026-08-03";
+    const calendar = getCalendarDays(2026, 8);
+    const sectionsByDate = buildSectionsByDate(
+      [{ date, userId: "remote" }, { date, userId: "excluded" }],
+      users,
+      identities,
+      {},
+      calendar,
+      new Set([3]),
+    );
+
+    const sections = sectionsByDate[date];
+    expect(sections.noComprende.map((entry) => entry.userId)).toEqual(["excluded"]);
+    expect(sections.teletrabajo.map((entry) => entry.userId)).toEqual(["remote"]);
+    expect(sections.enOficina.map((entry) => entry.userId)).toEqual(["office"]);
+
+    const summary = buildDaySummaries(sectionsByDate, calendar)[date];
+    expect(summary).toMatchObject({ absenceCount: 0, officeCount: 1, remoteCount: 1 });
+  });
+
+  it("rejects employees before checking the broad calendar-edit flag", async () => {
+    await expect(assertCanEditWorkFromHomeDays({
+      email: "employee@example.com",
+      id: "employee",
+      name: "Empleado",
+      role: "employee",
+    }, "another-user")).rejects.toThrow("Employees cannot update work-from-home days");
+  });
+
+  it("creates the complete section shape for empty calendar data", () => {
+    expect(Object.keys(createEmptySections())).toContain("noComprende");
+  });
+});

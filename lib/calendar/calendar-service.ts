@@ -28,7 +28,7 @@ export type AdminCalendarDaySummary = {
   remoteCount: number;
 };
 
-function buildSectionsByDate(
+export function buildSectionsByDate(
   entries: Awaited<ReturnType<typeof findAllWorkFromHomeDays>>,
   users: Awaited<ReturnType<typeof findAllUsers>>,
   identities: Awaited<ReturnType<typeof resolveUserIdentities>>,
@@ -125,7 +125,7 @@ function buildSectionsByDate(
   return sectionsByDate;
 }
 
-function buildDaySummaries(sectionsByDate: Record<string, DaySections>, calendar: ReturnType<typeof getCalendarDays>, minimumDate?: string) {
+export function buildDaySummaries(sectionsByDate: Record<string, DaySections>, calendar: ReturnType<typeof getCalendarDays>, minimumDate?: string) {
   const summaries: Record<string, AdminCalendarDaySummary> = {};
 
   for (const cell of calendar.cells) {
