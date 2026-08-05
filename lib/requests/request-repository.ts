@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, lte, ne, sql } from "drizz
 import { getDb, getPostgresClient } from "@/db";
 import { users, wfhChangeRequestDates, wfhChangeRequests, workFromHomeDays } from "@/db/schema";
 import { getRequestDateRange } from "@/lib/calendar/dates";
-import type { RequestCursor, RequestFilters } from "./request-service";
+import type { RequestCursor, RequestFilters } from "./request-types";
 
 export const REQUEST_NOTIFICATION_CHANNEL = "wfh_request_changed";
 

@@ -1,8 +1,9 @@
 import type { SessionUser } from "@/lib/auth/session";
 import { getAbsenceSectionsByDateStrict } from "@/lib/absences/absence-service";
-import { getHolidayName, getMadridTodayDateKey, isDateInWeek, isValidDateKey, isWeekendDateKey, type RequestDateFilter } from "@/lib/calendar/dates";
+import { getHolidayName, getMadridTodayDateKey, isDateInWeek, isValidDateKey, isWeekendDateKey } from "@/lib/calendar/dates";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { findCoordinatorUser, isUserInCoordinatorTeam } from "@/lib/employees/org-service";
+import type { RequestCursor, RequestFilters, RequestPage, RequestStatusFilter } from "./request-types";
 import {
   acknowledgeAdminSubstitution,
   acknowledgeCoordinatorSubstitution,
@@ -34,10 +35,6 @@ import {
 
 export type RequestFormState = { error?: string; message?: string; ok?: boolean };
 export type RequestKind = "additional" | "substitution";
-export type RequestStatusFilter = "all" | "pending" | "accepted" | "rejected" | "cancelled";
-export type RequestFilters = { date: RequestDateFilter; status: RequestStatusFilter };
-export type RequestCursor = { createdAt: string; id: string };
-export type RequestPage<T> = { requests: T[]; nextCursor: string | null };
 
 export const REQUEST_PAGE_SIZE = 10;
 

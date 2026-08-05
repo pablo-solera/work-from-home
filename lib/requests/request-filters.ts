@@ -1,5 +1,5 @@
 import type { RequestDateFilter } from "@/lib/calendar/dates";
-import type { RequestFilters, RequestStatusFilter } from "./request-service";
+import type { RequestFilters, RequestStatusFilter } from "./request-types";
 
 type RequestFilterParams = { date?: string; status?: string };
 

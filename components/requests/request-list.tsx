@@ -7,7 +7,7 @@ import { RequestDecisionForm } from "@/components/requests/request-decision-form
 import { CancelRequestDateButton } from "@/components/requests/cancel-request-date-button";
 import { RequestCardSkeleton } from "@/components/common/request-skeleton";
 import { MarkAdminSubstitutionReadButton } from "@/components/requests/mark-admin-substitution-read-button";
-import type { RequestFilters, RequestPage } from "@/lib/requests/request-service";
+import type { RequestFilters, RequestPage } from "@/lib/requests/request-types";
 
 const statusLabels = { accepted: "Aceptado", pending: "Pendiente", rejected: "Rechazado", cancelled: "Cancelado" } as const;
 const statusStyles = {
