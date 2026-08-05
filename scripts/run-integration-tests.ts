@@ -52,6 +52,7 @@ try {
     "drizzle/0014_admin_request_notifications.sql",
     "drizzle/0015_admin_coordinator_substitution_notifications.sql",
     "drizzle/0016_oracle_organization_authority.sql",
+    "drizzle/0017_work_from_home_days_date_index.sql",
   ]) {
     const migrationCode = await runSqlFile(migration);
     if (migrationCode !== 0) throw new Error(`${migration} failed with exit code ${migrationCode}`);

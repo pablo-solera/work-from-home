@@ -57,6 +57,9 @@ CREATE TABLE IF NOT EXISTS work_from_home_days (
 CREATE UNIQUE INDEX IF NOT EXISTS work_from_home_days_user_date_idx
 ON work_from_home_days USING btree (user_id, date);
 
+CREATE INDEX IF NOT EXISTS work_from_home_days_date_user_idx
+ON work_from_home_days USING btree (date, user_id);
+
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'work_from_home_days_user_id_users_id_fk') THEN
