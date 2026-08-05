@@ -3,8 +3,8 @@ import { AdminCalendar } from "@/components/admin/admin-calendar";
 import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-filter";
 import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
 import { requireAuthorizedUser } from "@/lib/auth/guards";
-import { getCoordinatorCalendarOverview, getCoordinatorCalendarUsers, getCoordinatorEmployeeCalendar, getTeamCalendarForViewer } from "@/lib/calendar/calendar-service";
-import { createMonthHref, getCurrentCalendarMonth, getMadridTodayDateKey, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
+import { getCoordinatorCalendarOverview, getCoordinatorCalendarUsers, getCoordinatorEmployeeCalendar, getMinimumEditableDate, getTeamCalendarForViewer } from "@/lib/calendar/calendar-service";
+import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
 import { createCalendarHref } from "@/lib/calendar/links";
 
 type TeamPageProps = {
@@ -76,7 +76,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
             selectedDates={employeeCalendar.selectedDates}
             showCurrentMonthLink={showCurrentMonthLink}
             targetUserId={employeeCalendar.employee.id}
-            minimumEditableDate={employeeCalendar.employee.id === user.id ? getMadridTodayDateKey() : undefined}
+            minimumEditableDate={getMinimumEditableDate(user.role)}
             year={year}
           />
         </section>

@@ -3,8 +3,8 @@ import { AdminCalendar } from "@/components/admin/admin-calendar";
 import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-filter";
 import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
 import { requireAuthorizedUser } from "@/lib/auth/guards";
-import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
-import { createMonthHref, getCurrentCalendarMonth, getMadridTodayDateKey, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
+import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar, getMinimumEditableDate } from "@/lib/calendar/calendar-service";
+import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
 import { getUserById } from "@/lib/users/user-service";
 import { createCalendarHref } from "@/lib/calendar/links";
 
@@ -61,7 +61,7 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
             selectedDates={userCalendar.selectedDates}
             showCurrentMonthLink={showCurrentMonthLink}
             targetUserId={userCalendar.user.id}
-            minimumEditableDate={userCalendar.user.id === user.id && user.role === "coordinator" ? getMadridTodayDateKey() : undefined}
+            minimumEditableDate={getMinimumEditableDate(user.role)}
             year={year}
           />
         </section>

@@ -11,6 +11,10 @@ import { getPendingRequestedDates } from "@/lib/requests/request-service";
 
 export type ReplicateWorkFromHomeScope = "next" | "untilYearEnd";
 
+export function getMinimumEditableDate(role: SessionUser["role"]) {
+  return role === "admin" ? undefined : getMadridTodayDateKey();
+}
+
 const UNKNOWN_IDENTITY = { name: "Usuario", email: null } as const;
 
 // Sections (other than "enOficina" itself) whose people are considered NOT in
@@ -392,7 +396,8 @@ export async function setWorkFromHomeDay(userId: string, date: string, enabled: 
 }
 
 export async function setWorkFromHomeDayForActor(actor: SessionUser, targetUserId: string, date: string, enabled: boolean) {
-  if (actor.role !== "admin" && date < getMadridTodayDateKey()) {
+  const minimumEditableDate = getMinimumEditableDate(actor.role);
+  if (minimumEditableDate && date < minimumEditableDate) {
     throw new Error("No puedes modificar días de teletrabajo anteriores a hoy.");
   }
 
