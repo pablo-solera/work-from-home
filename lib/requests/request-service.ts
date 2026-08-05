@@ -93,6 +93,10 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
     const requesterUser = await getRequester(user.id);
     if (!requesterUser) throw new Error("Solo usuarios activos pueden crear solicitudes.");
     const coordinator = user.role === "coordinator" ? requesterUser : await findCoordinatorUser(requesterUser);
+    const absenceRange = input.kind === "substitution" ? requestRange([...input.requestedDates, ...input.replacedDates]) : null;
+    const absenceSections = input.kind === "substitution"
+      ? await getAbsenceSectionsByDateStrict(absenceRange!.start, absenceRange!.end, [requesterUser])
+      : null;
 
     await runInRequestTransaction(async (tx) => {
       await lockUser(tx, user.id);
@@ -123,10 +127,8 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
           throw new Error("Una de las nuevas fechas ya está marcada como teletrabajo.");
         }
 
-        const range = requestRange([...input.requestedDates, ...input.replacedDates]);
-        const absenceSections = await getAbsenceSectionsByDateStrict(range.start, range.end, [requester]);
         const unavailableDates = new Set(
-          Object.entries(absenceSections).flatMap(([date, sections]) =>
+          Object.entries(absenceSections ?? {}).flatMap(([date, sections]) =>
             Object.values(sections).some((entries) => entries.some((entry) => entry.userId === user.id)) ? [date] : [],
           ),
         );
