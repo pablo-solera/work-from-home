@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { UserMenu } from "@/components/layout/user-menu";
 import { RequestBadges } from "@/components/layout/request-badges";
-import { EmployeeRequestSync } from "@/components/layout/employee-request-sync";
+import { RequestSync } from "@/components/layout/request-sync";
 import { ActiveNavLink } from "@/components/layout/active-nav-link";
 import type { SessionUser } from "@/lib/auth/session";
 import type { RequestNotificationSummary } from "@/lib/requests/request-service";
@@ -23,7 +23,7 @@ export function AppHeader({ canCover = false, canViewTeam = false, notificationS
             {user.role === "admin" ? <><ActiveNavLink href="/admin/requests" section><span>Solicitudes</span>{notificationSummary ? <RequestBadges key={notificationSummary.revision ?? "empty"} {...notificationSummary} /> : null}</ActiveNavLink><ActiveNavLink href="/admin">Admin</ActiveNavLink></> : null}
           </div>
           <UserMenu user={user} />
-          {user.role === "employee" ? <EmployeeRequestSync /> : null}
+          {user.role !== "admin" ? <RequestSync /> : null}
         </nav>
       </div>
     </header>

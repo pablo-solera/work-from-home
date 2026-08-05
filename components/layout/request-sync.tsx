@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 
 const SYNC_PATHS = new Set(["/calendar", "/requests", "/team"]);
 
-export function EmployeeRequestSync() {
+export function RequestSync() {
   const pathname = usePathname();
   const router = useRouter();
   const refreshScheduled = useRef(false);

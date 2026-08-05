@@ -35,7 +35,7 @@ export function RequestBadges(initialSummary: RequestBadgeSummary) {
       setSummary(next);
       hasPolledRef.current = true;
 
-       if (refreshPage && changed && (pathname === "/requests" || pathname === "/admin/requests") && !refreshScheduledRef.current) {
+        if (refreshPage && changed && pathname === "/admin/requests" && !refreshScheduledRef.current) {
         refreshScheduledRef.current = true;
         window.setTimeout(() => {
           refreshScheduledRef.current = false;
