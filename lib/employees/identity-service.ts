@@ -1,15 +1,29 @@
-import { findEmployeesByIds } from "./employee-repository";
+import { findEmployeesByIds, type OracleEmployee } from "./employee-repository";
 
 const IDENTITY_CACHE_TTL_MS = 15 * 60 * 1000;
+const MISSING_IDENTITY_TTL_MS = 5 * 60 * 1000;
+const ORACLE_UNAVAILABLE_TTL_MS = 30 * 1000;
 
-type CachedEmployee = {
-  email: string;
+type CachedIdentity = {
+  employee: OracleEmployee | null;
   expiresAt: number;
-  name: string;
-  wdNumber: string | null;
+  status: "found" | "missing" | "unavailable";
 };
 
-const employeeIdentityCache = new Map<number, CachedEmployee>();
+type IdentityCacheState = {
+  entries: Map<number, CachedIdentity>;
+  loading: Promise<void> | null;
+};
+
+declare global {
+  var __wfhEmployeeIdentityCache: IdentityCacheState | undefined;
+}
+
+const state: IdentityCacheState = globalThis.__wfhEmployeeIdentityCache ?? {
+  entries: new Map(),
+  loading: null,
+};
+globalThis.__wfhEmployeeIdentityCache = state;
 
 export type UserIdentityInput = {
   id: string;
@@ -23,6 +37,47 @@ export type ResolvedIdentity = {
   email: string | null;
   wdNumber: string | null;
 };
+
+async function loadMissingIdentities(empIds: number[]) {
+  if (state.loading) {
+    await state.loading;
+    return loadMissingIdentities(empIds);
+  }
+
+  const now = Date.now();
+  const idsToLoad = empIds.filter((empId) => {
+    const cached = state.entries.get(empId);
+    return !cached || cached.expiresAt <= now;
+  });
+
+  if (idsToLoad.length === 0) return;
+
+  const loading = findEmployeesByIds(idsToLoad)
+    .then((employeesById) => {
+      const loadedAt = Date.now();
+      for (const empId of idsToLoad) {
+        const employee = employeesById.get(empId) ?? null;
+        state.entries.set(empId, {
+          employee,
+          expiresAt: loadedAt + (employee ? IDENTITY_CACHE_TTL_MS : MISSING_IDENTITY_TTL_MS),
+          status: employee ? "found" : "missing",
+        });
+      }
+    })
+    .catch((error) => {
+      console.error("Failed to resolve employee identities from Oracle:", error);
+      const unavailableUntil = Date.now() + ORACLE_UNAVAILABLE_TTL_MS;
+      for (const empId of idsToLoad) {
+        state.entries.set(empId, { employee: null, expiresAt: unavailableUntil, status: "unavailable" });
+      }
+    })
+    .finally(() => {
+      state.loading = null;
+    });
+  state.loading = loading;
+
+  await loading;
+}
 
 /**
  * Resolves display identity (name/email/wdNumber) for a set of Postgres users,
@@ -38,40 +93,20 @@ export async function resolveUserIdentities(usersInput: UserIdentityInput[]): Pr
     .filter((id): id is number => id !== null && id !== undefined))];
   const now = Date.now();
   const missingEmpIds = empIds.filter((empId) => {
-    const cached = employeeIdentityCache.get(empId);
+    const cached = state.entries.get(empId);
     return !cached || cached.expiresAt <= now;
   });
 
-  const employeesById = new Map<number, { name: string; email: string; wdNumber: string | null }>();
-
   if (missingEmpIds.length > 0) {
-    try {
-      const employees = await findEmployeesByIds(missingEmpIds);
-      for (const [empId, employee] of employees) {
-        employeeIdentityCache.set(empId, {
-          email: employee.email,
-          expiresAt: now + IDENTITY_CACHE_TTL_MS,
-          name: employee.name,
-          wdNumber: employee.wdNumber,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to resolve employee identities from Oracle:", error);
-    }
-  }
-
-  for (const empId of empIds) {
-    const cached = employeeIdentityCache.get(empId);
-    if (cached && cached.expiresAt > now) {
-      employeesById.set(empId, cached);
-    }
+    await loadMissingIdentities(missingEmpIds);
   }
 
   const identities = new Map<string, ResolvedIdentity>();
 
   for (const user of usersInput) {
     if (user.oracleEmpId !== null && user.oracleEmpId !== undefined) {
-      const employee = employeesById.get(user.oracleEmpId);
+      const cached = state.entries.get(user.oracleEmpId);
+      const employee = cached && cached.expiresAt > Date.now() && cached.status === "found" ? cached.employee : null;
 
       identities.set(user.id, {
         name: employee?.name ?? user.fallbackName ?? `Empleado ${user.oracleEmpId}`,
