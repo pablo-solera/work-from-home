@@ -1,11 +1,36 @@
-import { and, asc, desc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
-import { getDb } from "@/db";
-import { users, wfhChangeRequestDates, wfhChangeRequests, workFromHomeDays } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/session";
 import { getAbsenceSectionsByDateStrict } from "@/lib/absences/absence-service";
-import { getHolidayName, getMadridTodayDateKey, getRequestDateRange, isDateInWeek, isValidDateKey, isWeekendDateKey, type RequestDateFilter } from "@/lib/calendar/dates";
+import { getHolidayName, getMadridTodayDateKey, isDateInWeek, isValidDateKey, isWeekendDateKey, type RequestDateFilter } from "@/lib/calendar/dates";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { findCoordinatorUser, isUserInCoordinatorTeam } from "@/lib/employees/org-service";
+import {
+  acknowledgeAdminSubstitution,
+  acknowledgeCoordinatorSubstitution,
+  cancelRequest,
+  cancelRequestDate,
+  deleteWorkFromHomeDays,
+  findAdminRequestsPage,
+  findAdminSubstitutionNotificationsPage,
+  findCoordinatorRequestsPage,
+  findNotificationSummary,
+  findPendingRequestDates as findPendingRequestDatesFromRepository,
+  findPendingRequestsWithDates,
+  findRequesterById,
+  findRequester,
+  findRequestByIdWithDates,
+  findRequesterRequestsPage,
+  findRequestWithDates,
+  findWorkFromHomeDays,
+  findWorkFromHomeDaysByUser,
+  insertRequest,
+  insertRequestDates,
+  insertWorkFromHomeDays,
+  lockRequest,
+  lockRequestDate,
+  lockUser,
+  runInRequestTransaction,
+  updateRequestDecision,
+} from "./request-repository";
 
 export type RequestFormState = { error?: string; message?: string; ok?: boolean };
 export type RequestKind = "additional" | "substitution";
@@ -40,7 +65,7 @@ function requestRange(dates: string[]) {
 }
 
 async function getRequester(userId: string) {
-  return getDb().query.users.findFirst({ where: eq(users.id, userId) });
+  return findRequesterById(userId);
 }
 
 export async function createWfhRequest(user: SessionUser, input: RequestInput): Promise<RequestFormState> {
@@ -65,24 +90,19 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
       }
     }
 
-    const db = getDb();
     const requesterUser = await getRequester(user.id);
     if (!requesterUser) throw new Error("Solo usuarios activos pueden crear solicitudes.");
     const coordinator = user.role === "coordinator" ? requesterUser : await findCoordinatorUser(requesterUser);
 
-    await db.transaction(async (tx) => {
-      await tx.execute(sql`SELECT id FROM users WHERE id = ${user.id} FOR UPDATE`);
-      const requester = await tx.query.users.findFirst({ where: eq(users.id, user.id) });
+    await runInRequestTransaction(async (tx) => {
+      await lockUser(tx, user.id);
+      const requester = await findRequester(tx, user.id);
 
       if (!requester || user.role === "admin") {
         throw new Error("Solo empleados y coordinadores pueden crear solicitudes.");
       }
 
-      const pendingDates = await tx
-        .select({ requestedDate: wfhChangeRequestDates.requestedDate, replacedDate: wfhChangeRequestDates.replacedDate })
-        .from(wfhChangeRequestDates)
-        .innerJoin(wfhChangeRequests, eq(wfhChangeRequestDates.requestId, wfhChangeRequests.id))
-        .where(and(eq(wfhChangeRequests.requesterId, user.id), eq(wfhChangeRequests.status, "pending"), sql`${wfhChangeRequestDates.cancelledAt} IS NULL`));
+      const pendingDates = await findPendingRequestDatesFromRepository(tx, user.id);
       const requestedDates = new Set(input.requestedDates);
       const affectedDates = new Set([...requestedDates, ...input.replacedDates]);
       const hasDuplicate = pendingDates.some((date) => affectedDates.has(date.requestedDate) || (date.replacedDate ? affectedDates.has(date.replacedDate) : false));
@@ -92,9 +112,7 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
       }
 
       if (input.kind === "substitution") {
-        const existingDates = await tx.query.workFromHomeDays.findMany({
-          where: and(eq(workFromHomeDays.userId, user.id), inArray(workFromHomeDays.date, [...input.requestedDates, ...input.replacedDates])),
-        });
+        const existingDates = await findWorkFromHomeDays(tx, user.id, [...input.requestedDates, ...input.replacedDates]);
         const existingDateSet = new Set(existingDates.map((date) => date.date));
 
         if (input.replacedDates.some((date) => !existingDateSet.has(date))) {
@@ -117,9 +135,7 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
           throw new Error("No se puede aplicar la sustitución porque el nuevo día tiene una ausencia.");
         }
 
-        const [request] = await tx
-          .insert(wfhChangeRequests)
-          .values({
+        const [request] = await insertRequest(tx, {
             requesterId: user.id,
             coordinatorId: coordinator?.id ?? null,
             kind: input.kind,
@@ -128,91 +144,44 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
             decidedAt: new Date(),
             coordinatorNotifiedAt: new Date(),
             adminNotifiedAt: user.role === "coordinator" ? new Date() : null,
-          })
-          .returning({ id: wfhChangeRequests.id });
+          });
 
-        await tx.insert(wfhChangeRequestDates).values(
+        await insertRequestDates(tx,
           input.requestedDates.map((requestedDate, index) => ({
             requestId: request.id,
             requestedDate,
             replacedDate: input.replacedDates[index],
-          })),
-        );
+          })));
 
-        const deleted = await tx
-          .delete(workFromHomeDays)
-          .where(and(eq(workFromHomeDays.userId, user.id), inArray(workFromHomeDays.date, input.replacedDates)))
-          .returning({ id: workFromHomeDays.id });
+        const deleted = await deleteWorkFromHomeDays(tx, user.id, input.replacedDates);
 
         if (deleted.length !== input.replacedDates.length) {
           throw new Error("No se pudieron sustituir todas las fechas originales.");
         }
 
-        await tx.insert(workFromHomeDays).values(input.requestedDates.map((date) => ({ userId: user.id, date })));
+        await insertWorkFromHomeDays(tx, input.requestedDates.map((date) => ({ userId: user.id, date })), false);
         return;
       }
 
-      const [request] = await tx
-        .insert(wfhChangeRequests)
-        .values({
+      const [request] = await insertRequest(tx, {
           requesterId: user.id,
           coordinatorId: coordinator?.id ?? null,
           kind: input.kind,
           requesterComment: input.comment,
-        })
-        .returning({ id: wfhChangeRequests.id });
+        });
 
-      await tx.insert(wfhChangeRequestDates).values(
+      await insertRequestDates(tx,
         input.requestedDates.map((requestedDate, index) => ({
           requestId: request.id,
           requestedDate,
           replacedDate: input.kind === "substitution" ? input.replacedDates[index] : null,
-        })),
-      );
+        })));
     });
 
     return { message: input.kind === "substitution" ? "Sustitución aplicada correctamente." : "Solicitud enviada correctamente.", ok: true };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No se pudo crear la solicitud." };
   }
-}
-
-function requestWhere(filters: RequestFilters, userColumn: typeof wfhChangeRequests.requesterId | typeof wfhChangeRequests.coordinatorId, userId: string) {
-  const conditions = [eq(userColumn, userId)];
-
-  if (filters.status !== "all") {
-    conditions.push(eq(wfhChangeRequests.status, filters.status));
-  }
-
-  if (filters.date !== "all") {
-    const range = getRequestDateRange(filters.date);
-    const matchingRequests = getDb()
-      .select({ requestId: wfhChangeRequestDates.requestId })
-      .from(wfhChangeRequestDates)
-      .where(and(gte(wfhChangeRequestDates.requestedDate, range.start), lte(wfhChangeRequestDates.requestedDate, range.end), sql`${wfhChangeRequestDates.cancelledAt} IS NULL`));
-    conditions.push(inArray(wfhChangeRequests.id, matchingRequests));
-  }
-
-  return and(...conditions);
-}
-
-function adminRequestWhere(filters: RequestFilters) {
-  const conditions = [eq(wfhChangeRequests.kind, "additional")];
-
-  if (filters.status !== "all") {
-    conditions.push(eq(wfhChangeRequests.status, filters.status));
-  }
-
-  if (filters.date !== "all") {
-    const range = getRequestDateRange(filters.date);
-    const matchingRequests = getDb()
-      .select({ requestId: wfhChangeRequestDates.requestId })
-      .from(wfhChangeRequestDates)
-      .where(and(gte(wfhChangeRequestDates.requestedDate, range.start), lte(wfhChangeRequestDates.requestedDate, range.end), sql`${wfhChangeRequestDates.cancelledAt} IS NULL`));
-    conditions.push(inArray(wfhChangeRequests.id, matchingRequests));
-  }
-
-  return and(...conditions);
 }
 
 function decodeCursor(value: string | undefined): RequestCursor | undefined {
@@ -233,29 +202,9 @@ function encodeCursor(request: { createdAt: Date; id: string }) {
   return Buffer.from(JSON.stringify({ createdAt: request.createdAt.toISOString(), id: request.id })).toString("base64url");
 }
 
-function requestPageWhere(
-  filters: RequestFilters,
-  userColumn: typeof wfhChangeRequests.requesterId | typeof wfhChangeRequests.coordinatorId,
-  userId: string,
-  cursor?: RequestCursor,
-) {
-  const baseWhere = requestWhere(filters, userColumn, userId);
-  if (!cursor) return baseWhere;
-
-  return and(
-    baseWhere,
-    sql`(${wfhChangeRequests.createdAt} < ${cursor.createdAt} OR (${wfhChangeRequests.createdAt} = ${cursor.createdAt} AND ${wfhChangeRequests.id} < ${cursor.id}))`,
-  );
-}
-
 export async function getRequestsForRequester(userId: string, filters: RequestFilters, cursorValue?: string) {
   const cursor = decodeCursor(cursorValue);
-  const requests = await getDb().query.wfhChangeRequests.findMany({
-    where: requestPageWhere(filters, wfhChangeRequests.requesterId, userId, cursor),
-    orderBy: [desc(wfhChangeRequests.createdAt), desc(wfhChangeRequests.id)],
-    limit: REQUEST_PAGE_SIZE + 1,
-    with: { dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) } },
-  });
+  const requests = await findRequesterRequestsPage(userId, filters, cursor, REQUEST_PAGE_SIZE + 1);
 
   return toRequestPage(requests);
 }
@@ -272,10 +221,7 @@ function toRequestPage<T extends { id: string; createdAt: Date }>(requests: T[])
 }
 
 export async function getPendingRequestedDates(userId: string, start: string, end: string) {
-  const requests = await getDb().query.wfhChangeRequests.findMany({
-    where: and(eq(wfhChangeRequests.requesterId, userId), eq(wfhChangeRequests.status, "pending")),
-    with: { dates: true },
-  });
+  const requests = await findPendingRequestsWithDates(userId);
 
   return requests.flatMap((request) =>
     request.dates.filter((date) => !date.cancelledAt).flatMap((date) => {
@@ -286,16 +232,6 @@ export async function getPendingRequestedDates(userId: string, start: string, en
   );
 }
 
-export async function getPendingRequestCountForCoordinator(coordinatorId: string) {
-  const summary = await getRequestNotificationSummary(coordinatorId, "coordinator");
-  return summary.informationalRequestCount;
-}
-
-export async function getUnreadAutomaticSubstitutionCount(coordinatorId: string) {
-  const summary = await getRequestNotificationSummary(coordinatorId, "coordinator");
-  return summary.informationalRequestCount;
-}
-
 export type RequestNotificationSummary = {
   actionableRequestCount: number;
   informationalRequestCount: number;
@@ -303,18 +239,7 @@ export type RequestNotificationSummary = {
 };
 
 export async function getRequestNotificationSummary(userId: string, role: "admin" | "coordinator"): Promise<RequestNotificationSummary> {
-  const [result] = await getDb()
-    .select({
-      actionableRequestCount: role === "admin"
-        ? sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'additional' and ${wfhChangeRequests.status} = 'pending')`
-        : sql<number>`0`,
-      informationalRequestCount: role === "coordinator"
-        ? sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'additional' and ${wfhChangeRequests.status} = 'pending') + count(*) filter (where ${wfhChangeRequests.kind} = 'substitution' and ${wfhChangeRequests.coordinatorNotifiedAt} is not null and ${wfhChangeRequests.coordinatorAcknowledgedAt} is null)`
-        : sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'substitution' and ${wfhChangeRequests.adminNotifiedAt} is not null and ${wfhChangeRequests.adminAcknowledgedAt} is null)`,
-      revision: sql<string | null>`max(greatest(${wfhChangeRequests.createdAt}, coalesce(${wfhChangeRequests.decidedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorNotifiedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorAcknowledgedAt}, ${wfhChangeRequests.createdAt}), coalesce((select max(d.cancelled_at) from wfh_change_request_dates d where d.request_id = ${wfhChangeRequests.id}), ${wfhChangeRequests.createdAt})))`,
-    })
-    .from(wfhChangeRequests)
-    .where(role === "admin" ? sql`${wfhChangeRequests.kind} = 'additional' OR (${wfhChangeRequests.kind} = 'substitution' AND ${wfhChangeRequests.adminNotifiedAt} IS NOT NULL)` : and(eq(wfhChangeRequests.coordinatorId, userId), ne(wfhChangeRequests.requesterId, userId)));
+  const [result] = await findNotificationSummary(userId, role);
 
   return {
     actionableRequestCount: Number(result?.actionableRequestCount ?? 0),
@@ -324,40 +249,18 @@ export async function getRequestNotificationSummary(userId: string, role: "admin
 }
 
 export async function markSubstitutionAsRead(coordinatorId: string, requestId: string) {
-  const updated = await getDb()
-    .update(wfhChangeRequests)
-    .set({ coordinatorAcknowledgedAt: new Date() })
-    .where(and(
-      eq(wfhChangeRequests.id, requestId),
-      eq(wfhChangeRequests.coordinatorId, coordinatorId),
-      eq(wfhChangeRequests.kind, "substitution"),
-      sql`${wfhChangeRequests.coordinatorNotifiedAt} IS NOT NULL`,
-      sql`${wfhChangeRequests.coordinatorAcknowledgedAt} IS NULL`,
-    ))
-    .returning({ id: wfhChangeRequests.id });
-
+  const updated = await acknowledgeCoordinatorSubstitution(coordinatorId, requestId);
   return updated.length > 0;
 }
 
 export async function markAdminSubstitutionAsRead(requestId: string) {
-  const updated = await getDb()
-    .update(wfhChangeRequests)
-    .set({ adminAcknowledgedAt: new Date() })
-    .where(and(
-      eq(wfhChangeRequests.id, requestId),
-      eq(wfhChangeRequests.kind, "substitution"),
-      sql`${wfhChangeRequests.adminNotifiedAt} IS NOT NULL`,
-      sql`${wfhChangeRequests.adminAcknowledgedAt} IS NULL`,
-      sql`${wfhChangeRequests.adminNotifiedAt} IS NOT NULL`,
-    ))
-    .returning({ id: wfhChangeRequests.id });
-
+  const updated = await acknowledgeAdminSubstitution(requestId);
   return updated.length > 0;
 }
 
-export async function getRequestsForCoordinator(coordinatorId: string, filters: RequestFilters, cursorValue?: string): Promise<RequestPage<Awaited<ReturnType<typeof getCoordinatorRequests>>[number] & { requesterName: string; requesterEmail: string }>> {
+export async function getRequestsForCoordinator(coordinatorId: string, filters: RequestFilters, cursorValue?: string): Promise<RequestPage<Awaited<ReturnType<typeof findCoordinatorRequestsPage>>[number] & { requesterName: string; requesterEmail: string }>> {
   const cursor = decodeCursor(cursorValue);
-  const requests = await getCoordinatorRequests(coordinatorId, filters, cursor);
+  const requests = await findCoordinatorRequestsPage(coordinatorId, filters, cursor, REQUEST_PAGE_SIZE + 1);
   const page = toRequestPage(requests);
   const identities = await resolveUserIdentities(page.requests.map((request) => request.requester));
 
@@ -373,28 +276,7 @@ export async function getRequestsForCoordinator(coordinatorId: string, filters: 
 
 export async function getRequestsForAdmin(filters: RequestFilters, cursorValue?: string) {
   const cursor = decodeCursor(cursorValue);
-  const requests = await getDb().query.wfhChangeRequests.findMany({
-    where: adminRequestPageWhere(filters, cursor),
-    orderBy: [desc(wfhChangeRequests.createdAt), desc(wfhChangeRequests.id)],
-    limit: REQUEST_PAGE_SIZE + 1,
-    columns: {
-      id: true,
-      requesterId: true,
-      coordinatorId: true,
-      kind: true,
-      status: true,
-      requesterComment: true,
-      decisionComment: true,
-      createdAt: true,
-      decidedAt: true,
-    },
-    with: {
-      dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) },
-      requester: {
-        columns: { id: true, oracleEmpId: true, fallbackName: true, fallbackEmail: true },
-      },
-    },
-  });
+  const requests = await findAdminRequestsPage(filters, cursor, REQUEST_PAGE_SIZE + 1);
   const page = toRequestPage(requests);
   const identities = await resolveUserIdentities(page.requests.map((request) => request.requester));
 
@@ -410,57 +292,14 @@ export async function getRequestsForAdmin(filters: RequestFilters, cursorValue?:
 
 export async function getAdminSubstitutionNotifications(cursorValue?: string) {
   const cursor = decodeCursor(cursorValue);
-  const conditions = [
-    eq(wfhChangeRequests.kind, "substitution"),
-    sql`${wfhChangeRequests.adminNotifiedAt} IS NOT NULL`,
-    sql`${wfhChangeRequests.adminNotifiedAt} IS NOT NULL`,
-  ];
-  if (cursor) {
-    conditions.push(sql`(${wfhChangeRequests.createdAt} < ${cursor.createdAt} OR (${wfhChangeRequests.createdAt} = ${cursor.createdAt} AND ${wfhChangeRequests.id} < ${cursor.id}))`);
-  }
-  const requests = await getDb().query.wfhChangeRequests.findMany({
-    where: and(...conditions),
-    orderBy: [desc(wfhChangeRequests.createdAt), desc(wfhChangeRequests.id)],
-    limit: REQUEST_PAGE_SIZE + 1,
-    columns: { id: true, requesterId: true, kind: true, status: true, requesterComment: true, decisionComment: true, createdAt: true, adminNotifiedAt: true, adminAcknowledgedAt: true },
-    with: { dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) }, requester: { columns: { id: true, oracleEmpId: true, fallbackName: true, fallbackEmail: true } } },
-  });
+  const requests = await findAdminSubstitutionNotificationsPage(cursor, REQUEST_PAGE_SIZE + 1);
   const page = toRequestPage(requests);
   const identities = await resolveUserIdentities(page.requests.map((request) => request.requester));
   return { ...page, requests: page.requests.map((request) => ({ ...request, requesterName: identities.get(request.requesterId)?.name ?? "Usuario", requesterEmail: identities.get(request.requesterId)?.email ?? "" })) };
 }
 
-function adminRequestPageWhere(filters: RequestFilters, cursor?: RequestCursor) {
-  const baseWhere = adminRequestWhere(filters);
-  if (!cursor) return baseWhere;
-
-  return and(
-    baseWhere,
-    sql`(${wfhChangeRequests.createdAt} < ${cursor.createdAt} OR (${wfhChangeRequests.createdAt} = ${cursor.createdAt} AND ${wfhChangeRequests.id} < ${cursor.id}))`,
-  );
-}
-
-async function getCoordinatorRequests(coordinatorId: string, filters: RequestFilters, cursor?: RequestCursor) {
-  const requests = await getDb().query.wfhChangeRequests.findMany({
-    where: and(requestPageWhere(filters, wfhChangeRequests.coordinatorId, coordinatorId, cursor), ne(wfhChangeRequests.requesterId, coordinatorId)),
-    orderBy: [desc(wfhChangeRequests.createdAt), desc(wfhChangeRequests.id)],
-    limit: REQUEST_PAGE_SIZE + 1,
-    with: {
-      dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) },
-      requester: {
-        columns: { id: true, oracleEmpId: true, fallbackName: true, fallbackEmail: true },
-      },
-    },
-  });
-
-  return requests;
-}
-
 async function getRequestWithDates(id: string) {
-  return getDb().query.wfhChangeRequests.findFirst({
-    where: eq(wfhChangeRequests.id, id),
-    with: { dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) } },
-  });
+  return findRequestByIdWithDates(id);
 }
 
 async function validateApproval(request: NonNullable<Awaited<ReturnType<typeof getRequestWithDates>>>, actor: SessionUser) {
@@ -492,9 +331,7 @@ async function validateApproval(request: NonNullable<Awaited<ReturnType<typeof g
     throw new Error("No se puede aprobar una fecha con vacaciones, baja, ausencia u otra indisponibilidad.");
   }
 
-  const existing = await getDb().query.workFromHomeDays.findMany({
-    where: and(eq(workFromHomeDays.userId, requester.id), inArray(workFromHomeDays.date, [...requestedDates, ...replacedDates])),
-  });
+  const existing = await findWorkFromHomeDaysByUser(requester.id, [...requestedDates, ...replacedDates]);
   const existingDates = new Set(existing.map((date) => date.date));
 
   if (request.kind === "additional" && requestedDates.some((date) => existingDates.has(date))) {
@@ -530,12 +367,8 @@ export async function decideWfhRequest(actor: SessionUser, id: string, status: "
       throw new Error("El empleado ya no existe.");
     }
 
-    await getDb().transaction(async (tx) => {
-      const updated = await tx
-        .update(wfhChangeRequests)
-        .set({ status, decisionComment: comment, decidedById: actor.id, decidedAt: new Date() })
-        .where(and(eq(wfhChangeRequests.id, id), eq(wfhChangeRequests.status, "pending"), eq(wfhChangeRequests.kind, request.kind)))
-        .returning({ id: wfhChangeRequests.id });
+    await runInRequestTransaction(async (tx) => {
+      const updated = await updateRequestDecision(tx, id, request.kind, status, comment, actor.id);
 
       if (updated.length === 0) {
         throw new Error("La solicitud ya ha sido procesada.");
@@ -548,10 +381,10 @@ export async function decideWfhRequest(actor: SessionUser, id: string, status: "
         }
 
         if (request.kind === "substitution") {
-          await tx.delete(workFromHomeDays).where(and(eq(workFromHomeDays.userId, requester.id), inArray(workFromHomeDays.date, activeDates.map((date) => date.replacedDate!))));
+          await deleteWorkFromHomeDays(tx, requester.id, activeDates.map((date) => date.replacedDate!));
         }
 
-        await tx.insert(workFromHomeDays).values(activeDates.map((date) => ({ userId: requester.id, date: date.requestedDate }))).onConflictDoNothing({ target: [workFromHomeDays.userId, workFromHomeDays.date] });
+        await insertWorkFromHomeDays(tx, activeDates.map((date) => ({ userId: requester.id, date: date.requestedDate })), true);
       }
     });
 
@@ -579,16 +412,12 @@ export async function cancelWfhRequestDate(actor: SessionUser, requestId: string
   }
 
   try {
-    const db = getDb();
-    await db.transaction(async (tx) => {
-      await tx.execute(sql`SELECT id FROM wfh_change_requests WHERE id = ${requestId} FOR UPDATE`);
-      await tx.execute(sql`SELECT id FROM users WHERE id = ${actor.id} FOR UPDATE`);
-      await tx.execute(sql`SELECT id FROM wfh_change_request_dates WHERE id = ${dateId} AND request_id = ${requestId} FOR UPDATE`);
+    await runInRequestTransaction(async (tx) => {
+      await lockRequest(tx, requestId);
+      await lockUser(tx, actor.id);
+      await lockRequestDate(tx, requestId, dateId);
 
-      const currentRequest = await tx.query.wfhChangeRequests.findFirst({
-        where: eq(wfhChangeRequests.id, requestId),
-        with: { dates: { orderBy: asc(wfhChangeRequestDates.requestedDate) } },
-      });
+      const currentRequest = await findRequestWithDates(tx, requestId);
       const currentDate = currentRequest?.dates.find((item) => item.id === dateId);
 
       if (!currentRequest || !currentDate || currentRequest.requesterId !== actor.id || currentDate.cancelledAt) {
@@ -603,15 +432,11 @@ export async function cancelWfhRequestDate(actor: SessionUser, requestId: string
         throw new Error("Solo puedes cancelar fechas futuras.");
       }
 
-      await tx.update(wfhChangeRequestDates)
-        .set({ cancelledAt: new Date(), cancelledById: actor.id })
-        .where(and(eq(wfhChangeRequestDates.id, dateId), sql`${wfhChangeRequestDates.cancelledAt} IS NULL`));
+      await cancelRequestDate(tx, dateId, actor.id);
 
       const remaining = currentRequest.dates.filter((item) => item.id !== dateId && !item.cancelledAt);
       if (remaining.length === 0) {
-        await tx.update(wfhChangeRequests)
-          .set({ status: "cancelled", decisionComment: "Cancelada por el empleado.", decidedAt: new Date() })
-          .where(eq(wfhChangeRequests.id, requestId));
+        await cancelRequest(tx, requestId);
       }
     });
 
