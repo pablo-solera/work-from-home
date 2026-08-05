@@ -83,7 +83,6 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
         cells={overview.cells}
         currentMonthHref={createMonthHref("/coverage", currentMonth)}
         daySummariesByDate={overview.daySummariesByDate}
-        dayDetailEndpoint="/api/calendar/coverage/day"
         monthName={overview.monthName}
         nextMonthHref={createMonthHref("/coverage", getNextMonth(year, month))}
         previousMonthHref={createMonthHref("/coverage", getPreviousMonth(year, month))}

@@ -3,7 +3,7 @@ import { getAbsenceSectionsByDateStrict } from "@/lib/absences/absence-service";
 import { getHolidayName, getMadridTodayDateKey, isDateInWeek, isValidDateKey, isWeekendDateKey } from "@/lib/calendar/dates";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { findCoordinatorUser, isUserInCoordinatorTeam } from "@/lib/employees/org-service";
-import type { RequestCursor, RequestFilters, RequestPage, RequestStatusFilter } from "./request-types";
+import type { RequestCursor, RequestFilters, RequestPage } from "./request-types";
 import {
   acknowledgeAdminSubstitution,
   acknowledgeCoordinatorSubstitution,
