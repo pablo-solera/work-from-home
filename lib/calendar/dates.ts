@@ -27,16 +27,33 @@ export function getTodayDateKey() {
   return `${year}-${month}-${day}`;
 }
 
-export function getMadridTodayDateKey() {
+export function getMadridTodayDateKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en", {
     day: "2-digit",
     month: "2-digit",
     timeZone: "Europe/Madrid",
     year: "numeric",
-  }).formatToParts(new Date());
+  }).formatToParts(date);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
 
   return `${values.year}-${values.month}-${values.day}`;
+}
+
+export const SUBSTITUTION_CUTOFF_MINUTES = 10 * 60 + 15;
+
+export function isSubstitutionLocked(dateKey: string, now = new Date()) {
+  if (dateKey !== getMadridTodayDateKey(now)) return false;
+
+  const parts = new Intl.DateTimeFormat("en", {
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    timeZone: "Europe/Madrid",
+  }).formatToParts(now);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const minutes = Number(values.hour) * 60 + Number(values.minute);
+
+  return minutes >= SUBSTITUTION_CUTOFF_MINUTES;
 }
 
 function addDateKey(dateKey: string, days: number) {

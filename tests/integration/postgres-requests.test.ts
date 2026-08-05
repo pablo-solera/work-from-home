@@ -127,6 +127,23 @@ describe("request persistence on PostgreSQL", () => {
     expect(days.map((row) => row.date instanceof Date ? row.date.toISOString().slice(0, 10) : String(row.date))).toEqual(["2099-01-08"]);
   });
 
+  it("rejects a same-day substitution from 10:15 Madrid time", async () => {
+    vi.useFakeTimers({ now: new Date("2026-08-05T08:15:00.000Z") });
+
+    try {
+      const result = await createWfhRequest(teamEmployee, {
+        kind: "substitution",
+        requestedDates: ["2026-08-06"],
+        replacedDates: ["2026-08-05"],
+        comment: null,
+      });
+
+      expect(result.error).toBe("Después de las 10:15 no se puede sustituir el día de hoy.");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("approves an additional request as an admin and rejects coordinator access", async () => {
     const created = await createWfhRequest(teamEmployee, {
       kind: "additional",

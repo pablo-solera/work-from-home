@@ -1,6 +1,6 @@
 import type { SessionUser } from "@/lib/auth/session";
 import { getAbsenceSectionsByDateStrict } from "@/lib/absences/absence-service";
-import { getHolidayName, getMadridTodayDateKey, isDateInWeek, isValidDateKey, isWeekendDateKey } from "@/lib/calendar/dates";
+import { getHolidayName, getMadridTodayDateKey, isDateInWeek, isSubstitutionLocked, isValidDateKey, isWeekendDateKey } from "@/lib/calendar/dates";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { findCoordinatorUser, isUserInCoordinatorTeam } from "@/lib/employees/org-service";
 import type { RequestCursor, RequestFilters, RequestPage } from "./request-types";
@@ -79,6 +79,9 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
       }
 
       validateDates(input.replacedDates);
+      if ([...input.requestedDates, ...input.replacedDates].some((date) => isSubstitutionLocked(date))) {
+        throw new Error("Después de las 10:15 no se puede sustituir el día de hoy.");
+      }
       if (input.requestedDates.some((date, index) => !isDateInWeek(date, input.replacedDates[index]))) {
         throw new Error("El día de sustitución debe pertenecer a la misma semana que el día original.");
       }

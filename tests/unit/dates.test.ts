@@ -16,6 +16,7 @@ import {
   isDateInWeek,
   isHoliday,
   isSpanishNationalHoliday,
+  isSubstitutionLocked,
   isValidDateKey,
   isWeekendDateKey,
   parseCalendarMonth,
@@ -60,6 +61,16 @@ describe("calendar dates", () => {
     expect(formatDateKeyForDisplay("2026-08-04")).toBe("04-08-2026");
     expect(formatDateKeyForDisplay("invalid")).toBe("Fecha no válida");
     expect(/^\d{4}-\d{2}-\d{2}$/.test(getMadridTodayDateKey())).toBe(true);
+  });
+
+  it("locks substitutions for today from 10:15 in Madrid", () => {
+    const beforeCutoff = new Date("2026-08-05T08:14:59.000Z");
+    const atCutoff = new Date("2026-08-05T08:15:00.000Z");
+    const today = getMadridTodayDateKey(atCutoff);
+
+    expect(isSubstitutionLocked(today, beforeCutoff)).toBe(false);
+    expect(isSubstitutionLocked(today, atCutoff)).toBe(true);
+    expect(isSubstitutionLocked("2026-08-06", atCutoff)).toBe(false);
   });
 
   it("builds calendar cells and calendar links", () => {
