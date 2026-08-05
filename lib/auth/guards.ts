@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import type { SessionUser } from "./session";
-import { findUserById } from "@/lib/users/user-repository";
+import { getUserById } from "@/lib/users/user-service";
 import { resolveUserRole } from "@/lib/employees/org-service";
 import { getCurrentUser } from "./session";
 
@@ -47,7 +47,7 @@ export async function getAuthorizedUser(): Promise<SessionUser | null> {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const dbUser = await findUserById(user.id);
+  const dbUser = await getUserById(user.id);
 
   if (!dbUser) return null;
 

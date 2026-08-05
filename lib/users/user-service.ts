@@ -4,8 +4,11 @@ import type { SessionUser } from "@/lib/auth/session";
 import { findActiveEmployeeByEmail } from "@/lib/employees/employee-repository";
 import { resolveUserRole } from "@/lib/employees/org-service";
 import { findTestAccountByEmail, verifyTestAccountPassword } from "@/lib/employees/test-accounts";
+import { cache } from "react";
 import { generateTemporaryPassword } from "./password-generator";
 import { deleteUser, findUserByFallbackEmail, findUserById, findUserByOracleEmpId, updateUser, updateUserPassword } from "./user-repository";
+
+export const getUserById = cache((id: string) => findUserById(id));
 
 type UpdateUserInput = {
   canEditAllWfh: boolean;

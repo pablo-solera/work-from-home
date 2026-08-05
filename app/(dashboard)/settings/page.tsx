@@ -1,11 +1,11 @@
 import { TeamVisibilityToggle } from "@/components/settings/team-visibility-toggle";
 import { PageHeader } from "@/components/common/page-header";
 import { requireCoordinator } from "@/lib/auth/guards";
-import { findUserById } from "@/lib/users/user-repository";
+import { getUserById } from "@/lib/users/user-service";
 
 export default async function SettingsPage() {
   const user = await requireCoordinator();
-  const dbUser = await findUserById(user.id);
+  const dbUser = await getUserById(user.id);
 
   return (
     <section className="space-y-6">

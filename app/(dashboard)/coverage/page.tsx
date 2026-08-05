@@ -5,7 +5,7 @@ import { EditableMonthCalendar } from "@/components/calendar/month-calendar-vari
 import { requireUser } from "@/lib/auth/guards";
 import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
 import { createMonthHref, getCurrentCalendarMonth, getMadridTodayDateKey, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
-import { findUserById } from "@/lib/users/user-repository";
+import { getUserById } from "@/lib/users/user-service";
 import { createCalendarHref } from "@/lib/calendar/links";
 
 type CoveragePageProps = {
@@ -18,7 +18,7 @@ function coverageHref(year: number, month: number, employeeId?: string) {
 
 export default async function CoveragePage({ searchParams }: CoveragePageProps) {
   const user = await requireUser();
-  const dbUser = await findUserById(user.id);
+  const dbUser = await getUserById(user.id);
 
   if (user.role !== "admin" && !dbUser?.canEditAllWfh) {
     redirect("/calendar");
