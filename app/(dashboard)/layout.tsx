@@ -1,7 +1,8 @@
 import { AppHeader } from "@/components/layout/app-header";
 import { ToastProvider } from "@/components/common/toast-provider";
 import { requireUser } from "@/lib/auth/guards";
-import { findEmployeeTeamVisibility, findUserById } from "@/lib/users/user-repository";
+import { findUserById } from "@/lib/users/user-repository";
+import { findEmployeeTeamVisibility } from "@/lib/employees/org-service";
 import { getRequestNotificationSummary } from "@/lib/requests/request-service";
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {

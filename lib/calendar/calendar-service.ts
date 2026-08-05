@@ -3,8 +3,8 @@ import { createEmptySections, type DaySections, getAbsenceSectionsByDate } from 
 import { ABSENCE_SECTIONS } from "@/lib/absences/absence-sections";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { filterVisibleStaff } from "@/lib/employees/staff-service";
-import { findAllUsers, findEmployeeByCoordinatorId, findEmployeesByCoordinatorId, findEmployeeTeamVisibility, findUserById } from "@/lib/users/user-repository";
-import { findExcludedEmpIds } from "@/lib/employees/org-service";
+import { findAllUsers, findUserById } from "@/lib/users/user-repository";
+import { findEmployeeByCoordinatorId, findEmployeeTeamVisibility, findExcludedEmpIds, findUsersForCoordinator } from "@/lib/employees/org-service";
 import { createWorkFromHomeDay, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds, replaceWorkFromHomeDays } from "./calendar-repository";
 import { getCalendarDays, getMadridTodayDateKey, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
 import { getPendingRequestedDates } from "@/lib/requests/request-service";
@@ -200,12 +200,12 @@ async function getCalendarUsersForViewer(viewer: SessionUser) {
   }
 
   if (viewer.role === "coordinator") {
-    return filterVisibleStaff(await findEmployeesByCoordinatorId(viewer.id));
+    return filterVisibleStaff(await findUsersForCoordinator(viewer.id));
   }
 
   const visibility = await findEmployeeTeamVisibility(viewer.id);
   if (!visibility?.teamWfhVisible) return null;
-  return filterVisibleStaff(await findEmployeesByCoordinatorId(visibility.coordinatorId));
+  return filterVisibleStaff(await findUsersForCoordinator(visibility.coordinatorId));
 }
 
 export async function getEmployeeTeamWfhDayDetail(viewer: SessionUser, date: string) {
@@ -215,7 +215,7 @@ export async function getEmployeeTeamWfhDayDetail(viewer: SessionUser, date: str
   const visibility = await findEmployeeTeamVisibility(viewer.id);
   if (!visibility?.teamWfhVisible) return null;
 
-  const users = await filterVisibleStaff(await findEmployeesByCoordinatorId(visibility.coordinatorId));
+  const users = await filterVisibleStaff(await findUsersForCoordinator(visibility.coordinatorId));
   const [entries, identities, absenceSectionsByDate, excludedEmpIds] = await Promise.all([
     findWorkFromHomeDaysByUserIds(users.map((user) => user.id), date, date),
     resolveUserIdentities(users),
@@ -278,7 +278,7 @@ export async function getAdminUserCalendar(userId: string, year: number, month: 
 }
 
 export async function getCoordinatorCalendarOverview(coordinatorId: string, year: number, month: number, employeeId?: string) {
-  const allEmployees = await findEmployeesByCoordinatorId(coordinatorId);
+  const allEmployees = await findUsersForCoordinator(coordinatorId);
   const employees = await filterVisibleStaff(allEmployees);
   const visibleEmployees = employeeId ? employees.filter((employee) => employee.id === employeeId) : employees;
   const visibleUserIds = visibleEmployees.map((employee) => employee.id);
@@ -308,7 +308,7 @@ export async function getCoordinatorCalendarOverview(coordinatorId: string, year
 }
 
 export async function getCoordinatorCalendarUsers(coordinatorId: string) {
-  const allEmployees = await findEmployeesByCoordinatorId(coordinatorId);
+  const allEmployees = await findUsersForCoordinator(coordinatorId);
   const employees = await filterVisibleStaff(allEmployees);
   const identities = await resolveUserIdentities(employees);
 
@@ -335,7 +335,7 @@ export async function getTeamCalendarForViewer(viewer: SessionUser, year: number
     return null;
   }
 
-  const employees = await filterVisibleStaff(await findEmployeesByCoordinatorId(teamVisibility.coordinatorId));
+  const employees = await filterVisibleStaff(await findUsersForCoordinator(teamVisibility.coordinatorId));
   const range = getMonthRange(year, month);
   const calendar = getCalendarDays(year, month);
   const today = getMadridTodayDateKey();

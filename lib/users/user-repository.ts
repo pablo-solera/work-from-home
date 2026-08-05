@@ -33,27 +33,6 @@ export function findUserById(id: string) {
   });
 }
 
-export async function findEmployeesByCoordinatorId(coordinatorId: string) {
-  const { findUsersForCoordinator } = await import("@/lib/employees/org-service");
-  return findUsersForCoordinator(coordinatorId);
-}
-
-export async function findEmployeeTeamVisibility(employeeId: string) {
-  const employee = await findUserById(employeeId);
-  if (!employee) return null;
-  const { findCoordinatorUser } = await import("@/lib/employees/org-service");
-  const coordinator = await findCoordinatorUser(employee);
-  if (!coordinator) return null;
-  return { coordinatorId: coordinator.id, teamWfhVisible: coordinator.teamWfhVisible };
-}
-
-export async function findEmployeeByCoordinatorId(employeeId: string, coordinatorId: string) {
-  const { isUserInCoordinatorTeam } = await import("@/lib/employees/org-service");
-  if (!(await isUserInCoordinatorTeam(employeeId, coordinatorId))) return undefined;
-  return findUserById(employeeId);
-}
-
-
 export function findAllUsers() {
   return getDb().query.users.findMany({
     columns: {

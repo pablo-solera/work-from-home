@@ -188,6 +188,19 @@ export async function findUsersForCoordinator(coordinatorId: string) {
   return findUsersByOracleEmpIds([...teamEmpIds]);
 }
 
+export async function findEmployeeTeamVisibility(employeeId: string) {
+  const employee = await findUserById(employeeId);
+  if (!employee) return null;
+  const coordinator = await findCoordinatorUser(employee);
+  if (!coordinator) return null;
+  return { coordinatorId: coordinator.id, teamWfhVisible: coordinator.teamWfhVisible };
+}
+
+export async function findEmployeeByCoordinatorId(employeeId: string, coordinatorId: string) {
+  if (!(await isUserInCoordinatorTeam(employeeId, coordinatorId))) return undefined;
+  return findUserById(employeeId);
+}
+
 export async function isUserInCoordinatorTeam(employeeId: string, coordinatorId: string) {
   const [employee, coordinator, snapshot] = await Promise.all([findUserById(employeeId), findUserById(coordinatorId), getOrganizationSnapshot()]);
   if (employee?.oracleEmpId === null || employee?.oracleEmpId === undefined || coordinator?.oracleEmpId === null || coordinator?.oracleEmpId === undefined) return false;
