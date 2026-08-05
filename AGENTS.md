@@ -69,6 +69,7 @@ This version has breaking changes. APIs, conventions, and file structure may dif
 
 - Use Drizzle schema for application data modeling.
 - SQL scripts are acceptable for deployment/setup tasks when simpler.
+- Database migrations are hand-written SQL files under `drizzle/` and are applied with `psql` (or the integration-test runner). Do not use `drizzle-kit generate` or `drizzle-kit migrate`; the migration journal does not contain complete snapshots for the applied SQL history.
 - Do not make destructive database changes without explicit confirmation.
 - Do not suggest deleting Docker volumes unless the user accepts data loss.
 
