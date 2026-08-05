@@ -1,6 +1,6 @@
 import { EditableMonthCalendar, RequestableMonthCalendar } from "@/components/calendar/month-calendar-variants";
 import { PageHeader } from "@/components/common/page-header";
-import { requireUser } from "@/lib/auth/guards";
+import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { getUserCalendar } from "@/lib/calendar/calendar-service";
 import { createMonthHref, getCurrentCalendarMonth, getMadridTodayDateKey, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
 
@@ -9,7 +9,7 @@ type CalendarPageProps = {
 };
 
 export default async function CalendarPage({ searchParams }: CalendarPageProps) {
-  const user = await requireUser();
+  const user = await requireAuthorizedUser();
   const params = await searchParams;
   const { year, month } = parseCalendarMonth(params?.year, params?.month);
   const currentMonth = getCurrentCalendarMonth();

@@ -1,12 +1,12 @@
 import { AppHeader } from "@/components/layout/app-header";
 import { ToastProvider } from "@/components/common/toast-provider";
-import { requireUser } from "@/lib/auth/guards";
+import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { getUserById } from "@/lib/users/user-service";
 import { findEmployeeTeamVisibility } from "@/lib/employees/org-service";
 import { getRequestNotificationSummary } from "@/lib/requests/request-service";
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const user = await requireUser();
+  const user = await requireAuthorizedUser();
   const [dbUser, teamVisibility, notificationSummary] = await Promise.all([
     getUserById(user.id),
     user.role === "employee" ? findEmployeeTeamVisibility(user.id) : Promise.resolve(null),

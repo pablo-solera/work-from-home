@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AdminCalendar } from "@/components/admin/admin-calendar";
 import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-filter";
 import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
-import { requireUser } from "@/lib/auth/guards";
+import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { getCoordinatorCalendarOverview, getCoordinatorCalendarUsers, getCoordinatorEmployeeCalendar, getTeamCalendarForViewer } from "@/lib/calendar/calendar-service";
 import { createMonthHref, getCurrentCalendarMonth, getMadridTodayDateKey, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
 import { createCalendarHref } from "@/lib/calendar/links";
@@ -16,7 +16,7 @@ function teamHref(year: number, month: number, employeeId?: string) {
 }
 
 export default async function TeamPage({ searchParams }: TeamPageProps) {
-  const user = await requireUser();
+  const user = await requireAuthorizedUser();
   if (user.role === "admin") redirect("/admin");
 
   const params = await searchParams;

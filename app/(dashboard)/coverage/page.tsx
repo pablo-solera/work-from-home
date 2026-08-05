@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AdminCalendar } from "@/components/admin/admin-calendar";
 import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-filter";
 import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
-import { requireUser } from "@/lib/auth/guards";
+import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
 import { createMonthHref, getCurrentCalendarMonth, getMadridTodayDateKey, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
 import { getUserById } from "@/lib/users/user-service";
@@ -17,7 +17,7 @@ function coverageHref(year: number, month: number, employeeId?: string) {
 }
 
 export default async function CoveragePage({ searchParams }: CoveragePageProps) {
-  const user = await requireUser();
+  const user = await requireAuthorizedUser();
   const dbUser = await getUserById(user.id);
 
   if (user.role !== "admin" && !dbUser?.canEditAllWfh) {

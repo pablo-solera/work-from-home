@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { RequestFilters } from "@/components/requests/request-filters";
 import { CoordinatorOwnRequestList, CoordinatorRequestList, RequesterRequestList } from "@/components/requests/request-list";
-import { requireUser } from "@/lib/auth/guards";
+import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { getRequestsForCoordinator, getRequestsForRequester } from "@/lib/requests/request-service";
 import { parseRequestFilters } from "@/lib/requests/request-filters";
 
@@ -10,7 +10,7 @@ type RequestsPageProps = {
 };
 
 export default async function RequestsPage({ searchParams }: RequestsPageProps) {
-  const user = await requireUser();
+  const user = await requireAuthorizedUser();
   const filters = parseRequestFilters(await searchParams);
 
   if (user.role === "admin") {
