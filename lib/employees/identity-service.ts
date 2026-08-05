@@ -1,5 +1,16 @@
 import { findEmployeesByIds } from "./employee-repository";
 
+const IDENTITY_CACHE_TTL_MS = 15 * 60 * 1000;
+
+type CachedEmployee = {
+  email: string;
+  expiresAt: number;
+  name: string;
+  wdNumber: string | null;
+};
+
+const employeeIdentityCache = new Map<number, CachedEmployee>();
+
 export type UserIdentityInput = {
   id: string;
   oracleEmpId: number | null;
@@ -22,16 +33,37 @@ export type ResolvedIdentity = {
  * Returns a Map keyed by the Postgres user id.
  */
 export async function resolveUserIdentities(usersInput: UserIdentityInput[]): Promise<Map<string, ResolvedIdentity>> {
-  const empIds = usersInput.map((user) => user.oracleEmpId).filter((id): id is number => id !== null && id !== undefined);
+  const empIds = [...new Set(usersInput
+    .map((user) => user.oracleEmpId)
+    .filter((id): id is number => id !== null && id !== undefined))];
+  const now = Date.now();
+  const missingEmpIds = empIds.filter((empId) => {
+    const cached = employeeIdentityCache.get(empId);
+    return !cached || cached.expiresAt <= now;
+  });
 
-  let employeesById = new Map<number, { name: string; email: string; wdNumber: string | null }>();
+  const employeesById = new Map<number, { name: string; email: string; wdNumber: string | null }>();
 
-  if (empIds.length > 0) {
+  if (missingEmpIds.length > 0) {
     try {
-      const employees = await findEmployeesByIds(empIds);
-      employeesById = new Map(Array.from(employees.entries()).map(([empId, employee]) => [empId, { name: employee.name, email: employee.email, wdNumber: employee.wdNumber }]));
+      const employees = await findEmployeesByIds(missingEmpIds);
+      for (const [empId, employee] of employees) {
+        employeeIdentityCache.set(empId, {
+          email: employee.email,
+          expiresAt: now + IDENTITY_CACHE_TTL_MS,
+          name: employee.name,
+          wdNumber: employee.wdNumber,
+        });
+      }
     } catch (error) {
       console.error("Failed to resolve employee identities from Oracle:", error);
+    }
+  }
+
+  for (const empId of empIds) {
+    const cached = employeeIdentityCache.get(empId);
+    if (cached && cached.expiresAt > now) {
+      employeesById.set(empId, cached);
     }
   }
 

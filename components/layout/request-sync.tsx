@@ -8,12 +8,17 @@ const SYNC_PATHS = new Set(["/calendar", "/requests", "/team"]);
 export function RequestSync() {
   const pathname = usePathname();
   const router = useRouter();
+  const pathnameRef = useRef(pathname);
   const refreshScheduled = useRef(false);
   const refreshPending = useRef(false);
 
   useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+
+  useEffect(() => {
     const scheduleRefresh = () => {
-      if (!SYNC_PATHS.has(pathname)) return;
+      if (!SYNC_PATHS.has(pathnameRef.current)) return;
       if (document.visibilityState !== "visible") {
         refreshPending.current = true;
         return;
@@ -29,7 +34,6 @@ export function RequestSync() {
     };
 
     const source = new EventSource("/api/requests/events");
-    source.addEventListener("ready", scheduleRefresh);
     source.addEventListener("requests-changed", scheduleRefresh);
 
     const handleVisibility = () => {
@@ -41,7 +45,7 @@ export function RequestSync() {
       source.close();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [pathname, router]);
+  }, [router]);
 
   return null;
 }

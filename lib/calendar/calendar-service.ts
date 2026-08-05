@@ -16,6 +16,9 @@ const UNKNOWN_IDENTITY = { name: "Usuario", email: null } as const;
 // Sections (other than "enOficina" itself) whose people are considered NOT in
 // the office on a given day: teletrabajo plus every absence section.
 const OUT_OF_OFFICE_SECTION_KEYS = ABSENCE_SECTIONS.map((section) => section.key).filter((key) => key !== "enOficina");
+const ABSENCE_ONLY_SECTION_KEYS = ABSENCE_SECTIONS
+  .map((section) => section.key)
+  .filter((key) => key !== "enOficina" && key !== "teletrabajo" && key !== "noComprende");
 
 export type AdminCalendarDaySummary = {
   absenceCount: number;
@@ -81,6 +84,14 @@ function buildSectionsByDate(
   }
 
   const officeStaff = users.filter((user) => user.oracleEmpId !== null && user.oracleEmpId !== undefined && !excludedUserIds.has(user.id));
+  const toCalendarEntry = (user: { id: string }) => {
+    const identity = identities.get(user.id) ?? UNKNOWN_IDENTITY;
+    return { userId: user.id, userName: identity.name, userEmail: identity.email };
+  };
+  const excludedEntries = users.filter((user) => excludedUserIds.has(user.id)).map(toCalendarEntry);
+  const officeEntries = officeStaff
+    .map(toCalendarEntry)
+    .sort((a, b) => a.userName.localeCompare(b.userName, "es"));
 
   for (const cell of calendar.cells) {
     if (!cell || cell.isWeekend || cell.isHoliday) {
@@ -90,13 +101,6 @@ function buildSectionsByDate(
 
     const sections = sectionsByDate[cell.date];
     const outOfOfficeUserIds = new Set<string>();
-
-    const excludedEntries = users
-      .filter((user) => excludedUserIds.has(user.id))
-      .map((user) => {
-        const identity = identities.get(user.id) ?? UNKNOWN_IDENTITY;
-        return { userId: user.id, userName: identity.name, userEmail: identity.email };
-      });
 
     sectionsByDate[cell.date] = sectionsByDate[cell.date] ?? createEmptySections();
     sectionsByDate[cell.date].noComprende = excludedEntries;
@@ -111,13 +115,7 @@ function buildSectionsByDate(
       }
     }
 
-    const inOffice = officeStaff
-      .filter((user) => !outOfOfficeUserIds.has(user.id))
-      .map((user) => {
-        const identity = identities.get(user.id) ?? UNKNOWN_IDENTITY;
-        return { userId: user.id, userName: identity.name, userEmail: identity.email };
-      })
-      .sort((a, b) => a.userName.localeCompare(b.userName, "es"));
+    const inOffice = officeEntries.filter((entry) => !outOfOfficeUserIds.has(entry.userId));
 
     if (inOffice.length > 0) {
       sectionsByDate[cell.date].enOficina = inOffice;
@@ -134,8 +132,8 @@ function buildDaySummaries(sectionsByDate: Record<string, DaySections>, calendar
     if (!cell) continue;
     const sections = sectionsByDate[cell.date] ?? createEmptySections();
     const isPast = Boolean(minimumDate && cell.date < minimumDate);
-    const absenceCount = ABSENCE_SECTIONS.filter((section) => section.key !== "enOficina" && section.key !== "teletrabajo" && section.key !== "noComprende")
-      .reduce((total, section) => total + (isPast ? 0 : sections[section.key].length), 0);
+    const absenceCount = ABSENCE_ONLY_SECTION_KEYS
+      .reduce((total, section) => total + (isPast ? 0 : sections[section].length), 0);
     summaries[cell.date] = {
       date: cell.date,
       isPast,
@@ -225,7 +223,8 @@ export async function getEmployeeTeamWfhDayDetail(viewer: SessionUser, date: str
     findExcludedEmpIds(),
   ]);
   const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)));
-  const sections = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar, excludedEmpIds, date)[date] ?? createEmptySections();
+  const dayCalendar = { ...calendar, cells: calendar.cells.filter((cell) => cell?.date === date) };
+  const sections = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, dayCalendar, excludedEmpIds)[date] ?? createEmptySections();
   return { ...sections, bajas: [] };
 }
 
@@ -241,7 +240,8 @@ export async function getCalendarDayDetail(viewer: SessionUser, date: string) {
     resolveUserIdentities(users),
     findExcludedEmpIds(),
   ]);
-  const sectionsByDate = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar, excludedEmpIds);
+  const dayCalendar = { ...calendar, cells: calendar.cells.filter((cell) => cell?.date === date) };
+  const sectionsByDate = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, dayCalendar, excludedEmpIds);
 
   return sectionsByDate[date] ?? createEmptySections();
 }

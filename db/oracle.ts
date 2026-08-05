@@ -1,6 +1,7 @@
 import oracledb from "oracledb";
 
 let pool: oracledb.Pool | null = null;
+let poolPromise: Promise<oracledb.Pool> | null = null;
 let thickClientInitialized = false;
 
 function initThickClient() {
@@ -32,6 +33,23 @@ async function getOraclePool() {
     return pool;
   }
 
+  if (poolPromise) {
+    return poolPromise;
+  }
+
+  poolPromise = createOraclePool();
+
+  try {
+    pool = await poolPromise;
+    return pool;
+  } catch (error) {
+    poolPromise = null;
+    throw error;
+  }
+}
+
+async function createOraclePool() {
+
   const user = process.env.ORACLE_USER;
   const password = process.env.ORACLE_PASSWORD;
   const connectString = process.env.ORACLE_CONNECT_STRING;
@@ -42,17 +60,16 @@ async function getOraclePool() {
 
   initThickClient();
 
-  pool = await oracledb.createPool({
+  return oracledb.createPool({
     user,
     password,
     connectString,
-    poolMin: 0,
-    poolMax: 4,
+    poolMin: 2,
+    poolMax: 20,
     poolIncrement: 1,
     poolTimeout: 60,
+    queueTimeout: 5000,
   });
-
-  return pool;
 }
 
 /**
@@ -64,6 +81,7 @@ export async function queryOracle<T>(sql: string, binds: oracledb.BindParameters
   const connection = await oraclePool.getConnection();
 
   try {
+    connection.callTimeout = 5000;
     const result = await connection.execute<T>(sql, binds, {
       outFormat: oracledb.OUT_FORMAT_OBJECT,
     });
