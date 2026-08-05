@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getAuthorizedUser } from "@/lib/auth/guards";
 import { getRequestsForCoordinator, getRequestsForRequester } from "@/lib/requests/request-service";
 import { parseRequestFilters } from "@/lib/requests/request-filters";
 
 export async function GET(request: Request) {
-  const user = await getCurrentUser();
+  const user = await getAuthorizedUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   if (user.role !== "coordinator" && user.role !== "employee") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 

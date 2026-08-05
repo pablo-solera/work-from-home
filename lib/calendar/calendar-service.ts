@@ -225,7 +225,8 @@ export async function getEmployeeTeamWfhDayDetail(viewer: SessionUser, date: str
     findExcludedEmpIds(),
   ]);
   const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)));
-  return buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar, excludedEmpIds, date)[date] ?? createEmptySections();
+  const sections = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, calendar, excludedEmpIds, date)[date] ?? createEmptySections();
+  return { ...sections, bajas: [] };
 }
 
 export async function getCalendarDayDetail(viewer: SessionUser, date: string) {
@@ -391,7 +392,7 @@ export async function setWorkFromHomeDay(userId: string, date: string, enabled: 
 }
 
 export async function setWorkFromHomeDayForActor(actor: SessionUser, targetUserId: string, date: string, enabled: boolean) {
-  if (actor.role === "coordinator" && targetUserId === actor.id && date < getMadridTodayDateKey()) {
+  if (actor.role !== "admin" && date < getMadridTodayDateKey()) {
     throw new Error("No puedes modificar días de teletrabajo anteriores a hoy.");
   }
 
@@ -399,19 +400,19 @@ export async function setWorkFromHomeDayForActor(actor: SessionUser, targetUserI
   await setWorkFromHomeDay(targetUserId, date, enabled);
 }
 
-async function assertCanEditWorkFromHomeDays(actor: SessionUser, targetUserId: string) {
+export async function assertCanEditWorkFromHomeDays(actor: SessionUser, targetUserId: string) {
   if (actor.role === "admin") {
     return;
+  }
+
+  if (actor.role === "employee") {
+    throw new Error("Employees cannot update work-from-home days");
   }
 
   const actorUser = await findUserById(actor.id);
 
   if (actorUser?.canEditAllWfh) {
     return;
-  }
-
-  if (actor.role === "employee") {
-    throw new Error("Employees cannot update work-from-home days");
   }
 
   if (actor.role === "coordinator") {

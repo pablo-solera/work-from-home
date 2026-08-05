@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getAuthorizedUser } from "@/lib/auth/guards";
 import { getEmployeeTeamWfhDayDetail } from "@/lib/calendar/calendar-service";
 
 export async function GET(request: Request) {
-  const user = await getCurrentUser();
+  const user = await getAuthorizedUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   const date = new URL(request.url).searchParams.get("date") ?? "";

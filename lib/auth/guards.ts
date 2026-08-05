@@ -36,10 +36,20 @@ export async function requireCoordinator() {
 
 /** Revalidates the signed role against the current Oracle organization. */
 export async function requireAuthorizedUser(): Promise<SessionUser> {
-  const user = await requireUser();
+  const user = await getAuthorizedUser();
+  if (!user) redirect("/login");
+
+  return user;
+}
+
+/** Revalidates the signed role without redirecting, for JSON route handlers. */
+export async function getAuthorizedUser(): Promise<SessionUser | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
   const dbUser = await findUserById(user.id);
 
-  if (!dbUser) redirect("/login");
+  if (!dbUser) return null;
 
   return { ...user, role: await resolveUserRole(dbUser) };
 }
