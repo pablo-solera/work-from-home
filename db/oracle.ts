@@ -1,11 +1,24 @@
 import oracledb from "oracledb";
 
-let pool: oracledb.Pool | null = null;
-let poolPromise: Promise<oracledb.Pool> | null = null;
-let thickClientInitialized = false;
+type OracleState = {
+  pool: oracledb.Pool | null;
+  poolPromise: Promise<oracledb.Pool> | null;
+  thickClientInitialized: boolean;
+};
+
+declare global {
+  var __wfhOracleState: OracleState | undefined;
+}
+
+const state: OracleState = globalThis.__wfhOracleState ?? {
+  pool: null,
+  poolPromise: null,
+  thickClientInitialized: false,
+};
+globalThis.__wfhOracleState = state;
 
 function initThickClient() {
-  if (thickClientInitialized) {
+  if (state.thickClientInitialized) {
     return;
   }
 
@@ -25,25 +38,25 @@ function initThickClient() {
     }
   }
 
-  thickClientInitialized = true;
+  state.thickClientInitialized = true;
 }
 
 async function getOraclePool() {
-  if (pool) {
-    return pool;
+  if (state.pool) {
+    return state.pool;
   }
 
-  if (poolPromise) {
-    return poolPromise;
+  if (state.poolPromise) {
+    return state.poolPromise;
   }
 
-  poolPromise = createOraclePool();
+  state.poolPromise = createOraclePool();
 
   try {
-    pool = await poolPromise;
-    return pool;
+    state.pool = await state.poolPromise;
+    return state.pool;
   } catch (error) {
-    poolPromise = null;
+    state.poolPromise = null;
     throw error;
   }
 }
