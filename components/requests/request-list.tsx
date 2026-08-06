@@ -32,7 +32,7 @@ type RequestListItem = {
   adminAcknowledgedAt?: Date | string | null;
 };
 
-function RequestList({ initialPage, coordinatorView = false, ownView = false, adminView = false, adminNotificationView = false, filtered = false, filters }: { coordinatorView?: boolean; ownView?: boolean; adminView?: boolean; adminNotificationView?: boolean; filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
+function RequestList({ initialPage, coordinatorView = false, ownView = false, requesterView = false, adminView = false, adminNotificationView = false, filtered = false, filters }: { coordinatorView?: boolean; ownView?: boolean; requesterView?: boolean; adminView?: boolean; adminNotificationView?: boolean; filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
   const [requests, setRequests] = useState(initialPage.requests);
   const [nextCursor, setNextCursor] = useState(initialPage.nextCursor);
   const [loading, setLoading] = useState(false);
@@ -82,7 +82,7 @@ function RequestList({ initialPage, coordinatorView = false, ownView = false, ad
               <div className="mt-1 space-y-1 text-sm text-zinc-600">
                 {request.dates.map((date) => {
                   const dateLabel = request.kind === "substitution" && date.replacedDate ? `${formatDateKeyForDisplay(date.replacedDate)} → ${formatDateKeyForDisplay(date.requestedDate)}` : formatDateKeyForDisplay(date.requestedDate);
-                  const canCancel = !coordinatorView && request.kind === "additional" && request.status === "pending" && !date.cancelledAt && date.requestedDate > getMadridTodayDateKey();
+                   const canCancel = requesterView && request.kind === "additional" && request.status === "pending" && !date.cancelledAt && date.requestedDate > getMadridTodayDateKey();
 
                   return <div className="flex flex-wrap items-center justify-between gap-2" key={date.id}><span className={date.cancelledAt ? "line-through text-zinc-400" : undefined}>{dateLabel}{date.cancelledAt ? " · Cancelado" : ""}</span>{canCancel ? <CancelRequestDateButton dateId={date.id} dateLabel={formatDateKeyForDisplay(date.requestedDate)} requestId={request.id} /> : null}</div>;
                 })}
@@ -113,7 +113,7 @@ export function CoordinatorRequestList({ filtered = false, initialPage, filters 
 }
 
 export function CoordinatorOwnRequestList({ filtered = false, initialPage, filters }: { filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
-  return <RequestList filtered={filtered} filters={filters} initialPage={initialPage} key={getPageKey(initialPage)} ownView />;
+  return <RequestList filtered={filtered} filters={filters} initialPage={initialPage} key={getPageKey(initialPage)} ownView requesterView />;
 }
 
 export function AdminRequestList({ filtered = false, initialPage, filters }: { filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
@@ -125,7 +125,7 @@ export function AdminSubstitutionNotificationList({ initialPage }: { initialPage
 }
 
 export function RequesterRequestList({ filtered = false, initialPage, filters }: { filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
-  return <RequestList key={getPageKey(initialPage)} filtered={filtered} filters={filters} initialPage={initialPage} />;
+  return <RequestList key={getPageKey(initialPage)} filtered={filtered} filters={filters} initialPage={initialPage} requesterView />;
 }
 
 function getPageKey(page: RequestPage<RequestListItem>) {
