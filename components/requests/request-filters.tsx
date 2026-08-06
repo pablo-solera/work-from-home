@@ -48,7 +48,7 @@ export function RequestFilters({ date, status, defaultStatus = "all" }: RequestF
             <option value="cancelled">Cancelado</option>
           </select>
         </label>
-        {hasFilters ? <button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => router.push(pathname)} type="button">Limpiar filtros</button> : <span />}
+        {hasFilters ? <button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => { const params = new URLSearchParams(searchParams.toString()); params.delete("date"); params.delete("status"); const query = params.toString(); router.push(query ? `${pathname}?${query}` : pathname); }} type="button">Limpiar filtros</button> : <span />}
       </div>
     </div>
   );

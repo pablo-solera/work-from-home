@@ -27,6 +27,13 @@ describe("RequestFilters", () => {
     expect(push).toHaveBeenCalledWith("/admin/requests");
   });
 
+  it("preserves the active request view when clearing filters", () => {
+    params = new URLSearchParams("date=month&status=accepted&view=team");
+    render(<RequestFilters date="month" status="accepted" />);
+    fireEvent.click(screen.getByRole("button", { name: "Limpiar filtros" }));
+    expect(push).toHaveBeenCalledWith("/admin/requests?view=team");
+  });
+
   it("keeps an explicit admin all-status filter in the URL", () => {
     render(<RequestFilters date="all" status="pending" defaultStatus="pending" />);
     fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "all" } });
