@@ -3,6 +3,10 @@ import { formatDateKeyForDisplay, getMadridTodayDateKey, isSubstitutionLocked } 
 
 export type RequestMode = "chooser" | "additional" | "substitution-source" | "substitution-target";
 
+export function isDateLockedForMode(date: string, mode: RequestMode | null) {
+  return mode !== null && mode !== "chooser" && isSubstitutionLocked(date);
+}
+
 function PendingIndicator() {
   return <span aria-label="Solicitud pendiente" className="relative flex size-3" title="Solicitud pendiente"><span aria-hidden="true" className="absolute inline-flex size-full animate-ping rounded-full bg-amber-400 opacity-75 motion-reduce:animate-none" /><span aria-hidden="true" className="relative inline-flex size-3 rounded-full bg-amber-500" /></span>;
 }
@@ -35,9 +39,10 @@ export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isTo
   if (requestMode && requestMode !== "chooser") {
     const isOutsideSubstitutionWeek = requestMode === "substitution-target" && substitutionWeek && (date < substitutionWeek.start || date > substitutionWeek.end);
     const isPastDate = date < getMadridTodayDateKey();
-    const isSubstitutionLockedDate = requestMode !== "additional" && isSubstitutionLocked(date);
-    const canSelect = !isPastDate && !isSubstitutionLockedDate && !pending && !isOutsideSubstitutionWeek && (requestMode === "additional" ? !selected : requestMode === "substitution-source" ? selected : !selected);
-    const label = isSubstitutionLockedDate ? "Fuera de plazo" : isPastDate ? "Fecha pasada" : pending ? "Pendiente" : isOutsideSubstitutionWeek ? "Otra semana" : requestMode === "substitution-source" ? "Elegir día" : requestSelected ? "Seleccionado" : requestMode === "substitution-target" ? "Elegir día" : "Seleccionar";
+    const isSubstitutionLockedDate = isDateLockedForMode(date, requestMode);
+    const blockedReason = isSubstitutionLockedDate ? "Fuera de plazo" : isPastDate ? "Fecha pasada" : pending ? "Pendiente" : isOutsideSubstitutionWeek ? "Otra semana" : requestMode === "additional" && selected ? "Ya asignado" : requestMode === "substitution-source" && !selected ? "Sin teletrabajo" : requestMode === "substitution-target" && selected ? "Ya asignado" : null;
+    const canSelect = !blockedReason;
+    const label = blockedReason ?? (requestSelected ? "Seleccionado" : requestMode === "additional" ? "Seleccionar" : "Elegir día");
     return <button aria-label={`${formatDateKeyForDisplay(date)}, ${label}`} className={`cursor-pointer min-h-24 w-full rounded-xl border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 ${requestSelected ? "border-sky-500 bg-sky-100/70" : selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""} disabled:cursor-not-allowed disabled:opacity-60`} disabled={!canSelect} onClick={() => onRequestClick(date)} type="button"><div className="flex h-full flex-col justify-between gap-3"><div className="flex items-start justify-between"><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>{pending ? <PendingIndicator /> : null}</div><span className="rounded-lg border border-zinc-300 px-2 py-1 text-center text-xs font-medium text-zinc-700">{label}</span></div></button>;
   }
 

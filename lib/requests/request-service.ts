@@ -69,6 +69,10 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
   try {
     validateDates(input.requestedDates);
 
+    if ([...input.requestedDates, ...input.replacedDates].some((date) => isSubstitutionLocked(date))) {
+      throw new Error("Fuera de plazo: después de las 10:15 no se puede seleccionar el día de hoy.");
+    }
+
     if (input.kind === "additional" && !input.comment?.trim()) {
       throw new Error("Debes indicar un comentario para solicitar días adicionales.");
     }
@@ -79,9 +83,6 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
       }
 
       validateDates(input.replacedDates);
-      if ([...input.requestedDates, ...input.replacedDates].some((date) => isSubstitutionLocked(date))) {
-        throw new Error("Después de las 10:15 no se puede sustituir el día de hoy.");
-      }
       if (input.requestedDates.some((date, index) => !isDateInWeek(date, input.replacedDates[index]))) {
         throw new Error("El día de sustitución debe pertenecer a la misma semana que el día original.");
       }

@@ -3,8 +3,8 @@
 import { useActionState, useEffect, useState } from "react";
 import { createWfhRequestAction } from "@/app/(dashboard)/requests/actions";
 import { useToast } from "@/components/common/toast-provider";
-import { formatDateKeyForDisplay, getMadridTodayDateKey, getWeekRange, isSubstitutionLocked, type CalendarCell } from "@/lib/calendar/dates";
-import { DayCell, type RequestMode } from "./day-cell";
+import { formatDateKeyForDisplay, getMadridTodayDateKey, getWeekRange, type CalendarCell } from "@/lib/calendar/dates";
+import { DayCell, isDateLockedForMode, type RequestMode } from "./day-cell";
 import { ReplicateControls } from "./replicate-controls";
 import { Dialog } from "@/components/common/dialog";
 import { CalendarGrid, CalendarPanel, EmptyCalendarCell } from "./calendar-shell";
@@ -67,7 +67,7 @@ export function MonthCalendar({
   }
 
   function handleDayClick(date: string) {
-    if (date < getMadridTodayDateKey() || (mode && mode !== "chooser" && isSubstitutionLocked(date))) {
+    if (date < getMadridTodayDateKey() || isDateLockedForMode(date, mode)) {
       return;
     }
 

@@ -138,7 +138,24 @@ describe("request persistence on PostgreSQL", () => {
         comment: null,
       });
 
-      expect(result.error).toBe("Después de las 10:15 no se puede sustituir el día de hoy.");
+      expect(result.error).toBe("Fuera de plazo: después de las 10:15 no se puede seleccionar el día de hoy.");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rejects an additional request for today from 10:15 Madrid time", async () => {
+    vi.useFakeTimers({ now: new Date("2026-08-05T08:15:00.000Z") });
+
+    try {
+      const result = await createWfhRequest(teamEmployee, {
+        kind: "additional",
+        requestedDates: ["2026-08-05"],
+        replacedDates: [],
+        comment: "Motivo de prueba.",
+      });
+
+      expect(result.error).toBe("Fuera de plazo: después de las 10:15 no se puede seleccionar el día de hoy.");
     } finally {
       vi.useRealTimers();
     }
