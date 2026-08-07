@@ -10,8 +10,8 @@ export function AdminDayCell({ day, onSelect }: AdminDayCellProps) {
   const total = day.remoteCount;
   const officeCount = day.officeCount;
   const absencesCount = day.absenceCount;
-  const isPast = day.isPast ?? false;
-  const canOpenDetails = !isPast && (total > 0 || absencesCount > 0 || officeCount > 0);
+  const isOutOfRange = day.isOutOfRange ?? false;
+  const canOpenDetails = !isOutOfRange && (total > 0 || absencesCount > 0 || officeCount > 0);
   const isDisabledDay = day.isWeekend || day.isHoliday;
 
   return (
@@ -39,7 +39,7 @@ export function AdminDayCell({ day, onSelect }: AdminDayCellProps) {
             <p className="text-xs font-medium text-zinc-700">
               {total} en teletrabajo
             </p>
-          ) : isDisabledDay && !isPast ? (
+          ) : isDisabledDay && !isOutOfRange ? (
             <p className="text-xs text-zinc-400">{day.holidayName ?? "Fin de semana"}</p>
           ) : null}
           {absencesCount > 0 ? (

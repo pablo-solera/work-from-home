@@ -11,7 +11,7 @@ export type AdminCalendarDay = Exclude<CalendarCell, null> & {
   absenceCount: number;
   officeCount: number;
   remoteCount: number;
-  isPast?: boolean;
+  isOutOfRange?: boolean;
 };
 
 type AdminCalendarProps = {

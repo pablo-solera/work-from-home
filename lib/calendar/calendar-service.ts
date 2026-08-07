@@ -6,7 +6,7 @@ import { filterVisibleStaff } from "@/lib/employees/staff-service";
 import { findAllUsers, findUserById } from "@/lib/users/user-repository";
 import { findEmployeeByCoordinatorId, findEmployeeTeamVisibility, findExcludedEmpIds, findUsersForCoordinator } from "@/lib/employees/org-service";
 import { createWorkFromHomeDay, deleteWorkFromHomeDay, findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds, replaceWorkFromHomeDays } from "./calendar-repository";
-import { getCalendarDays, getMadridTodayDateKey, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
+import { getCalendarDays, getCurrentCalendarMonth, getMadridTodayDateKey, getMonthRange, getMonthsUntilYearEnd, getNextMonth, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
 import { getPendingRequestedDates } from "@/lib/requests/request-service";
 
 export type ReplicateWorkFromHomeScope = "next" | "untilYearEnd";
@@ -27,10 +27,20 @@ const ABSENCE_ONLY_SECTION_KEYS = ABSENCE_SECTIONS
 export type AdminCalendarDaySummary = {
   absenceCount: number;
   date: string;
-  isPast?: boolean;
+  isOutOfRange?: boolean;
   officeCount: number;
   remoteCount: number;
 };
+
+export function getEmployeeTeamVisibleRange() {
+  const current = getCurrentCalendarMonth();
+  const next = getNextMonth(current.year, current.month);
+
+  return {
+    minimumDate: getMadridTodayDateKey(),
+    maximumDate: getMonthRange(next.year, next.month).end,
+  };
+}
 
 export function buildSectionsByDate(
   entries: Awaited<ReturnType<typeof findAllWorkFromHomeDays>>,
@@ -40,6 +50,7 @@ export function buildSectionsByDate(
   calendar: ReturnType<typeof getCalendarDays>,
   excludedEmpIds: Set<number>,
   minimumDate?: string,
+  maximumDate?: string,
 ) {
   const visibleUserIds = new Set(users.map((user) => user.id));
   const excludedUserIds = new Set(users
@@ -49,7 +60,7 @@ export function buildSectionsByDate(
   const absentUserIdsByDate: Record<string, Set<string>> = {};
 
   for (const [date, sections] of Object.entries(absenceSectionsByDate)) {
-    if (minimumDate && date < minimumDate) continue;
+    if ((minimumDate && date < minimumDate) || (maximumDate && date > maximumDate)) continue;
     const filtered = createEmptySections();
     const absentIds = new Set<string>();
 
@@ -73,7 +84,7 @@ export function buildSectionsByDate(
   }
 
   for (const entry of entries) {
-    if (minimumDate && entry.date < minimumDate) continue;
+    if ((minimumDate && entry.date < minimumDate) || (maximumDate && entry.date > maximumDate)) continue;
     if (!visibleUserIds.has(entry.userId) || excludedUserIds.has(entry.userId) || absentUserIdsByDate[entry.date]?.has(entry.userId)) {
       continue;
     }
@@ -101,7 +112,7 @@ export function buildSectionsByDate(
     if (!cell || cell.isWeekend || cell.isHoliday) {
       continue;
     }
-    if (minimumDate && cell.date < minimumDate) continue;
+    if ((minimumDate && cell.date < minimumDate) || (maximumDate && cell.date > maximumDate)) continue;
 
     const sections = sectionsByDate[cell.date];
     const outOfOfficeUserIds = new Set<string>();
@@ -129,20 +140,20 @@ export function buildSectionsByDate(
   return sectionsByDate;
 }
 
-export function buildDaySummaries(sectionsByDate: Record<string, DaySections>, calendar: ReturnType<typeof getCalendarDays>, minimumDate?: string) {
+export function buildDaySummaries(sectionsByDate: Record<string, DaySections>, calendar: ReturnType<typeof getCalendarDays>, minimumDate?: string, maximumDate?: string) {
   const summaries: Record<string, AdminCalendarDaySummary> = {};
 
   for (const cell of calendar.cells) {
     if (!cell) continue;
     const sections = sectionsByDate[cell.date] ?? createEmptySections();
-    const isPast = Boolean(minimumDate && cell.date < minimumDate);
+    const isOutOfRange = Boolean((minimumDate && cell.date < minimumDate) || (maximumDate && cell.date > maximumDate));
     const absenceCount = ABSENCE_ONLY_SECTION_KEYS
-      .reduce((total, section) => total + (isPast ? 0 : sections[section].length), 0);
+      .reduce((total, section) => total + (isOutOfRange ? 0 : sections[section].length), 0);
     summaries[cell.date] = {
       date: cell.date,
-      isPast,
-      officeCount: isPast ? 0 : sections.enOficina.length,
-      remoteCount: isPast ? 0 : sections.teletrabajo.length,
+      isOutOfRange,
+      officeCount: isOutOfRange ? 0 : sections.enOficina.length,
+      remoteCount: isOutOfRange ? 0 : sections.teletrabajo.length,
       absenceCount,
     };
   }
@@ -215,7 +226,8 @@ async function getCalendarUsersForViewer(viewer: SessionUser) {
 export async function getEmployeeTeamWfhDayDetail(viewer: SessionUser, date: string) {
   if (!isValidDateKey(date)) return null;
   if (viewer.role !== "employee") return null;
-  if (date < getMadridTodayDateKey()) return null;
+  const { minimumDate, maximumDate } = getEmployeeTeamVisibleRange();
+  if (date < minimumDate || date > maximumDate) return null;
   const visibility = await findEmployeeTeamVisibility(viewer.id);
   if (!visibility?.teamWfhVisible) return null;
 
@@ -342,19 +354,20 @@ export async function getTeamCalendarForViewer(viewer: SessionUser, year: number
   const employees = await filterVisibleStaff(await findUsersForCoordinator(teamVisibility.coordinatorId));
   const range = getMonthRange(year, month);
   const calendar = getCalendarDays(year, month);
-  const today = getMadridTodayDateKey();
-  const start = range.start > today ? range.start : today;
+  const { minimumDate, maximumDate } = getEmployeeTeamVisibleRange();
+  const start = range.start > minimumDate ? range.start : minimumDate;
+  const end = range.end < maximumDate ? range.end : maximumDate;
   const [entries, identities, absenceSectionsByDate, excludedEmpIds] = await Promise.all([
-    start <= range.end ? findWorkFromHomeDaysByUserIds(employees.map((employee) => employee.id), start, range.end) : Promise.resolve([]),
+    start <= end ? findWorkFromHomeDaysByUserIds(employees.map((employee) => employee.id), start, end) : Promise.resolve([]),
     resolveUserIdentities(employees),
-    start <= range.end ? getAbsenceSectionsByDate(start, range.end, employees) : Promise.resolve({}),
+    start <= end ? getAbsenceSectionsByDate(start, end, employees) : Promise.resolve({}),
     findExcludedEmpIds(),
   ]);
-  const sectionsByDate = buildSectionsByDate(entries, employees, identities, absenceSectionsByDate, calendar, excludedEmpIds, today);
+  const sectionsByDate = buildSectionsByDate(entries, employees, identities, absenceSectionsByDate, calendar, excludedEmpIds, minimumDate, maximumDate);
 
   return {
     ...calendar,
-    daySummariesByDate: buildDaySummaries(sectionsByDate, calendar, today),
+    daySummariesByDate: buildDaySummaries(sectionsByDate, calendar, minimumDate, maximumDate),
   };
 }
 

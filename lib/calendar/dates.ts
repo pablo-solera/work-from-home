@@ -80,12 +80,12 @@ export function getRequestDateRange(filter: Exclude<RequestDateFilter, "all">) {
   return { start, end: addDateKey(start, 6) };
 }
 
-export function getCurrentCalendarMonth(): CalendarMonthParams {
-  const now = new Date();
+export function getCurrentCalendarMonth(date = new Date()): CalendarMonthParams {
+  const today = getMadridTodayDateKey(date);
 
   return {
-    year: now.getFullYear(),
-    month: now.getMonth() + 1,
+    year: Number(today.slice(0, 4)),
+    month: Number(today.slice(5, 7)),
   };
 }
 

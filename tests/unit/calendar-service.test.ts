@@ -37,6 +37,24 @@ describe("calendar service", () => {
     expect(summary).toMatchObject({ absenceCount: 0, officeCount: 1, remoteCount: 1 });
   });
 
+  it("hides calendar data outside the visible date range", () => {
+    const calendar = getCalendarDays(2026, 8);
+    const date = "2026-08-20";
+    const sectionsByDate = buildSectionsByDate(
+      [{ date, userId: "remote" }],
+      users,
+      identities,
+      {},
+      calendar,
+      new Set(),
+      "2026-08-01",
+      "2026-08-19",
+    );
+
+    expect(sectionsByDate[date]).toBeUndefined();
+    expect(buildDaySummaries(sectionsByDate, calendar, "2026-08-01", "2026-08-19")[date]).toMatchObject({ isOutOfRange: true, officeCount: 0, remoteCount: 0 });
+  });
+
   it("rejects employees before checking the broad calendar-edit flag", async () => {
     await expect(assertCanEditWorkFromHomeDays({
       email: "employee@example.com",

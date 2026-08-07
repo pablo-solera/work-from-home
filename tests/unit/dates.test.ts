@@ -3,6 +3,7 @@ import {
   createMonthHref,
   formatDateKeyForDisplay,
   getCalendarDays,
+  getCurrentCalendarMonth,
   getMadridHolidayName,
   getMadridTodayDateKey,
   getMonthRange,
@@ -61,6 +62,10 @@ describe("calendar dates", () => {
     expect(formatDateKeyForDisplay("2026-08-04")).toBe("04-08-2026");
     expect(formatDateKeyForDisplay("invalid")).toBe("Fecha no válida");
     expect(/^\d{4}-\d{2}-\d{2}$/.test(getMadridTodayDateKey())).toBe(true);
+  });
+
+  it("uses Madrid time for the current calendar month", () => {
+    expect(getCurrentCalendarMonth(new Date("2026-08-31T22:30:00.000Z"))).toEqual({ year: 2026, month: 9 });
   });
 
   it("locks substitutions for today from 10:15 in Madrid", () => {
