@@ -22,10 +22,6 @@ function getSessionSecret() {
 }
 
 function shouldUseSecureSessionCookie() {
-  if (process.env.NODE_ENV === "production") {
-    return true;
-  }
-
   if (process.env.SESSION_COOKIE_SECURE) {
     return process.env.SESSION_COOKIE_SECURE === "true";
   }

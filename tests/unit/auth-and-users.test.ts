@@ -32,6 +32,21 @@ describe("session tokens", () => {
     expect(cookieStore.delete).toHaveBeenCalledWith("session");
     delete process.env.SESSION_COOKIE_SECURE;
   });
+
+  it("lets SESSION_COOKIE_SECURE override the production default", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SESSION_COOKIE_SECURE", "false");
+
+    await setSessionCookie(user);
+
+    expect(cookieStore.set).toHaveBeenLastCalledWith(
+      "session",
+      expect.any(String),
+      expect.objectContaining({ secure: false }),
+    );
+
+    vi.unstubAllEnvs();
+  });
 });
 
 describe("temporary passwords and CSV", () => {
