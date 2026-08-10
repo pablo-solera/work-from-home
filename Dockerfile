@@ -21,6 +21,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0 \
     ORACLE_CLIENT_LIB_DIR=/opt/oracle/instantclient \
     LD_LIBRARY_PATH=/opt/oracle/instantclient
 
