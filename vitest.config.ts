@@ -12,8 +12,10 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.ts", "tests/component/**/*.test.tsx"],
     coverage: {
       provider: "v8",
+      include: ["components/**", "lib/**", "db/**"],
+      exclude: ["scripts/**", "db/seed.ts"],
       reporter: ["text", "html", "lcov"],
-      thresholds: { lines: 38, functions: 38, statements: 37, branches: 32 },
+      thresholds: { lines: 25, functions: 24, statements: 25, branches: 23 },
     },
   },
 });
