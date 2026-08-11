@@ -100,40 +100,12 @@ export function createUser(value: NewUser) {
   return getDb().insert(users).values(value).returning();
 }
 
-export async function upsertTestUser(value: NewUser & { oracleEmpId: number }) {
-  const inserted = await getDb()
-    .insert(users)
-    .values(value)
-    .onConflictDoNothing({
-      target: users.oracleEmpId,
-      where: isNotNull(users.oracleEmpId),
-    })
-    .returning();
-
-  if (inserted.length > 0) return inserted;
-
-  return getDb()
-    .update(users)
-    .set({
-      fallbackEmail: value.fallbackEmail,
-      fallbackName: value.fallbackName,
-      hasWfh: value.hasWfh,
-      passwordHash: value.passwordHash,
-    })
-    .where(eq(users.oracleEmpId, value.oracleEmpId))
-    .returning();
-}
-
 export function updateUser(id: string, values: Partial<Pick<NewUser, "canEditAllWfh" | "hasWfh" | "wfhDaysAllowance">>) {
   return getDb().update(users).set(values).where(eq(users.id, id)).returning();
 }
 
 export function updateTeamWfhVisibility(coordinatorId: string, teamWfhVisible: boolean) {
   return getDb().update(users).set({ teamWfhVisible }).where(eq(users.id, coordinatorId)).returning();
-}
-
-export function updateUserPassword(id: string, passwordHash: string) {
-  return getDb().update(users).set({ passwordHash }).where(eq(users.id, id)).returning();
 }
 
 export function deleteUser(id: string) {

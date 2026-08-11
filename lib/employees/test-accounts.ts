@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { UserRole } from "@/db/schema";
+import type { UserRole } from "@/lib/auth/session";
 
 export type TestAccount = {
   email: string;

@@ -1,4 +1,4 @@
-import type { UserRole } from "@/db/schema";
+import type { UserRole } from "@/lib/auth/session";
 import { findOrganizationRows, getExcludedGroupIds } from "@/lib/employees/org-repository";
 import { findTestAccountByEmpId, getTestAccounts } from "@/lib/employees/test-accounts";
 import { findUserById, findUsersByOracleEmpIds } from "@/lib/users/user-repository";

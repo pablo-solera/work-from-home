@@ -1,7 +1,4 @@
 import { z } from "zod";
-import type { UserRole } from "@/db/schema";
-
-const optionalPassword = z.preprocess((value) => (value === null || (typeof value === "string" && value.trim() === "") ? undefined : value), z.string().min(8).optional());
 
 const checkboxBoolean = z.preprocess((value) => value === "on", z.boolean());
 
@@ -26,16 +23,6 @@ export const updateUserSchema = z.object({
   wfhDaysAllowance: optionalNonNegativeInt,
 });
 
-export const changePasswordSchema = z.object({
-  id: z.string().uuid(),
-  password: optionalPassword,
-  passwordMode: z.enum(["generate", "manual"]).default("generate"),
-});
-
 export const deleteUserSchema = z.object({
   id: z.string().uuid(),
 });
-
-export function isUserRole(role: string): role is UserRole {
-  return role === "admin" || role === "coordinator" || role === "employee";
-}

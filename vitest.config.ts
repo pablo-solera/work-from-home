@@ -13,7 +13,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["components/**", "lib/**", "db/**"],
-      exclude: ["scripts/**", "db/seed.ts"],
+      exclude: ["scripts/**"],
       reporter: ["text", "html", "lcov"],
       thresholds: { lines: 25, functions: 24, statements: 25, branches: 23 },
     },

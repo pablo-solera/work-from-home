@@ -31,28 +31,20 @@ Stop the stack:
 bun run docker:down
 ```
 
-Create the database tables and a test admin after the stack is running:
+Create or update the complete database schema after the stack is running:
 
 ```bash
 bun run docker:setup-db
 ```
 
-You can also run the SQL directly:
+This applies the baseline and every migration in order. It is safe to run again
+against an existing database.
 
-```bash
-docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f -' < scripts/setup-database.sql
-```
-
-The application accepts Active Directory users and, when explicitly enabled,
-the three test users configured by `TEST_ACCOUNTS_*`. Test users are seeded
-with:
-
-```bash
-bun run db:seed
-```
-
-Their shared local password is read from `TEST_ACCOUNTS_PASSWORD`; it is never
-stored in the database. Set `TEST_ACCOUNTS_ENABLED=false` to disable them.
+The application authenticates employees through Active Directory and, when
+explicitly enabled, the three test users configured by `TEST_ACCOUNTS_*`. Their
+shared test password is read from `TEST_ACCOUNTS_PASSWORD`; no local password or
+password hash is stored in PostgreSQL. Set `TEST_ACCOUNTS_ENABLED=false` to
+disable them.
 
 ## DockerHub
 

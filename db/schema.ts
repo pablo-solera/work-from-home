@@ -6,7 +6,6 @@ export const wfhRequestStatus = pgEnum("wfh_request_status", ["pending", "accept
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
-  passwordHash: text("password_hash").notNull(),
   oracleEmpId: integer("oracle_emp_id"),
   // Identity (name/email/wd number) normally lives in Oracle (TIMERTASK).
   // fallback_* also identifies explicitly configured local test accounts.
@@ -98,6 +97,5 @@ export const wfhChangeRequestDatesRelations = relations(wfhChangeRequestDates, (
   request: one(wfhChangeRequests, { fields: [wfhChangeRequestDates.requestId], references: [wfhChangeRequests.id] }),
 }));
 
-export type UserRole = "admin" | "coordinator" | "employee";
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

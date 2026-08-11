@@ -1,8 +1,5 @@
-import { hashPassword } from "@/lib/auth/password";
 import { findAllActiveEmployees } from "@/lib/employees/employee-repository";
 import { getTestAccountEmpIds } from "@/lib/employees/test-accounts";
-import { generateTemporaryPassword } from "@/lib/users/password-generator";
-import type { SyncPassword } from "@/lib/users/sync-state";
 import { countWorkFromHomeDaysByUserIds, createUsers, deleteUsers, findUsersWithOracleEmpId } from "@/lib/users/user-repository";
 
 // Oracle employees that are not real people and must never become app users.
@@ -18,7 +15,6 @@ export type SyncPlan = {
 export type SyncResult = {
   created: number;
   deleted: number;
-  passwords: SyncPassword[];
 };
 
 /**
@@ -56,47 +52,19 @@ export async function buildSyncPlan(): Promise<SyncPlan> {
 }
 
 /**
- * Applies the sync: creates missing employees with a temporary password and
- * deletes users that are no longer active employees. Returns the temporary
- * passwords so the caller decides how to deliver them (CSV file, UI, etc.).
+ * Applies the sync: creates missing employees and deletes users that are no
+ * longer active employees.
  */
 export async function runUserSync(): Promise<SyncResult> {
   const plan = await buildSyncPlan();
 
-  // Build each candidate with its empId so passwords stay tied to the right
-  // employee regardless of async resolution order (hashing is concurrent).
-  const candidates = await Promise.all(
-    plan.toCreate.map(async (employee) => {
-      const password = generateTemporaryPassword();
-
-      return {
-        empId: employee.empId,
-        name: employee.name,
-        email: employee.email,
-        password,
-        newUser: {
-          oracleEmpId: employee.empId,
-          passwordHash: await hashPassword(password),
-           hasWfh: false,
-        },
-      };
-    })
-  );
-
   // Concurrency-safe against a parallel sync (cron + on-demand): ignore rows
   // whose oracle_emp_id already exists.
-  const created = await createUsers(candidates.map((candidate) => candidate.newUser));
-
-  // Keep only the passwords for users that were actually created, matched by
-  // empId (not by array index).
-  const createdEmpIds = new Set(created.map((user) => user.oracleEmpId));
-  const passwords: SyncPassword[] = candidates
-    .filter((candidate) => createdEmpIds.has(candidate.empId))
-    .map((candidate) => ({ name: candidate.name, email: candidate.email, password: candidate.password }));
+  const created = await createUsers(plan.toCreate.map((employee) => ({ oracleEmpId: employee.empId, hasWfh: false })));
 
   if (plan.toDelete.length > 0) {
     await deleteUsers(plan.toDelete.map((entry) => entry.userId));
   }
 
-  return { created: created.length, deleted: plan.toDelete.length, passwords };
+  return { created: created.length, deleted: plan.toDelete.length };
 }

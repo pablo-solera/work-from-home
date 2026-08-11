@@ -1,9 +1,4 @@
-import { writeFile } from "node:fs/promises";
-import path from "node:path";
-import { buildPasswordsCsv } from "@/lib/users/passwords-csv";
 import { buildSyncPlan, runUserSync } from "@/lib/users/sync-service";
-
-const PASSWORDS_CSV_PATH = path.join(process.cwd(), "scripts", "sync-users-passwords.csv");
 
 async function main() {
   const shouldApply = process.argv.includes("--apply");
@@ -27,14 +22,7 @@ async function main() {
 
   const result = await runUserSync();
 
-  if (result.passwords.length > 0) {
-    await writeFile(PASSWORDS_CSV_PATH, buildPasswordsCsv(result.passwords), "utf8");
-  }
-
   console.log(`\n[apply] Creados: ${result.created} | Borrados: ${result.deleted}`);
-  if (result.passwords.length > 0) {
-    console.log(`Contraseñas temporales: ${PASSWORDS_CSV_PATH}`);
-  }
 }
 
 main()

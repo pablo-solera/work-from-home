@@ -1,12 +1,10 @@
-import { hashPassword } from "@/lib/auth/password";
 import { findLdapUserDn, verifyLdapCredentials } from "@/lib/auth/ldap";
 import type { SessionUser } from "@/lib/auth/session";
 import { findActiveEmployeeByEmail } from "@/lib/employees/employee-repository";
 import { resolveUserRole } from "@/lib/employees/org-service";
 import { findTestAccountByEmail, verifyTestAccountPassword } from "@/lib/employees/test-accounts";
 import { cache } from "react";
-import { generateTemporaryPassword } from "./password-generator";
-import { deleteUser, findUserByFallbackEmail, findUserById, findUserByOracleEmpId, updateUser, updateUserPassword } from "./user-repository";
+import { deleteUser, findUserByFallbackEmail, findUserById, findUserByOracleEmpId, updateUser } from "./user-repository";
 
 export const getUserById = cache((id: string) => findUserById(id));
 
@@ -15,12 +13,6 @@ type UpdateUserInput = {
   hasWfh: boolean;
   id: string;
   wfhDaysAllowance: number | null;
-};
-
-type ChangePasswordInput = {
-  id: string;
-  password?: string;
-  passwordMode: "generate" | "manual";
 };
 
 /**
@@ -81,7 +73,7 @@ export async function authenticateUser(email: string, password: string): Promise
   };
 }
 
-export async function updateUserById(_actor: SessionUser, input: Omit<UpdateUserInput, "coordinatorId" | "role">) {
+export async function updateUserById(_actor: SessionUser, input: UpdateUserInput) {
   const user = await findUserById(input.id);
 
   if (!user) {
@@ -99,33 +91,6 @@ export async function updateUserById(_actor: SessionUser, input: Omit<UpdateUser
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No se pudo actualizar el usuario." };
   }
-}
-
-export async function changeUserPassword(input: ChangePasswordInput) {
-  const user = await findUserById(input.id);
-
-  if (!user) {
-    return { error: "El usuario no existe." };
-  }
-
-  if (input.passwordMode === "manual" && !input.password) {
-    return { error: "Escribe una contraseña de al menos 8 caracteres o elige generar una temporal." };
-  }
-
-  const generatedPassword = input.passwordMode === "generate" ? generateTemporaryPassword() : undefined;
-  const password = generatedPassword ?? input.password;
-
-  if (!password) {
-    return { error: "No se pudo determinar la nueva contraseña." };
-  }
-
-  await updateUserPassword(input.id, await hashPassword(password));
-
-  return {
-    generatedPassword,
-    message: generatedPassword ? "Contraseña temporal generada correctamente." : "Contraseña actualizada correctamente.",
-    ok: true,
-  };
 }
 
 export async function deleteUserById(actor: SessionUser, id: string) {

@@ -46,12 +46,12 @@ const teamEmployee: SessionUser = { id: "00000000-0000-4000-8000-000000000004", 
 
 async function seedUsers() {
   await sql`
-    INSERT INTO users (id, password_hash, fallback_email, fallback_name, oracle_emp_id)
+    INSERT INTO users (id, fallback_email, fallback_name, oracle_emp_id)
     VALUES
-      (${admin.id}, 'test-hash', ${admin.email}, ${admin.name}, 220),
-      (${coordinator.id}, 'test-hash', ${coordinator.email}, ${coordinator.name}, 415),
-      (${employee.id}, 'test-hash', ${employee.email}, ${employee.name}, NULL),
-      (${teamEmployee.id}, 'test-hash', ${teamEmployee.email}, ${teamEmployee.name}, 500)
+      (${admin.id}, ${admin.email}, ${admin.name}, 220),
+      (${coordinator.id}, ${coordinator.email}, ${coordinator.name}, 415),
+      (${employee.id}, ${employee.email}, ${employee.name}, NULL),
+      (${teamEmployee.id}, ${teamEmployee.email}, ${teamEmployee.name}, 500)
   `;
 }
 

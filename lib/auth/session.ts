@@ -1,9 +1,10 @@
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
-import type { UserRole } from "@/db/schema";
 
 const SESSION_COOKIE = "session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
+
+export type UserRole = "admin" | "coordinator" | "employee";
 
 export type SessionUser = {
   id: string;

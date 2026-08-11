@@ -5,8 +5,8 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { runUserSync } from "@/lib/users/sync-service";
 import type { UserManagementState } from "@/lib/users/user-management-state";
 import type { SyncUsersState } from "@/lib/users/sync-state";
-import { changeUserPassword, deleteUserById, updateUserById } from "@/lib/users/user-service";
-import { changePasswordSchema, deleteUserSchema, updateUserSchema } from "@/lib/users/user-validation";
+import { deleteUserById, updateUserById } from "@/lib/users/user-service";
+import { deleteUserSchema, updateUserSchema } from "@/lib/users/user-validation";
 
 export async function updateUserAction(_state: UserManagementState, formData: FormData): Promise<UserManagementState> {
   const admin = await requireAdmin();
@@ -31,28 +31,6 @@ export async function updateUserAction(_state: UserManagementState, formData: Fo
   return result;
 }
 
-export async function changeUserPasswordAction(_state: UserManagementState, formData: FormData): Promise<UserManagementState> {
-  await requireAdmin();
-
-  const parsed = changePasswordSchema.safeParse({
-    id: formData.get("id"),
-    password: formData.get("password"),
-    passwordMode: formData.get("passwordMode"),
-  });
-
-  if (!parsed.success) {
-    return { error: "Revisa los datos del formulario." };
-  }
-
-  const result = await changeUserPassword(parsed.data);
-
-  if (result.ok) {
-    revalidatePath("/admin/users");
-  }
-
-  return result;
-}
-
 export async function syncUsersAction(): Promise<SyncUsersState> {
   await requireAdmin();
 
@@ -65,7 +43,6 @@ export async function syncUsersAction(): Promise<SyncUsersState> {
       ok: true,
       created: result.created,
       deleted: result.deleted,
-      passwords: result.passwords,
     };
   } catch (error) {
     console.error("Failed to sync users from Oracle:", error);

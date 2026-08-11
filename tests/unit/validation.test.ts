@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changePasswordSchema, deleteUserSchema, isUserRole, loginSchema, updateUserSchema } from "@/lib/users/user-validation";
+import { deleteUserSchema, loginSchema, updateUserSchema } from "@/lib/users/user-validation";
 
 const id = "11111111-1111-4111-8111-111111111111";
 
@@ -15,17 +15,8 @@ describe("user validation", () => {
     expect(updateUserSchema.safeParse({ canEditAllWfh: "on", hasWfh: "on", id, wfhDaysAllowance: "not-a-number" }).success).toBe(false);
   });
 
-  it("validates password modes and deletion ids", () => {
-    expect(changePasswordSchema.parse({ id, passwordMode: "generate" })).toMatchObject({ id, passwordMode: "generate" });
-    expect(changePasswordSchema.safeParse({ id, password: "short", passwordMode: "manual" }).success).toBe(false);
+  it("validates deletion ids", () => {
     expect(deleteUserSchema.parse({ id })).toEqual({ id });
     expect(deleteUserSchema.safeParse({ id: "bad" }).success).toBe(false);
-  });
-
-  it("recognizes only supported roles", () => {
-    expect(isUserRole("admin")).toBe(true);
-    expect(isUserRole("coordinator")).toBe(true);
-    expect(isUserRole("employee")).toBe(true);
-    expect(isUserRole("owner")).toBe(false);
   });
 });

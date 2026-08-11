@@ -24,10 +24,10 @@ export function UserFormModal({ onClose, user }: UserFormModalProps) {
     return result;
   }, initialUserManagementState);
   useEffect(() => {
-    if (state.ok && !state.generatedPassword) {
+    if (state.ok) {
       onClose();
     }
-  }, [state.ok, state.generatedPassword, onClose]);
+  }, [state.ok, onClose]);
 
   return (
     <Dialog onDismiss={onClose}>
