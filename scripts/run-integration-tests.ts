@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { getDatabaseSqlFiles } from "./migrations";
 
 const composeArgs = ["compose", "-p", "work-from-home-test", "-f", "docker-compose.test.yml"];
 function run(command: string, args: string[], env?: Record<string, string>) {
@@ -38,25 +39,10 @@ try {
   const hostPort = publishedPort.split(":").at(-1);
   if (!hostPort) throw new Error(`Could not determine PostgreSQL test port from: ${publishedPort}`);
   const databaseUrl = `postgres://work_from_home_test:work_from_home_test_password@localhost:${hostPort}/work_from_home_test`;
-  const baselineCode = await runSqlFile("scripts/setup-database.sql");
-  if (baselineCode !== 0) throw new Error(`Database baseline failed with exit code ${baselineCode}`);
-  for (const migration of [
-    "drizzle/0006_wfh_change_requests.sql",
-    "drizzle/0007_coordinator_wfh_notifications.sql",
-    "drizzle/0008_wfh_request_date_cancellation.sql",
-    "drizzle/0009_request_notification_indexes.sql",
-    "drizzle/0010_request_notification_triggers.sql",
-    "drizzle/0011_request_notification_recipients.sql",
-    "drizzle/0012_request_pagination_indexes.sql",
-    "drizzle/0013_admin_request_queue_index.sql",
-    "drizzle/0014_admin_request_notifications.sql",
-    "drizzle/0015_admin_coordinator_substitution_notifications.sql",
-    "drizzle/0016_oracle_organization_authority.sql",
-    "drizzle/0017_work_from_home_days_date_index.sql",
-  ]) {
-    const migrationCode = await runSqlFile(migration);
-    if (migrationCode !== 0) throw new Error(`${migration} failed with exit code ${migrationCode}`);
-  }
+   for (const file of await getDatabaseSqlFiles()) {
+     const sqlCode = await runSqlFile(file);
+     if (sqlCode !== 0) throw new Error(`${file} failed with exit code ${sqlCode}`);
+   }
 
   const testCode = await run("bunx", ["vitest", "run", "--config", "vitest.integration.config.ts"], { DATABASE_URL: databaseUrl });
   process.exitCode = testCode;

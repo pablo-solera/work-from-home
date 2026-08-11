@@ -1,3 +1,6 @@
+-- NOTE: This historical function body references users.role, which is removed
+-- by migration 0016. The file remains unchanged for migration history; 0015
+-- and 0016 replace this function before it can be executed.
 CREATE OR REPLACE FUNCTION notify_wfh_request_changed()
 RETURNS trigger
 LANGUAGE plpgsql
