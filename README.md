@@ -46,6 +46,20 @@ shared test password is read from `TEST_ACCOUNTS_PASSWORD`; no local password or
 password hash is stored in PostgreSQL. Set `TEST_ACCOUNTS_ENABLED=false` to
 disable them.
 
+Email notifications for additional WFH requests use the internal SMTP relay.
+Enable them in production with `MAIL_ENABLED=true` and configure `APP_BASE_URL`
+to include links in the messages. The default relay settings are:
+
+```text
+SMTP_HOST=10.33.144.238
+SMTP_PORT=25
+SMTP_SECURE=false
+SMTP_FROM=teletrabajo@audatex.es
+```
+
+When an additional request is created, all administrators from TIMERTASK receive
+an email. When it is accepted or rejected, the employee receives the decision.
+
 ## DockerHub
 
 GitHub Actions runs lint and coverage on pull requests and on pushes to `main` and

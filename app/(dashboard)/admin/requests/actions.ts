@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireAdmin } from "@/lib/auth/guards";
 import { decideWfhRequest } from "@/lib/requests/request-service";
+import { sendAdditionalRequestDecisionEmail } from "@/lib/requests/request-mail-service";
 
 export async function decideAdminWfhRequestAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -25,4 +27,5 @@ export async function decideAdminWfhRequestAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/coverage");
   revalidatePath("/(dashboard)", "layout");
+  after(() => sendAdditionalRequestDecisionEmail(String(formData.get("id") ?? ""), status));
 }

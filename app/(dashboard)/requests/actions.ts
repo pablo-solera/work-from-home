@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { cancelWfhRequestDate, createWfhRequest, decideWfhRequest, markAdminSubstitutionAsRead, markSubstitutionAsRead, type RequestFormState } from "@/lib/requests/request-service";
+import { sendAdditionalRequestCreatedEmail } from "@/lib/requests/request-mail-service";
 
 function parseDates(value: FormDataEntryValue | null) {
   return String(value ?? "")
@@ -13,8 +15,9 @@ function parseDates(value: FormDataEntryValue | null) {
 
 export async function createWfhRequestAction(_state: RequestFormState, formData: FormData) {
   const user = await requireAuthorizedUser();
+  const kind = formData.get("kind") === "substitution" ? "substitution" : "additional";
   const result = await createWfhRequest(user, {
-    kind: formData.get("kind") === "substitution" ? "substitution" : "additional",
+    kind,
     requestedDates: parseDates(formData.get("requestedDates")),
     replacedDates: parseDates(formData.get("replacedDates")),
     comment: String(formData.get("comment") ?? "").trim() || null,
@@ -27,6 +30,9 @@ export async function createWfhRequestAction(_state: RequestFormState, formData:
     revalidatePath("/admin");
     revalidatePath("/coverage");
     revalidatePath("/(dashboard)", "layout");
+    if (kind === "additional" && result.requestId) {
+      after(() => sendAdditionalRequestCreatedEmail(result.requestId!));
+    }
   }
 
   return result;

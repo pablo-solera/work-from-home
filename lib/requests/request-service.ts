@@ -33,7 +33,7 @@ import {
   updateRequestDecision,
 } from "./request-repository";
 
-export type RequestFormState = { error?: string; message?: string; ok?: boolean };
+export type RequestFormState = { error?: string; message?: string; ok?: boolean; requestId?: string };
 export type RequestKind = "additional" | "substitution";
 
 export const REQUEST_PAGE_SIZE = 10;
@@ -99,7 +99,7 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
       ? await getAbsenceSectionsByDateStrict(absenceRange!.start, absenceRange!.end, [requesterUser])
       : null;
 
-    await runInRequestTransaction(async (tx) => {
+    const requestId = await runInRequestTransaction(async (tx) => {
       await lockUser(tx, user.id);
       const requester = await findRequester(tx, user.id);
 
@@ -163,7 +163,7 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
         }
 
         await insertWorkFromHomeDays(tx, input.requestedDates.map((date) => ({ userId: user.id, date })), false);
-        return;
+        return request.id;
       }
 
       const [request] = await insertRequest(tx, {
@@ -179,9 +179,11 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
           requestedDate,
           replacedDate: input.kind === "substitution" ? input.replacedDates[index] : null,
         })));
+
+      return request.id;
     });
 
-    return { message: input.kind === "substitution" ? "Sustitución aplicada correctamente." : "Solicitud enviada correctamente.", ok: true };
+    return { message: input.kind === "substitution" ? "Sustitución aplicada correctamente." : "Solicitud enviada correctamente.", ok: true, requestId };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No se pudo crear la solicitud." };
   }
