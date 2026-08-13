@@ -44,4 +44,30 @@ describe("createWfhRequestAction", () => {
     expect(mocks.after).not.toHaveBeenCalled();
     expect(mocks.sendAdditionalRequestCreatedEmail).not.toHaveBeenCalled();
   });
+
+  it("sends additional-request email work only for additional requests", async () => {
+    const formData = new FormData();
+    formData.set("kind", "additional");
+    formData.set("requestedDates", "2099-08-14;2099-08-24\n2099-08-25");
+    formData.set("comment", "Motivo");
+
+    await createWfhRequestAction({}, formData);
+
+    expect(mocks.createWfhRequest).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      kind: "additional",
+      requestedDates: ["2099-08-14", "2099-08-24", "2099-08-25"],
+    }));
+    expect(mocks.after).toHaveBeenCalledTimes(1);
+    expect(mocks.sendAdditionalRequestCreatedEmail).not.toHaveBeenCalled();
+  });
+
+  it("falls back to additional for an unknown request kind", async () => {
+    const formData = new FormData();
+    formData.set("kind", "unknown");
+    formData.set("requestedDates", "2099-08-14");
+
+    await createWfhRequestAction({}, formData);
+
+    expect(mocks.createWfhRequest).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ kind: "additional" }));
+  });
 });

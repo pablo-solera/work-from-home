@@ -64,11 +64,19 @@ describe("request action components", () => {
     fireEvent.change(screen.getByLabelText("Comentario opcional"), { target: { value: "De acuerdo" } });
     fireEvent.click(screen.getByRole("button", { name: "Aceptar" }));
     await waitFor(() => expect(actions.decide).toHaveBeenCalled());
+    const acceptedForm = actions.decide.mock.calls[0][0] as FormData;
+    expect(acceptedForm.get("id")).toBe("request-1");
+    expect(acceptedForm.get("status")).toBe("accepted");
+    expect(acceptedForm.get("comment")).toBe("De acuerdo");
     expect(refresh).toHaveBeenCalled();
 
     rerender(<RequestDecisionForm adminView requestId="request-2" />);
     fireEvent.click(screen.getByRole("button", { name: "Rechazar" }));
     await waitFor(() => expect(actions.decideAdmin).toHaveBeenCalled());
+    const rejectedForm = actions.decideAdmin.mock.calls[0][0] as FormData;
+    expect(rejectedForm.get("id")).toBe("request-2");
+    expect(rejectedForm.get("status")).toBe("rejected");
+    expect(rejectedForm.get("comment")).toBe("De acuerdo");
   });
 
   it("shows decision errors", async () => {
@@ -82,10 +90,12 @@ describe("request action components", () => {
     const { rerender } = render(<MarkSubstitutionReadButton requestId="request-1" />);
     fireEvent.click(screen.getByRole("button", { name: "Marcar como leída" }));
     await waitFor(() => expect(actions.mark).toHaveBeenCalled());
+    expect((actions.mark.mock.calls[0][0] as FormData).get("id")).toBe("request-1");
 
     rerender(<MarkAdminSubstitutionReadButton requestId="request-2" />);
     fireEvent.click(screen.getByRole("button", { name: "Marcar como leída" }));
     await waitFor(() => expect(actions.markAdmin).toHaveBeenCalled());
+    expect((actions.markAdmin.mock.calls[0][0] as FormData).get("id")).toBe("request-2");
   });
 
   it("shows coordinator read errors", async () => {

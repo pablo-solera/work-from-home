@@ -56,7 +56,6 @@ describe("organización Oracle", () => {
     expect(await resolveUserRole(localUsers[1])).toBe("coordinator");
     expect(await resolveUserRole({ oracleEmpId: 501 })).toBe("employee");
     expect(await resolveUserRole({ oracleEmpId: null })).toBe("employee");
-    expect(await resolveUserRole({ oracleEmpId: null })).toBe("employee");
     expect(await findStaffEmpIds()).toEqual(new Set([415, 500, 501, 502]));
     expect(await findExcludedEmpIds()).toEqual(new Set([700]));
     expect(await findUsersForCoordinator("coordinator")).toEqual([localUsers[2]]);

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createMonthHref,
   formatDateKeyForDisplay,
@@ -24,6 +24,7 @@ import {
 } from "@/lib/calendar/dates";
 
 describe("calendar dates", () => {
+  afterEach(() => vi.useRealTimers());
   it("calculates month ranges and navigation across year boundaries", () => {
     expect(getMonthRange(2026, 2)).toMatchObject({ start: "2026-02-01", end: "2026-02-28" });
     expect(getPreviousMonth(2026, 1)).toEqual({ year: 2025, month: 12 });
@@ -36,27 +37,32 @@ describe("calendar dates", () => {
 
   it("parses valid calendar months and falls back for invalid values", () => {
     expect(parseCalendarMonth("2026", "8")).toEqual({ year: 2026, month: 8 });
-    expect(parseCalendarMonth("bad", "13")).toEqual(expect.objectContaining({ year: expect.any(Number), month: expect.any(Number) }));
+    vi.useFakeTimers({ now: new Date("2026-08-12T12:00:00.000Z") });
+    expect(parseCalendarMonth("bad", "13")).toEqual({ year: 2026, month: 8 });
   });
 
   it("calculates Monday-to-Sunday weeks and membership", () => {
+    expect(getWeekRange("2026-08-03")).toEqual({ start: "2026-08-03", end: "2026-08-09" });
     expect(getWeekRange("2026-08-04")).toEqual({ start: "2026-08-03", end: "2026-08-09" });
     expect(getWeekRange("2026-08-09")).toEqual({ start: "2026-08-03", end: "2026-08-09" });
     expect(isDateInWeek("2026-08-07", "2026-08-04")).toBe(true);
     expect(isDateInWeek("2026-08-10", "2026-08-04")).toBe(false);
     expect(getWeekdayFromDateKey("2026-08-09")).toBe(0);
-    expect(getRequestDateRange("week").end >= getRequestDateRange("week").start).toBe(true);
-    expect(getRequestDateRange("month")).toMatchObject({ year: expect.any(Number), month: expect.any(Number) });
+    vi.useFakeTimers({ now: new Date("2026-08-12T12:00:00.000Z") });
+    expect(getRequestDateRange("week")).toEqual({ start: "2026-08-10", end: "2026-08-16" });
+    expect(getRequestDateRange("month")).toMatchObject({ start: "2026-08-01", end: "2026-08-31", year: 2026, month: 8 });
   });
 
   it("identifies holidays, weekends and valid date keys", () => {
     expect(isWeekendDateKey("2026-08-08")).toBe(true);
     expect(isWeekendDateKey("2026-08-07")).toBe(false);
     expect(getSpanishNationalHolidayName("2026-01-01")).toBe("Año Nuevo");
+    expect(getSpanishNationalHolidayName("2026-04-03")).toBe("Viernes Santo");
     expect(getMadridHolidayName("2026-05-15")).toBe("San Isidro");
     expect(isSpanishNationalHoliday("2026-01-06")).toBe(true);
     expect(isHoliday("2026-05-15")).toBe(true);
     expect(isHoliday("2026-08-04")).toBe(false);
+    expect(isHoliday("2026-12-24")).toBe(true);
     expect(isValidDateKey("2026-08-04")).toBe(true);
     expect(isValidDateKey("2026-8-4")).toBe(false);
     expect(formatDateKeyForDisplay("2026-08-04")).toBe("04-08-2026");

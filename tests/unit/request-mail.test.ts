@@ -66,7 +66,16 @@ describe("request email notifications", () => {
       from: "teletrabajo@audatex.es",
       to: ["admin.one@audatex.es", "admin.two@audatex.es"],
       subject: "Nueva solicitud de día adicional - Pablo Avila",
+      html: expect.stringContaining("Necesito el día por una cita."),
     }));
+  });
+
+  it("escapes requester comments in HTML emails", async () => {
+    mocks.findRequestByIdWithDates.mockResolvedValue({ ...request, requesterComment: '<img src=x onerror="alert(1)">' });
+
+    await sendAdditionalRequestCreatedEmail(request.id);
+
+    expect(mocks.sendMail.mock.calls[0][0].html).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
   });
 
   it("sends the decision to the requester", async () => {
@@ -78,9 +87,10 @@ describe("request email notifications", () => {
     }));
   });
 
-  it("does not throw when SMTP fails", async () => {
+  it("swallows SMTP failures after attempting the message", async () => {
     mocks.sendMail.mockRejectedValue(new Error("SMTP unavailable"));
 
     await expect(sendAdditionalRequestDecisionEmail(request.id, "rejected")).resolves.toBeUndefined();
+    expect(mocks.sendMail).toHaveBeenCalledTimes(1);
   });
 });

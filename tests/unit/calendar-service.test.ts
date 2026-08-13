@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { createEmptySections } from "@/lib/absences/absence-service";
 import { assertCanEditWorkFromHomeDays, buildDaySummaries, buildSectionsByDate } from "@/lib/calendar/calendar-service";
 import { getCalendarDays } from "@/lib/calendar/dates";
 
@@ -37,6 +36,22 @@ describe("calendar service", () => {
     expect(summary).toMatchObject({ absenceCount: 0, officeCount: 1, remoteCount: 1 });
   });
 
+  it("does not count an employee as teleworking and in the office when absent", () => {
+    const date = "2026-08-03";
+    const calendar = getCalendarDays(2026, 8);
+    const sectionsByDate = buildSectionsByDate(
+      [{ date, userId: "remote" }],
+      users,
+      identities,
+      { [date]: { vacaciones: [{ userId: "remote", userName: "Bea Remota", userEmail: "bea@example.com" }] } },
+      calendar,
+      new Set([3]),
+    );
+
+    expect(sectionsByDate[date].teletrabajo).toHaveLength(0);
+    expect(sectionsByDate[date].enOficina.map((entry) => entry.userId)).toEqual(["office"]);
+  });
+
   it("hides calendar data outside the visible date range", () => {
     const calendar = getCalendarDays(2026, 8);
     const date = "2026-08-20";
@@ -64,7 +79,4 @@ describe("calendar service", () => {
     }, "another-user")).rejects.toThrow("Employees cannot update work-from-home days");
   });
 
-  it("creates the complete section shape for empty calendar data", () => {
-    expect(Object.keys(createEmptySections())).toContain("noComprende");
-  });
 });

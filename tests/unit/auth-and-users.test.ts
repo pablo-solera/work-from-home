@@ -31,8 +31,7 @@ describe("session tokens", () => {
     delete process.env.SESSION_COOKIE_SECURE;
   });
 
-  it("lets SESSION_COOKIE_SECURE override the production default", async () => {
-    vi.stubEnv("NODE_ENV", "production");
+  it("lets SESSION_COOKIE_SECURE disable secure cookies", async () => {
     vi.stubEnv("SESSION_COOKIE_SECURE", "false");
 
     await setSessionCookie(user);

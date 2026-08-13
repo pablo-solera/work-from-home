@@ -209,6 +209,42 @@ describe("request persistence on PostgreSQL", () => {
     expect(days.map((row) => row.date instanceof Date ? row.date.toISOString().slice(0, 10) : String(row.date))).toContain("2099-02-03");
   });
 
+  it("rejects an additional request without assigning the requested day", async () => {
+    const created = await createWfhRequest(teamEmployee, {
+      kind: "additional",
+      requestedDates: ["2099-02-10"],
+      replacedDates: [],
+      comment: "Motivo de prueba.",
+    });
+    expect(created.ok).toBe(true);
+
+    const [{ id }] = await sql`SELECT id FROM wfh_change_requests WHERE requester_id = ${teamEmployee.id}`;
+    expect((await decideWfhRequest(admin, String(id), "rejected", "No procede.")).ok).toBe(true);
+
+    const rows = await sql`SELECT status FROM wfh_change_requests WHERE id = ${id}`;
+    const days = await sql`SELECT date FROM work_from_home_days WHERE user_id = ${teamEmployee.id} AND date = '2099-02-10'`;
+    expect(rows[0].status).toBe("rejected");
+    expect(days).toHaveLength(0);
+  });
+
+  it("denies coordinators and admins the wrong request kinds", async () => {
+    const additional = await createWfhRequest(teamEmployee, {
+      kind: "additional",
+      requestedDates: ["2099-02-11"],
+      replacedDates: [],
+      comment: "Motivo de prueba.",
+    });
+    expect(additional.ok).toBe(true);
+    const [{ id: additionalId }] = await sql`SELECT id FROM wfh_change_requests WHERE requester_id = ${teamEmployee.id}`;
+    expect((await decideWfhRequest(coordinator, String(additionalId), "accepted", null)).error).toContain("permiso");
+
+    await sql`INSERT INTO work_from_home_days (user_id, date) VALUES (${teamEmployee.id}, '2099-02-12')`;
+    const removal = await createWfhRequest(teamEmployee, { kind: "removal", requestedDates: ["2099-02-12"], replacedDates: [], comment: null });
+    expect(removal.ok).toBe(true);
+    const [{ id: removalId }] = await sql`SELECT id FROM wfh_change_requests WHERE kind = 'removal' AND requester_id = ${teamEmployee.id}`;
+    expect((await decideWfhRequest(admin, String(removalId), "accepted", null)).error).toContain("procesada");
+  });
+
   it("approves a pending substitution for the coordinator team", async () => {
     await sql`INSERT INTO work_from_home_days (user_id, date) VALUES (${teamEmployee.id}, '2099-03-03')`;
     const [{ id: requestId }] = await sql`
@@ -225,7 +261,7 @@ describe("request persistence on PostgreSQL", () => {
     expect((await decideWfhRequest(coordinator, String(requestId), "accepted", null)).ok).toBe(true);
     const days = await sql`SELECT date FROM work_from_home_days WHERE user_id = ${teamEmployee.id} ORDER BY date`;
     expect(days.map((row) => row.date instanceof Date ? row.date.toISOString().slice(0, 10) : String(row.date))).toEqual(["2099-03-05"]);
-    expect(dateId).toBeTruthy();
+    expect(dateId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
   it("does not resolve the same pending request twice", async () => {

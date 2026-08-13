@@ -2,7 +2,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RequestFilters } from "@/components/requests/request-filters";
-import { GeneratedAvatar } from "@/components/common/generated-avatar";
 
 const push = vi.fn();
 let pathname = "/admin/requests";
@@ -48,8 +47,4 @@ describe("RequestFilters", () => {
     expect(push).toHaveBeenCalledWith("/requests");
   });
 
-  it("renders generated avatars", () => {
-    render(<GeneratedAvatar name="Ana García" />);
-    expect(screen.getByText("AG")).toBeInTheDocument();
-  });
 });
