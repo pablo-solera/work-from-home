@@ -11,13 +11,13 @@ export async function decideAdminWfhRequestAction(formData: FormData) {
   const status = formData.get("status");
 
   if (status !== "accepted" && status !== "rejected") {
-    throw new Error("Estado de solicitud no válido.");
+    return { ok: false as const, error: "Estado de solicitud no válido." };
   }
 
   const result = await decideWfhRequest(admin, String(formData.get("id") ?? ""), status, String(formData.get("comment") ?? "").trim() || null);
 
   if (!result.ok) {
-    throw new Error(result.error ?? "No se pudo resolver la solicitud.");
+    return { ok: false as const, error: result.error ?? "No se pudo resolver la solicitud." };
   }
 
   revalidatePath("/admin/requests");
@@ -28,4 +28,5 @@ export async function decideAdminWfhRequestAction(formData: FormData) {
   revalidatePath("/coverage");
   revalidatePath("/(dashboard)", "layout");
   after(() => sendAdditionalRequestDecisionEmail(String(formData.get("id") ?? ""), status));
+  return { ok: true as const };
 }

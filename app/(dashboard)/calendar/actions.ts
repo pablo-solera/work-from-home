@@ -15,8 +15,13 @@ export async function toggleWorkFromHomeDayAction(formData: FormData) {
     throw new Error("Invalid source path");
   }
 
-  await setWorkFromHomeDayForActor(user, targetUserId, date, enabled);
+  try {
+    await setWorkFromHomeDayForActor(user, targetUserId, date, enabled);
+  } catch (error) {
+    return { ok: false as const, error: error instanceof Error ? error.message : "No se pudo actualizar el día." };
+  }
   revalidatePath(sourcePath);
+  return { ok: true as const };
 }
 
 export async function replicateWorkFromHomeDaysAction(formData: FormData) {
@@ -30,9 +35,14 @@ export async function replicateWorkFromHomeDaysAction(formData: FormData) {
     throw new Error("Invalid replication scope");
   }
 
-  await replicateWorkFromHomeDays(user, { month, scope, targetUserId, year });
+  try {
+    await replicateWorkFromHomeDays(user, { month, scope, targetUserId, year });
+  } catch (error) {
+    return { ok: false as const, error: error instanceof Error ? error.message : "No se pudo replicar el patrón." };
+  }
   revalidatePath("/calendar");
   revalidatePath("/team");
   revalidatePath("/admin");
   revalidatePath("/coverage");
+  return { ok: true as const };
 }

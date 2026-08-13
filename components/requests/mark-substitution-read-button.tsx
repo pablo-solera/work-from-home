@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { markSubstitutionAsReadAction } from "@/app/(dashboard)/requests/actions";
+import { useErrorModal } from "@/components/common/error-modal-provider";
 
 export function MarkSubstitutionReadButton({ requestId }: { requestId: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { showError } = useErrorModal();
 
   function markAsRead() {
     setError(null);
@@ -15,10 +17,18 @@ export function MarkSubstitutionReadButton({ requestId }: { requestId: string })
       try {
         const formData = new FormData();
         formData.append("id", requestId);
-        await markSubstitutionAsReadAction(formData);
+        const result = await markSubstitutionAsReadAction(formData);
+        if (!result.ok) {
+          const message = result.error ?? "No se pudo marcar la sustitución como leída.";
+          setError(message);
+          showError(message);
+          return;
+        }
         router.refresh();
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "No se pudo marcar la sustitución como leída.");
+        const message = cause instanceof Error ? cause.message : "No se pudo marcar la sustitución como leída.";
+        setError(message);
+        showError(message);
       }
     });
   }

@@ -42,13 +42,11 @@ export async function createWfhRequestAction(_state: RequestFormState, formData:
 export async function decideWfhRequestAction(formData: FormData) {
   const user = await requireAuthorizedUser();
 
-  if (user.role !== "coordinator") {
-    throw new Error("No tienes permiso para gestionar solicitudes.");
-  }
+  if (user.role !== "coordinator") return { ok: false as const, error: "No tienes permiso para gestionar solicitudes." };
 
   const status = formData.get("status");
   if (status !== "accepted" && status !== "rejected") {
-    throw new Error("Estado de solicitud no válido.");
+    return { ok: false as const, error: "Estado de solicitud no válido." };
   }
 
   const result = await decideWfhRequest(user, String(formData.get("id") ?? ""), status, String(formData.get("comment") ?? "").trim() || null);
@@ -60,30 +58,32 @@ export async function decideWfhRequestAction(formData: FormData) {
     revalidatePath("/admin");
     revalidatePath("/coverage");
     revalidatePath("/(dashboard)", "layout");
-    return;
+    return { ok: true as const };
   }
 
-  throw new Error(result.error ?? "No se pudo resolver la solicitud.");
+  return { ok: false as const, error: result.error ?? "No se pudo resolver la solicitud." };
 }
 
 export async function markSubstitutionAsReadAction(formData: FormData) {
   const user = await requireAuthorizedUser();
 
   if (user.role !== "coordinator") {
-    throw new Error("No tienes permiso para marcar notificaciones.");
+    return { ok: false as const, error: "No tienes permiso para marcar notificaciones." };
   }
 
   await markSubstitutionAsRead(user.id, String(formData.get("id") ?? ""));
   revalidatePath("/requests");
   revalidatePath("/(dashboard)", "layout");
+  return { ok: true as const };
 }
 
 export async function markAdminSubstitutionAsReadAction(formData: FormData) {
   const user = await requireAuthorizedUser();
-  if (user.role !== "admin") throw new Error("No tienes permiso para marcar notificaciones.");
+  if (user.role !== "admin") return { ok: false as const, error: "No tienes permiso para marcar notificaciones." };
   await markAdminSubstitutionAsRead(String(formData.get("id") ?? ""));
   revalidatePath("/admin/requests");
   revalidatePath("/(dashboard)", "layout");
+  return { ok: true as const };
 }
 
 export async function cancelWfhRequestDateAction(formData: FormData) {
@@ -91,7 +91,7 @@ export async function cancelWfhRequestDateAction(formData: FormData) {
   const result = await cancelWfhRequestDate(user, String(formData.get("requestId") ?? ""), String(formData.get("dateId") ?? ""));
 
   if (!result.ok) {
-    throw new Error(result.error ?? "No se pudo cancelar la fecha.");
+    return { ok: false as const, error: result.error ?? "No se pudo cancelar la fecha." };
   }
 
   revalidatePath("/requests");

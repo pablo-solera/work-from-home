@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { cancelWfhRequestDateAction } from "@/app/(dashboard)/requests/actions";
+import { useErrorModal } from "@/components/common/error-modal-provider";
 
 export function CancelRequestDateButton({ requestId, dateId, dateLabel }: { requestId: string; dateId: string; dateLabel: string }) {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { showError } = useErrorModal();
 
   function cancel() {
     setError(null);
@@ -15,9 +17,16 @@ export function CancelRequestDateButton({ requestId, dateId, dateLabel }: { requ
         const formData = new FormData();
         formData.append("requestId", requestId);
         formData.append("dateId", dateId);
-        await cancelWfhRequestDateAction(formData);
+        const result = await cancelWfhRequestDateAction(formData);
+        if (!result.ok) {
+          const message = result.error ?? "No se pudo cancelar la fecha.";
+          setError(message);
+          showError(message);
+        }
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "No se pudo cancelar la fecha.");
+        const message = cause instanceof Error ? cause.message : "No se pudo cancelar la fecha.";
+        setError(message);
+        showError(message);
       }
     });
   }

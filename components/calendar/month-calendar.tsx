@@ -4,6 +4,7 @@ import { useActionState, useEffect, useOptimistic, useState, useTransition } fro
 import { toggleWorkFromHomeDayAction } from "@/app/(dashboard)/calendar/actions";
 import { createWfhRequestAction } from "@/app/(dashboard)/requests/actions";
 import { useToast } from "@/components/common/toast-provider";
+import { useErrorModal } from "@/components/common/error-modal-provider";
 import { formatDateKeyForDisplay, getMadridTodayDateKey, getWeekRange, type CalendarCell } from "@/lib/calendar/dates";
 import { DayCell, isDateLockedForMode, type RequestMode } from "./day-cell";
 import { ReplicateControls } from "./replicate-controls";
@@ -52,6 +53,7 @@ export function MonthCalendar({
   const [optimisticSelectedDates, updateOptimisticSelectedDates] = useOptimistic(selectedDates, (current: string[], update: { date: string; enabled: boolean }) => update.enabled ? [...new Set([...current, update.date])].toSorted() : current.filter((date) => date !== update.date));
   const optimisticSelected = new Set(optimisticSelectedDates);
   const [, startTransition] = useTransition();
+  const { showError } = useErrorModal();
   const pending = new Set(pendingDates);
   const [mode, setMode] = useState<RequestMode | null>(null);
   const [savingDates, setSavingDates] = useState<string[]>([]);
@@ -85,9 +87,12 @@ export function MonthCalendar({
     setSavingDates((current) => [...current, date]);
     startTransition(async () => {
       updateOptimisticSelectedDates({ date, enabled });
-      await toggleWorkFromHomeDayAction(formData).finally(() => {
-        setSavingDates((current) => current.filter((value) => value !== date));
-      });
+      const result = await toggleWorkFromHomeDayAction(formData);
+      if (!result.ok) {
+        updateOptimisticSelectedDates({ date, enabled: !enabled });
+        showError(result.error);
+      }
+      setSavingDates((current) => current.filter((value) => value !== date));
     });
   }
 

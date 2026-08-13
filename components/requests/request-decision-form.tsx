@@ -4,12 +4,14 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { decideWfhRequestAction } from "@/app/(dashboard)/requests/actions";
 import { decideAdminWfhRequestAction } from "@/app/(dashboard)/admin/requests/actions";
+import { useErrorModal } from "@/components/common/error-modal-provider";
 
 export function RequestDecisionForm({ requestId, adminView = false }: { requestId: string; adminView?: boolean }) {
   const router = useRouter();
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { showError } = useErrorModal();
 
   function decide(status: "accepted" | "rejected") {
     setError(null);
@@ -19,10 +21,18 @@ export function RequestDecisionForm({ requestId, adminView = false }: { requestI
         formData.append("id", requestId);
         formData.append("status", status);
         formData.append("comment", comment);
-        await (adminView ? decideAdminWfhRequestAction(formData) : decideWfhRequestAction(formData));
+        const result = await (adminView ? decideAdminWfhRequestAction(formData) : decideWfhRequestAction(formData));
+        if (!result.ok) {
+          const message = result.error ?? "No se pudo resolver la solicitud.";
+          setError(message);
+          showError(message);
+          return;
+        }
         router.refresh();
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "No se pudo resolver la solicitud.");
+        const message = cause instanceof Error ? cause.message : "No se pudo resolver la solicitud.";
+        setError(message);
+        showError(message);
       }
     });
   }
