@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DayCell, isDateLockedForMode } from "@/components/calendar/day-cell";
 
@@ -56,5 +56,26 @@ describe("DayCell request states", () => {
     render(<DayCell {...baseProps} date="2026-08-06" dayNumber={6} requestMode="substitution-source" />);
 
     expect(screen.getByRole("button", { name: /Sin teletrabajo/ })).toBeDisabled();
+  });
+
+  it("explains why a day without telework cannot be removed", () => {
+    render(<DayCell {...baseProps} date="2026-08-06" dayNumber={6} requestMode="removal" />);
+
+    expect(screen.getByRole("button", { name: /Sin teletrabajo/ })).toBeDisabled();
+  });
+
+  it("calls the optimistic toggle callback with the opposite state", () => {
+    const onToggle = vi.fn();
+    render(<DayCell {...baseProps} requestMode={null} onToggle={onToggle} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Marcar teletrabajo/ }));
+
+    expect(onToggle).toHaveBeenCalledWith("2026-08-05", true);
+  });
+
+  it("disables the toggle while it is saving", () => {
+    render(<DayCell {...baseProps} requestMode={null} saving onToggle={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: /Marcar teletrabajo/ })).toBeDisabled();
   });
 });

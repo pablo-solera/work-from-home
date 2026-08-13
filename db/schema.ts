@@ -1,7 +1,7 @@
 import { isNotNull, relations } from "drizzle-orm";
 import { boolean, index, date, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
-export const wfhRequestKind = pgEnum("wfh_request_kind", ["additional", "substitution"]);
+export const wfhRequestKind = pgEnum("wfh_request_kind", ["additional", "substitution", "removal"]);
 export const wfhRequestStatus = pgEnum("wfh_request_status", ["pending", "accepted", "rejected", "cancelled"]);
 
 export const users = pgTable("users", {

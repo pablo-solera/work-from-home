@@ -9,18 +9,14 @@ export async function toggleWorkFromHomeDayAction(formData: FormData) {
   const date = String(formData.get("date") ?? "");
   const enabled = formData.get("enabled") === "true";
   const targetUserId = String(formData.get("targetUserId") ?? "");
-  const year = String(formData.get("year") ?? "");
-  const month = String(formData.get("month") ?? "");
+  const sourcePath = String(formData.get("sourcePath") ?? "");
+
+  if (!["/calendar", "/team", "/admin", "/coverage"].includes(sourcePath)) {
+    throw new Error("Invalid source path");
+  }
 
   await setWorkFromHomeDayForActor(user, targetUserId, date, enabled);
-  revalidatePath("/calendar");
-  revalidatePath(`/calendar?year=${year}&month=${month}`);
-  revalidatePath("/team");
-  revalidatePath(`/team?year=${year}&month=${month}`);
-  revalidatePath("/admin");
-  revalidatePath(`/admin?year=${year}&month=${month}`);
-  revalidatePath("/coverage");
-  revalidatePath(`/coverage?year=${year}&month=${month}`);
+  revalidatePath(sourcePath);
 }
 
 export async function replicateWorkFromHomeDaysAction(formData: FormData) {

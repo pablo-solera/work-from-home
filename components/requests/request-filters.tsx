@@ -32,7 +32,7 @@ export function RequestFilters({ date, status, defaultStatus = "all" }: RequestF
       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <label className="block text-sm font-medium text-zinc-700">
           Fecha solicitada
-          <select className="mt-1 w-full cursor-pointer rounded-lg border border-zinc-300 bg-white px-3 py-2 font-normal" onChange={(event) => updateFilter("date", event.target.value)} value={date}>
+          <select id="request-date-filter" name="date" className="mt-1 w-full cursor-pointer rounded-lg border border-zinc-300 bg-white px-3 py-2 font-normal" onChange={(event) => updateFilter("date", event.target.value)} value={date}>
             <option value="all">Todas</option>
             <option value="month">Este mes</option>
             <option value="week">Esta semana</option>
@@ -40,7 +40,7 @@ export function RequestFilters({ date, status, defaultStatus = "all" }: RequestF
         </label>
         <label className="block text-sm font-medium text-zinc-700">
           Estado
-          <select className="mt-1 w-full cursor-pointer rounded-lg border border-zinc-300 bg-white px-3 py-2 font-normal" onChange={(event) => updateFilter("status", event.target.value)} value={status}>
+          <select id="request-status-filter" name="status" className="mt-1 w-full cursor-pointer rounded-lg border border-zinc-300 bg-white px-3 py-2 font-normal" onChange={(event) => updateFilter("status", event.target.value)} value={status}>
             <option value="all">Todas</option>
             <option value="pending">Pendiente</option>
             <option value="accepted">Aceptado</option>

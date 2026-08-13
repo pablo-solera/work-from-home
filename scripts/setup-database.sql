@@ -78,7 +78,7 @@ $$;
 
 DO $$
 BEGIN
-  CREATE TYPE wfh_request_kind AS ENUM ('additional', 'substitution');
+  CREATE TYPE wfh_request_kind AS ENUM ('additional', 'substitution', 'removal');
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END
@@ -93,6 +93,7 @@ END
 $$;
 
 ALTER TYPE wfh_request_status ADD VALUE IF NOT EXISTS 'cancelled';
+ALTER TYPE wfh_request_kind ADD VALUE IF NOT EXISTS 'removal';
 
 CREATE TABLE IF NOT EXISTS wfh_change_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,

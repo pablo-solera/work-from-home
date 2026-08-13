@@ -16,10 +16,11 @@ const statusStyles = {
   rejected: "bg-red-100 text-red-800",
   cancelled: "bg-zinc-100 text-zinc-700",
 } as const;
+const kindLabels = { additional: "Días adicionales", substitution: "Sustitución", removal: "Anulación de días" } as const;
 
 type RequestListItem = {
   id: string;
-  kind: "additional" | "substitution";
+  kind: "additional" | "substitution" | "removal";
   status: "accepted" | "pending" | "rejected" | "cancelled";
   requesterComment: string | null;
   decisionComment: string | null;
@@ -78,7 +79,7 @@ function RequestList({ initialPage, coordinatorView = false, ownView = false, re
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               {coordinatorView || adminView || adminNotificationView ? <p className="font-semibold text-zinc-950">{request.requesterName} <span className="font-normal text-zinc-500">({request.requesterEmail})</span></p> : null}
-              <p className="mt-1 text-sm text-zinc-700">{request.kind === "substitution" ? "Sustitución" : "Días adicionales"}</p>
+              <p className="mt-1 text-sm text-zinc-700">{kindLabels[request.kind]}</p>
               <div className="mt-1 space-y-1 text-sm text-zinc-600">
                 {request.dates.map((date) => {
                   const dateLabel = request.kind === "substitution" && date.replacedDate ? `${formatDateKeyForDisplay(date.replacedDate)} → ${formatDateKeyForDisplay(date.requestedDate)}` : formatDateKeyForDisplay(date.requestedDate);
@@ -88,7 +89,7 @@ function RequestList({ initialPage, coordinatorView = false, ownView = false, re
                 })}
               </div>
             </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusStyles[request.status]}`}>{request.kind === "substitution" && request.status === "accepted" ? "Aplicada" : statusLabels[request.status]}</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusStyles[request.status]}`}>{(request.kind === "substitution" || request.kind === "removal") && request.status === "accepted" ? "Aplicada" : statusLabels[request.status]}</span>
           </div>
           {request.requesterComment ? <p className="mt-3 text-sm text-zinc-600">Comentario: {request.requesterComment}</p> : null}
           {request.decisionComment ? <p className="mt-2 text-sm text-zinc-600">Respuesta: {request.decisionComment}</p> : null}

@@ -127,6 +127,35 @@ describe("request persistence on PostgreSQL", () => {
     expect(days.map((row) => row.date instanceof Date ? row.date.toISOString().slice(0, 10) : String(row.date))).toEqual(["2099-01-08"]);
   });
 
+  it("applies a removal immediately and notifies the coordinator", async () => {
+    await sql`INSERT INTO work_from_home_days (user_id, date) VALUES (${teamEmployee.id}, '2099-01-12')`;
+
+    const result = await createWfhRequest(teamEmployee, {
+      kind: "removal",
+      requestedDates: ["2099-01-12"],
+      replacedDates: [],
+      comment: null,
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    const requests = await sql`SELECT kind, status, coordinator_notified_at FROM wfh_change_requests WHERE id = ${result.requestId}`;
+    const days = await sql`SELECT date FROM work_from_home_days WHERE user_id = ${teamEmployee.id} AND date = '2099-01-12'`;
+    expect(requests[0]).toMatchObject({ kind: "removal", status: "accepted" });
+    expect(requests[0].coordinator_notified_at).not.toBeNull();
+    expect(days).toHaveLength(0);
+  });
+
+  it("rejects removing a day that is no longer assigned", async () => {
+    const result = await createWfhRequest(teamEmployee, {
+      kind: "removal",
+      requestedDates: ["2099-01-13"],
+      replacedDates: [],
+      comment: null,
+    });
+
+    expect(result.error).toContain("ya no está marcada");
+  });
+
   it("rejects a same-day substitution from 10:15 Madrid time", async () => {
     vi.useFakeTimers({ now: new Date("2026-08-05T08:15:00.000Z") });
 

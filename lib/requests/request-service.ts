@@ -34,7 +34,7 @@ import {
 } from "./request-repository";
 
 export type RequestFormState = { error?: string; message?: string; ok?: boolean; requestId?: string };
-export type RequestKind = "additional" | "substitution";
+export type RequestKind = "additional" | "substitution" | "removal";
 
 export const REQUEST_PAGE_SIZE = 10;
 
@@ -166,6 +166,33 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
         return request.id;
       }
 
+      if (input.kind === "removal") {
+        const existingDates = await findWorkFromHomeDays(tx, user.id, input.requestedDates);
+        if (existingDates.length !== input.requestedDates.length) {
+          throw new Error("Una de las fechas que quieres anular ya no está marcada como teletrabajo.");
+        }
+
+        const [request] = await insertRequest(tx, {
+          requesterId: user.id,
+          coordinatorId: coordinator?.id ?? null,
+          kind: input.kind,
+          status: "accepted",
+          requesterComment: input.comment,
+          decisionComment: "Aplicada automáticamente por el sistema.",
+          decidedAt: new Date(),
+          coordinatorNotifiedAt: new Date(),
+        });
+
+        await insertRequestDates(tx, input.requestedDates.map((requestedDate) => ({ requestId: request.id, requestedDate })));
+
+        const deleted = await deleteWorkFromHomeDays(tx, user.id, input.requestedDates);
+        if (deleted.length !== input.requestedDates.length) {
+          throw new Error("No se pudieron anular todas las fechas seleccionadas.");
+        }
+
+        return request.id;
+      }
+
       const [request] = await insertRequest(tx, {
           requesterId: user.id,
           coordinatorId: coordinator?.id ?? null,
@@ -183,7 +210,7 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
       return request.id;
     });
 
-    return { message: input.kind === "substitution" ? "Sustitución aplicada correctamente." : "Solicitud enviada correctamente.", ok: true, requestId };
+    return { message: input.kind === "substitution" ? "Sustitución aplicada correctamente." : input.kind === "removal" ? "Anulación aplicada correctamente." : "Solicitud enviada correctamente.", ok: true, requestId };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No se pudo crear la solicitud." };
   }

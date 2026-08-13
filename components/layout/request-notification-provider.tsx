@@ -25,19 +25,44 @@ export function RequestNotificationProvider({ children }: Readonly<{ children: R
   useEffect(() => {
     if (!hasSubscribers) return;
 
-    const events = new EventSource("/api/requests/events");
+    let events: EventSource | null = null;
+    let reconnectTimer: number | null = null;
+    let reconnectDelay = 1000;
     const notify = (event: NotificationEvent) => {
       for (const listener of listenersRef.current) listener(event);
     };
     const handleReady = () => notify("ready");
     const handleChange = () => notify("requests-changed");
-    events.addEventListener("ready", handleReady);
-    events.addEventListener("requests-changed", handleChange);
+    const connect = () => {
+      if (document.visibilityState !== "visible") return;
+      events?.close();
+      events = new EventSource("/api/requests/events");
+      events.addEventListener("ready", handleReady);
+      events.addEventListener("requests-changed", handleChange);
+      events.onopen = () => { reconnectDelay = 1000; };
+      events.onerror = () => {
+        events?.close();
+        if (reconnectTimer === null) {
+          reconnectTimer = window.setTimeout(() => { reconnectTimer = null; connect(); }, reconnectDelay);
+          reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+        }
+      };
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") connect();
+    };
+    const handlePageShow = () => connect();
+    connect();
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pageshow", handlePageShow);
 
     return () => {
-      events.removeEventListener("ready", handleReady);
-      events.removeEventListener("requests-changed", handleChange);
-      events.close();
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pageshow", handlePageShow);
+      if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
+      events?.removeEventListener("ready", handleReady);
+      events?.removeEventListener("requests-changed", handleChange);
+      events?.close();
     };
   }, [hasSubscribers]);
 

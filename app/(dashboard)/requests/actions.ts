@@ -15,7 +15,8 @@ function parseDates(value: FormDataEntryValue | null) {
 
 export async function createWfhRequestAction(_state: RequestFormState, formData: FormData) {
   const user = await requireAuthorizedUser();
-  const kind = formData.get("kind") === "substitution" ? "substitution" : "additional";
+  const submittedKind = String(formData.get("kind") ?? "");
+  const kind = submittedKind === "substitution" || submittedKind === "removal" ? submittedKind : "additional";
   const result = await createWfhRequest(user, {
     kind,
     requestedDates: parseDates(formData.get("requestedDates")),

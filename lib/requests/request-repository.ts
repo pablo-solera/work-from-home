@@ -118,7 +118,7 @@ export function findNotificationSummary(userId: string, role: "admin" | "coordin
         ? sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'additional' and ${wfhChangeRequests.status} = 'pending')`
         : sql<number>`0`,
       informationalRequestCount: role === "coordinator"
-        ? sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'additional' and ${wfhChangeRequests.status} = 'pending') + count(*) filter (where ${wfhChangeRequests.kind} = 'substitution' and ${wfhChangeRequests.coordinatorNotifiedAt} is not null and ${wfhChangeRequests.coordinatorAcknowledgedAt} is null)`
+        ? sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'additional' and ${wfhChangeRequests.status} = 'pending') + count(*) filter (where (${wfhChangeRequests.kind} = 'substitution' or ${wfhChangeRequests.kind} = 'removal') and ${wfhChangeRequests.coordinatorNotifiedAt} is not null and ${wfhChangeRequests.coordinatorAcknowledgedAt} is null)`
         : sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'substitution' and ${wfhChangeRequests.adminNotifiedAt} is not null and ${wfhChangeRequests.adminAcknowledgedAt} is null)`,
       revision: sql<string | null>`max(greatest(${wfhChangeRequests.createdAt}, coalesce(${wfhChangeRequests.decidedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorNotifiedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorAcknowledgedAt}, ${wfhChangeRequests.createdAt}), coalesce(${cancellationDates.cancelledAt}, ${wfhChangeRequests.createdAt})))`,
     })
@@ -228,7 +228,7 @@ export function insertWorkFromHomeDays(executor: RequestTransaction, values: (ty
     : query;
 }
 
-export function updateRequestDecision(executor: RequestTransaction, requestId: string, kind: "additional" | "substitution", status: "accepted" | "rejected", decisionComment: string | null, decidedById: string) {
+export function updateRequestDecision(executor: RequestTransaction, requestId: string, kind: "additional" | "substitution" | "removal", status: "accepted" | "rejected", decisionComment: string | null, decidedById: string) {
   return executor
     .update(wfhChangeRequests)
     .set({ status, decisionComment, decidedById, decidedAt: new Date() })
@@ -257,7 +257,7 @@ export function acknowledgeCoordinatorSubstitution(coordinatorId: string, reques
     .where(and(
       eq(wfhChangeRequests.id, requestId),
       eq(wfhChangeRequests.coordinatorId, coordinatorId),
-      eq(wfhChangeRequests.kind, "substitution"),
+      inArray(wfhChangeRequests.kind, ["substitution", "removal"] as const),
       sql`${wfhChangeRequests.coordinatorNotifiedAt} IS NOT NULL`,
       sql`${wfhChangeRequests.coordinatorAcknowledgedAt} IS NULL`,
     ))
