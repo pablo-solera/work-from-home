@@ -46,9 +46,31 @@ export function findWorkFromHomeDaysByUserIds(userIds: string[], start: string, 
     .orderBy(asc(workFromHomeDays.date));
 }
 
-export function createWorkFromHomeDay(userId: string, date: string) {
+export function createWorkFromHomeDay(userId: string, date: string, enforceAllowance = true) {
   return getDb().transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`);
+    const existing = await tx.query.workFromHomeDays.findFirst({
+      columns: { id: true },
+      where: and(eq(workFromHomeDays.userId, userId), eq(workFromHomeDays.date, date)),
+    });
+    if (existing) {
+      return;
+    }
+
+    const user = await tx.query.users.findFirst({
+      columns: { wfhDaysAllowance: true },
+      where: eq(users.id, userId),
+    });
+    const weekStart = sql`date_trunc('week', ${date}::date)::date`;
+    const usage = await tx
+      .select({ count: sql<number>`count(*)` })
+      .from(workFromHomeDays)
+      .where(and(eq(workFromHomeDays.userId, userId), sql`date_trunc('week', ${workFromHomeDays.date})::date = ${weekStart}`));
+
+    if (enforceAllowance && Number(usage[0]?.count ?? 0) >= (user?.wfhDaysAllowance ?? 0)) {
+      throw new Error("Has alcanzado el cupo semanal de teletrabajo.");
+    }
+
     await tx.insert(workFromHomeDays).values({ userId, date }).onConflictDoNothing({ target: [workFromHomeDays.userId, workFromHomeDays.date] });
   });
 }

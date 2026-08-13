@@ -44,4 +44,14 @@ describe("calendar business rules", () => {
     await expect(setWorkFromHomeDay("user-1", "2026-05-15", true)).rejects.toThrow("Holiday");
     expect(mocks.createWorkFromHomeDay).not.toHaveBeenCalled();
   });
+
+  it("passes the allowance enforcement to the calendar repository", async () => {
+    mocks.createWorkFromHomeDay.mockResolvedValue(undefined);
+
+    await setWorkFromHomeDay("user-1", "2026-08-03", true);
+    await setWorkFromHomeDay("user-1", "2026-08-04", true, false);
+
+    expect(mocks.createWorkFromHomeDay).toHaveBeenNthCalledWith(1, "user-1", "2026-08-03", true);
+    expect(mocks.createWorkFromHomeDay).toHaveBeenNthCalledWith(2, "user-1", "2026-08-04", false);
+  });
 });

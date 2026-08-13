@@ -29,6 +29,8 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         nextMonthHref={createMonthHref("/calendar", getNextMonth(year, month))}
         previousMonthHref={createMonthHref("/calendar", getPreviousMonth(year, month))}
           selectedDates={calendar.selectedDates}
+          weeklyAllowance={calendar.weeklyAllowance}
+          weeklyCounts={calendar.weeklyCounts}
           pendingDates={calendar.pendingDates}
         showCurrentMonthLink={showCurrentMonthLink}
         targetUserId={user.id}

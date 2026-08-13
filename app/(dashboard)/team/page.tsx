@@ -74,6 +74,8 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
             nextMonthHref={teamHref(getNextMonth(year, month).year, getNextMonth(year, month).month, selectedEmployeeId)}
             previousMonthHref={teamHref(getPreviousMonth(year, month).year, getPreviousMonth(year, month).month, selectedEmployeeId)}
             selectedDates={employeeCalendar.selectedDates}
+            weeklyAllowance={employeeCalendar.weeklyAllowance}
+            weeklyCounts={employeeCalendar.weeklyCounts}
             showCurrentMonthLink={showCurrentMonthLink}
             targetUserId={employeeCalendar.employee.id}
             minimumEditableDate={getMinimumEditableDate(user.role)}

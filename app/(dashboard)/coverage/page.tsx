@@ -58,7 +58,10 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
             monthName={userCalendar.monthName}
             nextMonthHref={coverageHref(getNextMonth(year, month).year, getNextMonth(year, month).month, selectedUserId)}
             previousMonthHref={coverageHref(getPreviousMonth(year, month).year, getPreviousMonth(year, month).month, selectedUserId)}
-            selectedDates={userCalendar.selectedDates}
+             selectedDates={userCalendar.selectedDates}
+             weeklyAllowance={userCalendar.weeklyAllowance}
+             weeklyCounts={userCalendar.weeklyCounts}
+             enforceWeeklyAllowance={false}
             showCurrentMonthLink={showCurrentMonthLink}
             targetUserId={userCalendar.user.id}
             minimumEditableDate={getMinimumEditableDate(user.role)}

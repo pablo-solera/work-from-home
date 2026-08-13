@@ -16,6 +16,9 @@ export type MonthCalendarProps = {
   cells: CalendarCell[];
   monthName: string;
   selectedDates: string[];
+  weeklyAllowance?: number;
+  weeklyCounts?: Record<string, number>;
+  enforceWeeklyAllowance?: boolean;
   pendingDates?: string[];
   previousMonthHref: string;
   currentMonthHref: string;
@@ -33,6 +36,9 @@ export function MonthCalendar({
   cells,
   monthName,
   selectedDates,
+  weeklyAllowance,
+  weeklyCounts,
+  enforceWeeklyAllowance = true,
   pendingDates = [],
   previousMonthHref,
   currentMonthHref,
@@ -165,6 +171,8 @@ export function MonthCalendar({
             requestMode={mode && mode !== "chooser" ? mode : null}
             requestSelected={additionalDates.includes(cell.date) || replacementTarget === cell.date}
              selected={optimisticSelected.has(cell.date)}
+             weeklyAllowance={enforceWeeklyAllowance ? weeklyAllowance : Number.MAX_SAFE_INTEGER}
+             weeklyCount={weeklyCounts?.[getWeekRange(cell.date).start] ?? 0}
             substitutionWeek={substitutionWeek}
             targetUserId={targetUserId}
             year={year}

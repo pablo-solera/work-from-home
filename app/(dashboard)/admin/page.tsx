@@ -69,7 +69,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             monthName={userCalendar.monthName}
             nextMonthHref={adminHref(getNextMonth(year, month).year, getNextMonth(year, month).month, selectedUserId)}
             previousMonthHref={adminHref(getPreviousMonth(year, month).year, getPreviousMonth(year, month).month, selectedUserId)}
-            selectedDates={userCalendar.selectedDates}
+             selectedDates={userCalendar.selectedDates}
+             weeklyAllowance={userCalendar.weeklyAllowance}
+             weeklyCounts={userCalendar.weeklyCounts}
+             enforceWeeklyAllowance={false}
             showCurrentMonthLink={showCurrentMonthLink}
             targetUserId={userCalendar.user.id}
             year={year}

@@ -26,13 +26,15 @@ type DayCellProps = {
   requestSelected: boolean;
   substitutionWeek?: { start: string; end: string };
   selected: boolean;
+  weeklyAllowance?: number;
+  weeklyCount?: number;
   targetUserId: string;
   year: number;
   onRequestClick: (date: string) => void;
   onToggle?: (date: string, enabled: boolean) => void;
 };
 
-export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isToday, isWeekend, minimumEditableDate, pending, saving = false, requestMode, requestSelected, selected, substitutionWeek, onRequestClick, onToggle }: DayCellProps) {
+export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isToday, isWeekend, minimumEditableDate, pending, saving = false, requestMode, requestSelected, selected, substitutionWeek, weeklyAllowance = Number.MAX_SAFE_INTEGER, weeklyCount = 0, onRequestClick, onToggle }: DayCellProps) {
   if (isWeekend || isHoliday) {
     return <div className={`min-h-24 rounded-xl border p-3 text-zinc-400 ${isToday ? "border-zinc-950 bg-zinc-100 ring-2 ring-zinc-950/10" : "border-zinc-200 bg-zinc-50"}`}><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold"}>{dayNumber}</span><p className="mt-4 text-xs">{holidayName ?? "Fin de semana"}</p></div>;
   }
@@ -51,5 +53,6 @@ export function DayCell({ canEdit, date, dayNumber, holidayName, isHoliday, isTo
     return <div className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}><div className="flex h-full flex-col justify-between gap-4"><div className="flex items-start justify-between"><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>{pending ? <PendingIndicator /> : null}</div><p className={selected ? "text-xs font-medium text-emerald-800" : "text-xs text-zinc-500"}>{selected ? "Teletrabajo" : "Sin asignar"}</p></div></div>;
   }
 
-  return <form action={async () => onToggle?.(date, !selected)} aria-label={`${formatDateKeyForDisplay(date)}, ${selected ? "teletrabajo marcado" : "sin teletrabajo"}`} className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}><div className="flex h-full flex-col justify-between gap-4"><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span><button aria-label={`${selected ? "Quitar" : "Marcar"} teletrabajo el ${formatDateKeyForDisplay(date)}`} className={`cursor-pointer rounded-lg border px-2 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 ${selected ? "border-emerald-400 bg-white text-emerald-800 hover:bg-emerald-50" : "border-zinc-300 text-zinc-700 hover:bg-zinc-100"}`} disabled={saving} type="submit">{saving ? "Guardando…" : selected ? "Quitar" : "Marcar"}</button></div></form>;
+  const weeklyLimitReached = !selected && weeklyCount >= weeklyAllowance;
+  return <form action={async () => onToggle?.(date, !selected)} aria-label={`${formatDateKeyForDisplay(date)}, ${selected ? "teletrabajo marcado" : "sin teletrabajo"}`} className={`min-h-24 rounded-xl border p-3 ${selected ? "border-emerald-500 bg-emerald-100/50" : "border-zinc-200 bg-white"} ${isToday ? "ring-2 ring-zinc-950/20" : ""}`}><div className="flex h-full flex-col justify-between gap-4"><div className="flex items-start justify-between"><span className={isToday ? "inline-flex size-7 items-center justify-center rounded-full bg-zinc-950 text-sm font-semibold text-white" : "text-sm font-semibold text-zinc-950"}>{dayNumber}</span>{!selected ? <span className="text-[11px] text-zinc-500">{weeklyCount}/{weeklyAllowance}</span> : null}</div><button aria-label={`${selected ? "Quitar" : "Marcar"} teletrabajo el ${formatDateKeyForDisplay(date)}`} className={`cursor-pointer rounded-lg border px-2 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 ${selected ? "border-emerald-400 bg-white text-emerald-800 hover:bg-emerald-50" : "border-zinc-300 text-zinc-700 hover:bg-zinc-100"}`} disabled={saving || weeklyLimitReached} title={weeklyLimitReached ? "Cupo semanal completo" : undefined} type="submit">{saving ? "Guardando…" : selected ? "Quitar" : weeklyLimitReached ? "Cupo completo" : "Marcar"}</button></div></form>;
 }
