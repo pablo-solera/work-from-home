@@ -5,24 +5,14 @@ import { after } from "next/server";
 import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { cancelWfhRequestDate, createWfhRequest, decideWfhRequest, markAdminSubstitutionAsRead, markSubstitutionAsRead, type RequestFormState } from "@/lib/requests/request-service";
 import { sendAdditionalRequestCreatedEmail } from "@/lib/requests/request-mail-service";
-
-function parseDates(value: FormDataEntryValue | null) {
-  return String(value ?? "")
-    .split(/[\n,;]+/)
-    .map((date) => date.trim())
-    .filter(Boolean);
-}
+import { cancelWfhRequestDateSchema, createWfhRequestSchema, decideWfhRequestSchema, formDataObject, requestIdSchema } from "@/lib/requests/request-validation";
 
 export async function createWfhRequestAction(_state: RequestFormState, formData: FormData) {
   const user = await requireAuthorizedUser();
-  const submittedKind = String(formData.get("kind") ?? "");
-  const kind = submittedKind === "substitution" || submittedKind === "removal" ? submittedKind : "additional";
-  const result = await createWfhRequest(user, {
-    kind,
-    requestedDates: parseDates(formData.get("requestedDates")),
-    replacedDates: parseDates(formData.get("replacedDates")),
-    comment: String(formData.get("comment") ?? "").trim() || null,
-  });
+  const parsed = createWfhRequestSchema.safeParse(formDataObject(formData, ["kind", "requestedDates", "replacedDates", "comment"]));
+  if (!parsed.success) return { error: "Los datos de la solicitud no son válidos." };
+  const { kind } = parsed.data;
+  const result = await createWfhRequest(user, parsed.data);
 
   if (result.ok) {
     revalidatePath("/requests");
@@ -44,12 +34,9 @@ export async function decideWfhRequestAction(formData: FormData) {
 
   if (user.role !== "coordinator") return { ok: false as const, error: "No tienes permiso para gestionar solicitudes." };
 
-  const status = formData.get("status");
-  if (status !== "accepted" && status !== "rejected") {
-    return { ok: false as const, error: "Estado de solicitud no válido." };
-  }
-
-  const result = await decideWfhRequest(user, String(formData.get("id") ?? ""), status, String(formData.get("comment") ?? "").trim() || null);
+  const parsed = decideWfhRequestSchema.safeParse(formDataObject(formData, ["id", "status", "comment"]));
+  if (!parsed.success) return { ok: false as const, error: "Los datos de la decisión no son válidos." };
+  const result = await decideWfhRequest(user, parsed.data.id, parsed.data.status, parsed.data.comment);
 
   if (result.ok) {
     revalidatePath("/requests");
@@ -71,7 +58,9 @@ export async function markSubstitutionAsReadAction(formData: FormData) {
     return { ok: false as const, error: "No tienes permiso para marcar notificaciones." };
   }
 
-  await markSubstitutionAsRead(user.id, String(formData.get("id") ?? ""));
+  const parsed = requestIdSchema.safeParse(formDataObject(formData, ["id"]));
+  if (!parsed.success) return { ok: false as const, error: "La notificación no es válida." };
+  await markSubstitutionAsRead(user.id, parsed.data.id);
   revalidatePath("/requests");
   revalidatePath("/(dashboard)", "layout");
   return { ok: true as const };
@@ -80,7 +69,9 @@ export async function markSubstitutionAsReadAction(formData: FormData) {
 export async function markAdminSubstitutionAsReadAction(formData: FormData) {
   const user = await requireAuthorizedUser();
   if (user.role !== "admin") return { ok: false as const, error: "No tienes permiso para marcar notificaciones." };
-  await markAdminSubstitutionAsRead(String(formData.get("id") ?? ""));
+  const parsed = requestIdSchema.safeParse(formDataObject(formData, ["id"]));
+  if (!parsed.success) return { ok: false as const, error: "La notificación no es válida." };
+  await markAdminSubstitutionAsRead(parsed.data.id);
   revalidatePath("/admin/requests");
   revalidatePath("/(dashboard)", "layout");
   return { ok: true as const };
@@ -88,7 +79,9 @@ export async function markAdminSubstitutionAsReadAction(formData: FormData) {
 
 export async function cancelWfhRequestDateAction(formData: FormData) {
   const user = await requireAuthorizedUser();
-  const result = await cancelWfhRequestDate(user, String(formData.get("requestId") ?? ""), String(formData.get("dateId") ?? ""));
+  const parsed = cancelWfhRequestDateSchema.safeParse(formDataObject(formData, ["requestId", "dateId"]));
+  if (!parsed.success) return { ok: false as const, error: "Los datos de la fecha no son válidos." };
+  const result = await cancelWfhRequestDate(user, parsed.data.requestId, parsed.data.dateId);
 
   if (!result.ok) {
     return { ok: false as const, error: result.error ?? "No se pudo cancelar la fecha." };

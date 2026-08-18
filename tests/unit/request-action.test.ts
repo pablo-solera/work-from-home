@@ -61,13 +61,14 @@ describe("createWfhRequestAction", () => {
     expect(mocks.sendAdditionalRequestCreatedEmail).not.toHaveBeenCalled();
   });
 
-  it("falls back to additional for an unknown request kind", async () => {
+  it("rejects an unknown request kind", async () => {
     const formData = new FormData();
     formData.set("kind", "unknown");
     formData.set("requestedDates", "2099-08-14");
 
-    await createWfhRequestAction({}, formData);
+    const result = await createWfhRequestAction({}, formData);
 
-    expect(mocks.createWfhRequest).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ kind: "additional" }));
+    expect(result).toEqual({ error: "Los datos de la solicitud no son válidos." });
+    expect(mocks.createWfhRequest).not.toHaveBeenCalled();
   });
 });

@@ -2,18 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAuthorizedUser } from "@/lib/auth/guards";
-import { type ReplicateWorkFromHomeScope, replicateWorkFromHomeDays, setWorkFromHomeDayForActor } from "@/lib/calendar/calendar-service";
+import { replicateWorkFromHomeDays, setWorkFromHomeDayForActor } from "@/lib/calendar/calendar-service";
+import { replicateWorkFromHomeDaysSchema, toggleWorkFromHomeDaySchema } from "@/lib/calendar/calendar-validation";
 
 export async function toggleWorkFromHomeDayAction(formData: FormData) {
   const user = await requireAuthorizedUser();
-  const date = String(formData.get("date") ?? "");
-  const enabled = formData.get("enabled") === "true";
-  const targetUserId = String(formData.get("targetUserId") ?? "");
-  const sourcePath = String(formData.get("sourcePath") ?? "");
-
-  if (!["/calendar", "/team", "/admin", "/coverage"].includes(sourcePath)) {
-    throw new Error("Invalid source path");
-  }
+  const parsed = toggleWorkFromHomeDaySchema.safeParse(Object.fromEntries(["date", "enabled", "targetUserId", "sourcePath"].map((field) => [field, formData.get(field)])));
+  if (!parsed.success) return { ok: false as const, error: "Los datos del día no son válidos." };
+  const { date, enabled, targetUserId, sourcePath } = parsed.data;
 
   try {
     await setWorkFromHomeDayForActor(user, targetUserId, date, enabled);
@@ -26,14 +22,9 @@ export async function toggleWorkFromHomeDayAction(formData: FormData) {
 
 export async function replicateWorkFromHomeDaysAction(formData: FormData) {
   const user = await requireAuthorizedUser();
-  const targetUserId = String(formData.get("targetUserId") ?? "");
-  const year = Number(formData.get("year"));
-  const month = Number(formData.get("month"));
-  const scope = String(formData.get("scope") ?? "") as ReplicateWorkFromHomeScope;
-
-  if (scope !== "next" && scope !== "untilYearEnd") {
-    throw new Error("Invalid replication scope");
-  }
+  const parsed = replicateWorkFromHomeDaysSchema.safeParse(Object.fromEntries(["targetUserId", "year", "month", "scope"].map((field) => [field, formData.get(field)])));
+  if (!parsed.success) return { ok: false as const, error: "Los datos de replicación no son válidos." };
+  const { targetUserId, year, month, scope } = parsed.data;
 
   try {
     await replicateWorkFromHomeDays(user, { month, scope, targetUserId, year });
