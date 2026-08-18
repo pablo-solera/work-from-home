@@ -1,6 +1,7 @@
 import { and, asc, between, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users, workFromHomeDays } from "@/db/schema";
+import { hasReachedWeeklyAllowance, WEEKLY_ALLOWANCE_ERROR } from "./calendar-business-rules";
 
 export function findUserWorkFromHomeDays(userId: string, start: string, end: string) {
   return getDb().query.workFromHomeDays.findMany({
@@ -67,8 +68,8 @@ export function createWorkFromHomeDay(userId: string, date: string, enforceAllow
       .from(workFromHomeDays)
       .where(and(eq(workFromHomeDays.userId, userId), sql`date_trunc('week', ${workFromHomeDays.date})::date = ${weekStart}`));
 
-    if (enforceAllowance && Number(usage[0]?.count ?? 0) >= (user?.wfhDaysAllowance ?? 0)) {
-      throw new Error("Has alcanzado el cupo semanal de teletrabajo.");
+    if (enforceAllowance && hasReachedWeeklyAllowance(Number(usage[0]?.count ?? 0), user?.wfhDaysAllowance ?? 0)) {
+      throw new Error(WEEKLY_ALLOWANCE_ERROR);
     }
 
     await tx.insert(workFromHomeDays).values({ userId, date }).onConflictDoNothing({ target: [workFromHomeDays.userId, workFromHomeDays.date] });
