@@ -5,24 +5,19 @@ import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-
 import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
 import { requireAdmin } from "@/lib/auth/guards";
 import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
-import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
-import { createCalendarHref } from "@/lib/calendar/links";
+import { parseCalendarMonth } from "@/lib/calendar/dates";
+import { getCalendarNavigation } from "@/lib/calendar/calendar-view";
 
 type AdminPageProps = {
   searchParams?: Promise<{ year?: string; month?: string; employeeId?: string }>;
 };
-
-function adminHref(year: number, month: number, employeeId?: string) {
-  return createCalendarHref("/admin", { employeeId, month, year });
-}
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const admin = await requireAdmin();
   const params = await searchParams;
   const { year, month } = parseCalendarMonth(params?.year, params?.month);
   const selectedUserId = params?.employeeId ?? "all";
-  const currentMonth = getCurrentCalendarMonth();
-  const showCurrentMonthLink = year !== currentMonth.year || month !== currentMonth.month;
+  const overviewNavigation = getCalendarNavigation("/admin", year, month);
   const adminLinks = (
     <div className="grid gap-4 md:grid-cols-2">
       <Link className="cursor-pointer rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-400" href="/calendar">
@@ -36,16 +31,18 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     </div>
   );
   if (selectedUserId === admin.id) {
-    redirect(adminHref(year, month));
+    redirect(overviewNavigation.currentMonthHref);
   }
 
   if (selectedUserId !== "all") {
-    const [selectableUsers, userCalendar] = await Promise.all([
+    const [users, userCalendar] = await Promise.all([
       getAdminCalendarUsers(),
       getAdminUserCalendar(selectedUserId, year, month),
     ]);
 
     if (userCalendar) {
+      const navigation = getCalendarNavigation("/admin", year, month, selectedUserId);
+      const selectableUsers = users.filter((user) => user.id !== admin.id);
       return (
         <section className="space-y-8">
           <div>
@@ -64,16 +61,16 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           />
           <EditableMonthCalendar
             cells={userCalendar.cells}
-            currentMonthHref={adminHref(currentMonth.year, currentMonth.month, selectedUserId)}
+            currentMonthHref={navigation.currentMonthHref}
             month={month}
             monthName={userCalendar.monthName}
-            nextMonthHref={adminHref(getNextMonth(year, month).year, getNextMonth(year, month).month, selectedUserId)}
-            previousMonthHref={adminHref(getPreviousMonth(year, month).year, getPreviousMonth(year, month).month, selectedUserId)}
+            nextMonthHref={navigation.nextMonthHref}
+            previousMonthHref={navigation.previousMonthHref}
              selectedDates={userCalendar.selectedDates}
              weeklyAllowance={userCalendar.weeklyAllowance}
              weeklyCounts={userCalendar.weeklyCounts}
              enforceWeeklyAllowance={false}
-            showCurrentMonthLink={showCurrentMonthLink}
+            showCurrentMonthLink={navigation.showCurrentMonthLink}
             targetUserId={userCalendar.user.id}
             year={year}
           />
@@ -96,7 +93,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <EmployeeCalendarFilter
         allLabel="Todos"
         basePath="/admin"
-        employees={selectableUsers}
+         employees={selectableUsers}
         label="Usuario"
         month={month}
         selectedEmployeeId="all"
@@ -104,12 +101,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       />
       <AdminCalendar
         cells={overview.cells}
-        currentMonthHref={createMonthHref("/admin", currentMonth)}
+         currentMonthHref={overviewNavigation.currentMonthHref}
         daySummariesByDate={overview.daySummariesByDate}
         monthName={overview.monthName}
-        nextMonthHref={createMonthHref("/admin", getNextMonth(year, month))}
-        previousMonthHref={createMonthHref("/admin", getPreviousMonth(year, month))}
-        showCurrentMonthLink={showCurrentMonthLink}
+         nextMonthHref={overviewNavigation.nextMonthHref}
+         previousMonthHref={overviewNavigation.previousMonthHref}
+         showCurrentMonthLink={overviewNavigation.showCurrentMonthLink}
       />
     </section>
   );

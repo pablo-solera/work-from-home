@@ -4,17 +4,13 @@ import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-
 import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
 import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar, getMinimumEditableDate } from "@/lib/calendar/calendar-service";
-import { createMonthHref, getCurrentCalendarMonth, getNextMonth, getPreviousMonth, parseCalendarMonth } from "@/lib/calendar/dates";
+import { parseCalendarMonth } from "@/lib/calendar/dates";
+import { getCalendarNavigation } from "@/lib/calendar/calendar-view";
 import { getUserById } from "@/lib/users/user-service";
-import { createCalendarHref } from "@/lib/calendar/links";
 
 type CoveragePageProps = {
   searchParams?: Promise<{ year?: string; month?: string; employeeId?: string }>;
 };
-
-function coverageHref(year: number, month: number, employeeId?: string) {
-  return createCalendarHref("/coverage", { employeeId, month, year });
-}
 
 export default async function CoveragePage({ searchParams }: CoveragePageProps) {
   const user = await requireAuthorizedUser();
@@ -27,8 +23,7 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
   const params = await searchParams;
   const { year, month } = parseCalendarMonth(params?.year, params?.month);
   const selectedUserId = params?.employeeId ?? "all";
-  const currentMonth = getCurrentCalendarMonth();
-  const showCurrentMonthLink = year !== currentMonth.year || month !== currentMonth.month;
+  const overviewNavigation = getCalendarNavigation("/coverage", year, month);
   if (selectedUserId !== "all") {
     const [selectableUsers, userCalendar] = await Promise.all([
       getAdminCalendarUsers(),
@@ -36,6 +31,7 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
     ]);
 
     if (userCalendar) {
+      const navigation = getCalendarNavigation("/coverage", year, month, selectedUserId);
       return (
         <section className="space-y-6">
           <div>
@@ -53,16 +49,16 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
           />
           <EditableMonthCalendar
             cells={userCalendar.cells}
-            currentMonthHref={coverageHref(currentMonth.year, currentMonth.month, selectedUserId)}
+            currentMonthHref={navigation.currentMonthHref}
             month={month}
             monthName={userCalendar.monthName}
-            nextMonthHref={coverageHref(getNextMonth(year, month).year, getNextMonth(year, month).month, selectedUserId)}
-            previousMonthHref={coverageHref(getPreviousMonth(year, month).year, getPreviousMonth(year, month).month, selectedUserId)}
+            nextMonthHref={navigation.nextMonthHref}
+            previousMonthHref={navigation.previousMonthHref}
              selectedDates={userCalendar.selectedDates}
              weeklyAllowance={userCalendar.weeklyAllowance}
              weeklyCounts={userCalendar.weeklyCounts}
              enforceWeeklyAllowance={false}
-            showCurrentMonthLink={showCurrentMonthLink}
+            showCurrentMonthLink={navigation.showCurrentMonthLink}
             targetUserId={userCalendar.user.id}
             minimumEditableDate={getMinimumEditableDate(user.role)}
             year={year}
@@ -84,12 +80,12 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
       <EmployeeCalendarFilter allLabel="Todos" basePath="/coverage" employees={overview.users} label="Usuario" month={month} selectedEmployeeId="all" year={year} />
       <AdminCalendar
         cells={overview.cells}
-        currentMonthHref={createMonthHref("/coverage", currentMonth)}
+         currentMonthHref={overviewNavigation.currentMonthHref}
         daySummariesByDate={overview.daySummariesByDate}
         monthName={overview.monthName}
-        nextMonthHref={createMonthHref("/coverage", getNextMonth(year, month))}
-        previousMonthHref={createMonthHref("/coverage", getPreviousMonth(year, month))}
-        showCurrentMonthLink={showCurrentMonthLink}
+         nextMonthHref={overviewNavigation.nextMonthHref}
+         previousMonthHref={overviewNavigation.previousMonthHref}
+         showCurrentMonthLink={overviewNavigation.showCurrentMonthLink}
       />
     </section>
   );
