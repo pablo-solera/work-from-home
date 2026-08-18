@@ -4,7 +4,7 @@ import { findActiveEmployeeByEmail } from "@/lib/employees/employee-repository";
 import { resolveUserRole } from "@/lib/employees/org-service";
 import { findTestAccountByEmail, verifyTestAccountPassword } from "@/lib/employees/test-accounts";
 import { cache } from "react";
-import { deleteUser, findUserByFallbackEmail, findUserById, findUserByOracleEmpId, updateUser } from "./user-repository";
+import { findUserByFallbackEmail, findUserById, findUserByOracleEmpId, updateUser } from "./user-repository";
 
 export const getUserById = cache((id: string) => findUserById(id));
 
@@ -91,20 +91,4 @@ export async function updateUserById(_actor: SessionUser, input: UpdateUserInput
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No se pudo actualizar el usuario." };
   }
-}
-
-export async function deleteUserById(actor: SessionUser, id: string) {
-  if (actor.id === id) {
-    return { error: "No puedes eliminar tu propia cuenta." };
-  }
-
-  const user = await findUserById(id);
-
-  if (!user) {
-    return { error: "El usuario no existe." };
-  }
-
-  await deleteUser(id);
-
-  return { message: "Usuario eliminado correctamente.", ok: true };
 }

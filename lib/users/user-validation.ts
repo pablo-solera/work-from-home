@@ -22,7 +22,3 @@ export const updateUserSchema = z.object({
   id: z.string().uuid(),
   wfhDaysAllowance: optionalNonNegativeInt,
 });
-
-export const deleteUserSchema = z.object({
-  id: z.string().uuid(),
-});

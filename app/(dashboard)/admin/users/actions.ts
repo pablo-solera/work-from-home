@@ -5,8 +5,8 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { runUserSync } from "@/lib/users/sync-service";
 import type { UserManagementState } from "@/lib/users/user-management-state";
 import type { SyncUsersState } from "@/lib/users/sync-state";
-import { deleteUserById, updateUserById } from "@/lib/users/user-service";
-import { deleteUserSchema, updateUserSchema } from "@/lib/users/user-validation";
+import { updateUserById } from "@/lib/users/user-service";
+import { updateUserSchema } from "@/lib/users/user-validation";
 
 export async function updateUserAction(_state: UserManagementState, formData: FormData): Promise<UserManagementState> {
   const admin = await requireAdmin();
@@ -49,24 +49,4 @@ export async function syncUsersAction(): Promise<SyncUsersState> {
 
     return { error: "No se pudo sincronizar con TimerTask. Inténtalo de nuevo." };
   }
-}
-
-export async function deleteUserAction(_state: UserManagementState, formData: FormData): Promise<UserManagementState> {
-  const admin = await requireAdmin();
-
-  const parsed = deleteUserSchema.safeParse({
-    id: formData.get("id"),
-  });
-
-  if (!parsed.success) {
-    return { error: "Revisa los datos del formulario." };
-  }
-
-  const result = await deleteUserById(admin, parsed.data.id);
-
-  if (result.ok) {
-    revalidatePath("/admin/users");
-  }
-
-  return result;
 }

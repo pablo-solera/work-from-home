@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deleteUserSchema, loginSchema, updateUserSchema } from "@/lib/users/user-validation";
+import { loginSchema, updateUserSchema } from "@/lib/users/user-validation";
 
 const id = "11111111-1111-4111-8111-111111111111";
 
@@ -15,8 +15,4 @@ describe("user validation", () => {
     expect(updateUserSchema.safeParse({ canEditAllWfh: "on", hasWfh: "on", id, wfhDaysAllowance: "not-a-number" }).success).toBe(false);
   });
 
-  it("validates deletion ids", () => {
-    expect(deleteUserSchema.parse({ id })).toEqual({ id });
-    expect(deleteUserSchema.safeParse({ id: "bad" }).success).toBe(false);
-  });
 });

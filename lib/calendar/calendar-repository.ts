@@ -75,14 +75,6 @@ export function createWorkFromHomeDay(userId: string, date: string, enforceAllow
   });
 }
 
-export function createWorkFromHomeDays(values: Array<{ userId: string; date: string }>) {
-  if (values.length === 0) {
-    return Promise.resolve();
-  }
-
-  return getDb().insert(workFromHomeDays).values(values).onConflictDoNothing({ target: [workFromHomeDays.userId, workFromHomeDays.date] });
-}
-
 export async function replaceWorkFromHomeDays(
   userId: string,
   start: string,

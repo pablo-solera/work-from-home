@@ -2,8 +2,6 @@ import { eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { type NewUser, users, workFromHomeDays } from "@/db/schema";
 
-export type AdminUserRow = Awaited<ReturnType<typeof findUsersForAdmin>>[number];
-
 /** System accounts (no Oracle employee) log in with fallback_email. */
 export function findUserByFallbackEmail(email: string) {
   return getDb().query.users.findFirst({
@@ -42,11 +40,6 @@ export function findAllUsers() {
       fallbackEmail: true,
     },
   });
-}
-
-/** Alias kept for callers that need the Oracle id alongside basic user data. */
-export function findAllUsersWithOracleId() {
-  return findAllUsers();
 }
 
 export function findUsersForAdmin() {
@@ -96,20 +89,12 @@ export async function createUsers(values: NewUser[]) {
   return getDb().insert(users).values(values).onConflictDoNothing({ target: users.oracleEmpId, where: isNotNull(users.oracleEmpId) }).returning();
 }
 
-export function createUser(value: NewUser) {
-  return getDb().insert(users).values(value).returning();
-}
-
 export function updateUser(id: string, values: Partial<Pick<NewUser, "canEditAllWfh" | "hasWfh" | "wfhDaysAllowance">>) {
   return getDb().update(users).set(values).where(eq(users.id, id)).returning();
 }
 
 export function updateTeamWfhVisibility(coordinatorId: string, teamWfhVisible: boolean) {
   return getDb().update(users).set({ teamWfhVisible }).where(eq(users.id, coordinatorId)).returning();
-}
-
-export function deleteUser(id: string) {
-  return getDb().delete(users).where(eq(users.id, id)).returning();
 }
 
 export function deleteUsers(ids: string[]) {
