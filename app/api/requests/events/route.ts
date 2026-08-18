@@ -1,12 +1,9 @@
-import { getCurrentUser } from "@/lib/auth/session";
 import { getAuthorizedUser } from "@/lib/auth/guards";
 import { subscribeToRequestNotifications } from "@/lib/requests/request-notification-hub";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const user = await getCurrentUser();
-  if (!user) return new Response("No autenticado", { status: 401 });
   const authorizedUser = await getAuthorizedUser();
   if (!authorizedUser) return new Response("No autorizado", { status: 403 });
   let cleanup = () => undefined;

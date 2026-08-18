@@ -161,14 +161,14 @@ export function buildDaySummaries(sectionsByDate: Record<string, DaySections>, c
   return summaries;
 }
 
-export async function getUserCalendar(userId: string, year: number, month: number) {
+async function buildUserCalendar(userId: string, year: number, month: number, knownUser?: Awaited<ReturnType<typeof findUserById>>) {
   const range = getMonthRange(year, month);
   const dataRange = { start: getWeekRange(range.start).start, end: getWeekRange(range.end).end };
-  const [entries, pendingDates] = await Promise.all([
+  const [entries, pendingDates, user] = await Promise.all([
     findUserWorkFromHomeDays(userId, dataRange.start, dataRange.end),
     getPendingRequestedDates(userId, range.start, range.end),
+    knownUser ? Promise.resolve(knownUser) : findUserById(userId),
   ]);
-  const user = await findUserById(userId);
   const selectedDates = new Set(entries.filter((entry) => entry.date >= range.start && entry.date <= range.end).map((entry) => entry.date));
   const weeklyCounts: Record<string, number> = {};
   for (const entry of entries) {
@@ -184,6 +184,10 @@ export async function getUserCalendar(userId: string, year: number, month: numbe
     weeklyAllowance: user?.wfhDaysAllowance ?? 0,
     weeklyCounts,
   };
+}
+
+export function getUserCalendar(userId: string, year: number, month: number) {
+  return buildUserCalendar(userId, year, month);
 }
 
 export async function getAdminCalendarOverview(year: number, month: number) {
@@ -293,7 +297,7 @@ export async function getAdminUserCalendar(userId: string, year: number, month: 
     return null;
   }
 
-  const [calendar, identities] = await Promise.all([getUserCalendar(user.id, year, month), resolveUserIdentities([user])]);
+  const [calendar, identities] = await Promise.all([buildUserCalendar(user.id, year, month, user), resolveUserIdentities([user])]);
   const identity = identities.get(user.id) ?? UNKNOWN_IDENTITY;
 
   return {
@@ -387,7 +391,7 @@ export async function getCoordinatorEmployeeCalendar(coordinatorId: string, empl
     return null;
   }
 
-  const [calendar, identities] = await Promise.all([getUserCalendar(employee.id, year, month), resolveUserIdentities([employee])]);
+  const [calendar, identities] = await Promise.all([buildUserCalendar(employee.id, year, month, employee), resolveUserIdentities([employee])]);
   const identity = identities.get(employee.id) ?? UNKNOWN_IDENTITY;
 
   return {
@@ -447,7 +451,7 @@ export async function assertCanEditWorkFromHomeDays(actor: SessionUser, targetUs
       return;
     }
 
-    const employee = await findEmployeeByCoordinatorId(targetUserId, actor.id);
+    const employee = await findEmployeeByCoordinatorId(targetUserId, actor.id, actorUser);
 
     if (!employee) {
       throw new Error("Employee is not assigned to this coordinator");

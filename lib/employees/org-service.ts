@@ -196,9 +196,17 @@ export async function findEmployeeTeamVisibility(employeeId: string) {
   return { coordinatorId: coordinator.id, teamWfhVisible: coordinator.teamWfhVisible };
 }
 
-export async function findEmployeeByCoordinatorId(employeeId: string, coordinatorId: string) {
-  if (!(await isUserInCoordinatorTeam(employeeId, coordinatorId))) return undefined;
-  return findUserById(employeeId);
+export async function findEmployeeByCoordinatorId(employeeId: string, coordinatorId: string, coordinator?: Awaited<ReturnType<typeof findUserById>>) {
+  const [employee, resolvedCoordinator, snapshot] = await Promise.all([
+    findUserById(employeeId),
+    coordinator ? Promise.resolve(coordinator) : findUserById(coordinatorId),
+    getOrganizationSnapshot(),
+  ]);
+
+  if (employee?.oracleEmpId === null || employee?.oracleEmpId === undefined || resolvedCoordinator?.oracleEmpId === null || resolvedCoordinator?.oracleEmpId === undefined) return undefined;
+  if (!snapshot.teamByCoordinatorEmpId.get(resolvedCoordinator.oracleEmpId)?.has(employee.oracleEmpId)) return undefined;
+
+  return employee;
 }
 
 export async function isUserInCoordinatorTeam(employeeId: string, coordinatorId: string) {

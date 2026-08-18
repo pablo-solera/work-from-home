@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useOptimistic, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { toggleWorkFromHomeDayAction } from "@/app/(dashboard)/calendar/actions";
 import { createWfhRequestAction } from "@/app/(dashboard)/requests/actions";
 import { useToast } from "@/components/common/toast-provider";
@@ -51,16 +51,18 @@ export function MonthCalendar({
   minimumEditableDate,
 }: MonthCalendarProps) {
   const [optimisticSelectedDates, updateOptimisticSelectedDates] = useOptimistic(selectedDates, (current: string[], update: { date: string; enabled: boolean }) => update.enabled ? [...new Set([...current, update.date])].toSorted() : current.filter((date) => date !== update.date));
-  const optimisticSelected = new Set(optimisticSelectedDates);
+  const optimisticSelected = useMemo(() => new Set(optimisticSelectedDates), [optimisticSelectedDates]);
   const [, startTransition] = useTransition();
   const { showError } = useErrorModal();
-  const pending = new Set(pendingDates);
   const [mode, setMode] = useState<RequestMode | null>(null);
   const [savingDates, setSavingDates] = useState<string[]>([]);
   const [additionalDates, setAdditionalDates] = useState<string[]>([]);
   const [replacementSource, setReplacementSource] = useState<string | null>(null);
   const [replacementTarget, setReplacementTarget] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const pending = useMemo(() => new Set(pendingDates), [pendingDates]);
+  const saving = useMemo(() => new Set(savingDates), [savingDates]);
+  const weekStartByDate = useMemo(() => new Map(cells.flatMap((cell) => cell ? [[cell.date, getWeekRange(cell.date).start] as const] : [])), [cells]);
 
   const requestDates = mode === "additional" || mode === "removal" ? additionalDates : replacementTarget ? [replacementTarget] : [];
   const canContinue = mode === "additional" || mode === "removal" ? additionalDates.length > 0 : Boolean(replacementSource && replacementTarget);
@@ -172,12 +174,12 @@ export function MonthCalendar({
             month={month}
             minimumEditableDate={minimumEditableDate}
              pending={pending.has(cell.date)}
-             saving={savingDates.includes(cell.date)}
+              saving={saving.has(cell.date)}
             requestMode={mode && mode !== "chooser" ? mode : null}
             requestSelected={additionalDates.includes(cell.date) || replacementTarget === cell.date}
              selected={optimisticSelected.has(cell.date)}
               weeklyAllowance={weeklyAllowance}
-              weeklyCount={weeklyCounts?.[getWeekRange(cell.date).start] ?? 0}
+              weeklyCount={weeklyCounts?.[weekStartByDate.get(cell.date) ?? ""] ?? 0}
               enforceWeeklyAllowance={enforceWeeklyAllowance}
             substitutionWeek={substitutionWeek}
             targetUserId={targetUserId}
