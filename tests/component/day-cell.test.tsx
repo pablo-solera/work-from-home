@@ -78,4 +78,11 @@ describe("DayCell request states", () => {
 
     expect(screen.getByRole("button", { name: /Marcar teletrabajo/ })).toBeDisabled();
   });
+
+  it("shows the real allowance without enforcing it", () => {
+    render(<DayCell {...baseProps} requestMode={null} weeklyAllowance={2} weeklyCount={2} enforceWeeklyAllowance={false} onToggle={vi.fn()} />);
+
+    expect(screen.getByText("2/2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Marcar teletrabajo/ })).toBeEnabled();
+  });
 });

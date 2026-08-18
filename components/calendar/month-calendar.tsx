@@ -176,8 +176,9 @@ export function MonthCalendar({
             requestMode={mode && mode !== "chooser" ? mode : null}
             requestSelected={additionalDates.includes(cell.date) || replacementTarget === cell.date}
              selected={optimisticSelected.has(cell.date)}
-             weeklyAllowance={enforceWeeklyAllowance ? weeklyAllowance : Number.MAX_SAFE_INTEGER}
-             weeklyCount={weeklyCounts?.[getWeekRange(cell.date).start] ?? 0}
+              weeklyAllowance={weeklyAllowance}
+              weeklyCount={weeklyCounts?.[getWeekRange(cell.date).start] ?? 0}
+              enforceWeeklyAllowance={enforceWeeklyAllowance}
             substitutionWeek={substitutionWeek}
             targetUserId={targetUserId}
             year={year}
