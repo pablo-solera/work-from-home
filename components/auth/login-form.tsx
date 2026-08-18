@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { loginAction, type LoginFormState } from "@/app/(auth)/login/actions";
 import { SubmitButton } from "@/components/common/submit-button";
+import { ActionFeedback } from "@/components/common/action-feedback";
 
 const initialState: LoginFormState = {};
 
@@ -19,11 +20,7 @@ export function LoginForm() {
         <span className="text-sm font-medium text-zinc-700">Contraseña</span>
         <input autoComplete="current-password" className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950" name="password" type="password" required />
       </label>
-      {state.error ? (
-        <p aria-live="polite" className="text-sm text-red-600">
-          {state.error}
-        </p>
-      ) : null}
+      <ActionFeedback error={state.error} />
       <SubmitButton className="w-full" pendingLabel="Entrando…">Entrar</SubmitButton>
     </form>
   );

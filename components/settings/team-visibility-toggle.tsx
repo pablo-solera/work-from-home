@@ -2,6 +2,7 @@
 
 import { useId, useState, useTransition } from "react";
 import { updateTeamVisibilityAction } from "@/app/(dashboard)/settings/actions";
+import { ActionFeedback } from "@/components/common/action-feedback";
 
 type TeamVisibilityToggleProps = {
   initialEnabled: boolean;
@@ -36,7 +37,7 @@ export function TeamVisibilityToggle({ initialEnabled }: TeamVisibilityTogglePro
           <span className={`size-5 rounded-full bg-white shadow-sm transition ${enabled ? "translate-x-5" : "translate-x-0"}`} />
         </span>
       </label>
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      <ActionFeedback error={error} />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { syncUsersAction } from "@/app/(dashboard)/admin/users/actions";
+import { ActionFeedback } from "@/components/common/action-feedback";
 import { initialSyncUsersState, type SyncUsersState } from "@/lib/users/sync-state";
 
 export function SyncUsersButton() {
@@ -26,17 +27,7 @@ export function SyncUsersButton() {
         {pending ? "Sincronizando…" : "Sincronizar con TimerTask"}
       </button>
 
-      {state.error ? (
-        <p aria-live="polite" className="text-sm text-red-600">
-          {state.error}
-        </p>
-      ) : null}
-
-      {state.ok ? (
-        <p aria-live="polite" className="text-sm text-zinc-600">
-          Creados: {state.created} · Borrados: {state.deleted}
-        </p>
-      ) : null}
+      <ActionFeedback error={state.error} message={state.ok ? `Creados: ${state.created} · Borrados: ${state.deleted}` : null} />
 
     </div>
   );

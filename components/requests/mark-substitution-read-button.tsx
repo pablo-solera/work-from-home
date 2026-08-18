@@ -3,13 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { markSubstitutionAsReadAction } from "@/app/(dashboard)/requests/actions";
-import { useErrorModal } from "@/components/common/error-modal-provider";
+import { ActionFeedback } from "@/components/common/action-feedback";
 
 export function MarkSubstitutionReadButton({ requestId }: { requestId: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const { showError } = useErrorModal();
 
   function markAsRead() {
     setError(null);
@@ -21,17 +20,15 @@ export function MarkSubstitutionReadButton({ requestId }: { requestId: string })
         if (!result.ok) {
           const message = result.error ?? "No se pudo marcar la sustitución como leída.";
           setError(message);
-          showError(message);
           return;
         }
         router.refresh();
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : "No se pudo marcar la sustitución como leída.";
         setError(message);
-        showError(message);
       }
     });
   }
 
-  return <span className="inline-flex flex-wrap items-center gap-2"><button aria-busy={pending} className="cursor-pointer text-sm font-medium text-sky-700 hover:text-sky-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} onClick={markAsRead} type="button">{pending ? "Marcando…" : "Marcar como leída"}</button>{error ? <span aria-live="polite" className="text-xs text-red-600" role="alert">{error}</span> : null}</span>;
+  return <span className="inline-flex flex-wrap items-center gap-2"><button aria-busy={pending} className="cursor-pointer text-sm font-medium text-sky-700 hover:text-sky-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} onClick={markAsRead} type="button">{pending ? "Marcando…" : "Marcar como leída"}</button><ActionFeedback error={error} /></span>;
 }

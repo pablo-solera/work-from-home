@@ -2,13 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { cancelWfhRequestDateAction } from "@/app/(dashboard)/requests/actions";
-import { useErrorModal } from "@/components/common/error-modal-provider";
+import { ActionFeedback } from "@/components/common/action-feedback";
 
 export function CancelRequestDateButton({ requestId, dateId, dateLabel }: { requestId: string; dateId: string; dateLabel: string }) {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const { showError } = useErrorModal();
 
   function cancel() {
     setError(null);
@@ -21,18 +20,16 @@ export function CancelRequestDateButton({ requestId, dateId, dateLabel }: { requ
         if (!result.ok) {
           const message = result.error ?? "No se pudo cancelar la fecha.";
           setError(message);
-          showError(message);
         }
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : "No se pudo cancelar la fecha.";
         setError(message);
-        showError(message);
       }
     });
   }
 
   if (confirming) {
-    return <span className="flex flex-wrap items-center gap-2 text-xs"><span>¿Cancelar {dateLabel}?</span><button className="font-medium text-red-700 hover:text-red-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700" disabled={pending} onClick={cancel} type="button">{pending ? "Cancelando…" : "Sí, cancelar"}</button><button className="text-zinc-600 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700" disabled={pending} onClick={() => setConfirming(false)} type="button">No</button>{error ? <span className="basis-full text-red-600" role="alert">{error}</span> : null}</span>;
+    return <div className="flex flex-wrap items-center gap-2 text-xs"><span>¿Cancelar {dateLabel}?</span><button className="font-medium text-red-700 hover:text-red-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700" disabled={pending} onClick={cancel} type="button">{pending ? "Cancelando…" : "Sí, cancelar"}</button><button className="text-zinc-600 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700" disabled={pending} onClick={() => setConfirming(false)} type="button">No</button><ActionFeedback error={error} /></div>;
   }
 
   return <button className="text-xs font-medium text-red-700 hover:text-red-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700" onClick={() => setConfirming(true)} type="button">Cancelar día</button>;
