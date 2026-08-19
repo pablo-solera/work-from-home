@@ -11,7 +11,7 @@ import { getCalendarDays, getCurrentCalendarMonth, getMadridTodayDateKey, getMon
 
 const UNKNOWN_IDENTITY = { name: "Usuario", email: null } as const;
 
-export function getEmployeeTeamVisibleRange() {
+function getEmployeeTeamVisibleRange() {
   const current = getCurrentCalendarMonth();
   const next = getNextMonth(current.year, current.month);
   return { minimumDate: getMadridTodayDateKey(), maximumDate: getMonthRange(next.year, next.month).end };

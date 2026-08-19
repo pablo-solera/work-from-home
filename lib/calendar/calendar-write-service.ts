@@ -4,7 +4,7 @@ import { createWorkFromHomeDay, deleteWorkFromHomeDay, findUserWorkFromHomeDays,
 import { assertCanEditWorkFromHomeDays, getMinimumEditableDate } from "./calendar-authorization";
 import { getCalendarDays, getMadridTodayDateKey, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
 
-export type ReplicateWorkFromHomeScope = "next" | "untilYearEnd";
+type ReplicateWorkFromHomeScope = "next" | "untilYearEnd";
 
 export async function setWorkFromHomeDay(userId: string, date: string, enabled: boolean, enforceAllowance = true) {
   if (!isValidDateKey(date)) throw new Error("Invalid date");
