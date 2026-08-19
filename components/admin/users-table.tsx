@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { ChevronLeftIcon } from "@/components/icons/chevron-left-icon";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import { SyncUsersButton } from "./sync-users-button";
-import { UserFormModal } from "./user-form-modal";
+
+const UserFormModal = dynamic(() => import("./user-form-modal").then((module) => module.UserFormModal));
 
 export type UserCoordinatorOption = {
   email: string;

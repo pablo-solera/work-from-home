@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import type { CalendarCell } from "@/lib/calendar/dates";
 import type { AdminCalendarDaySummary } from "@/lib/calendar/calendar-service";
 import { CalendarGrid, CalendarPanel, EmptyCalendarCell } from "@/components/calendar/calendar-shell";
 import { AdminDayCell } from "./admin-day-cell";
-import { AdminDayModal } from "./admin-day-modal";
+
+const AdminDayModal = dynamic(() => import("./admin-day-modal").then((module) => module.AdminDayModal));
 
 export type AdminCalendarDay = Exclude<CalendarCell, null> & {
   absenceCount: number;

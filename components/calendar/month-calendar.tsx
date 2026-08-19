@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { toggleWorkFromHomeDayAction } from "@/app/(dashboard)/calendar/actions";
 import { createWfhRequestAction } from "@/app/(dashboard)/requests/actions";
 import { useToast } from "@/components/common/toast-provider";
@@ -10,6 +11,9 @@ import { DayCell, isDateLockedForMode, type RequestMode } from "./day-cell";
 import { ReplicateControls } from "./replicate-controls";
 import { Dialog } from "@/components/common/dialog";
 import { CalendarGrid, CalendarPanel, EmptyCalendarCell } from "./calendar-shell";
+
+const LazyRequestReviewModal = dynamic(() => import("./request-review-modal").then((module) => module.RequestReviewModal));
+const LazyRemovalReviewModal = dynamic(() => import("./removal-review-modal").then((module) => module.RemovalReviewModal));
 
 export type MonthCalendarProps = {
   canEdit: boolean;
@@ -189,7 +193,7 @@ export function MonthCalendar({
           />
         ) : <EmptyCalendarCell index={index} key={`empty-${index}`} />)}
       </CalendarGrid>
-       {canRequest && reviewOpen ? mode === "removal" ? <RemovalReviewModal dates={requestDates} onClose={resetRequest} /> : <RequestReviewModal dates={requestDates} kind={mode === "additional" ? "additional" : "substitution"} replacedDate={replacementSource} onClose={resetRequest} /> : null}
+        {canRequest && reviewOpen ? mode === "removal" ? <LazyRemovalReviewModal dates={requestDates} onClose={resetRequest} /> : <LazyRequestReviewModal dates={requestDates} kind={mode === "additional" ? "additional" : "substitution"} replacedDate={replacementSource} onClose={resetRequest} /> : null}
     </CalendarPanel>
   );
 }
@@ -200,7 +204,7 @@ function SelectionBanner({ mode, additionalCount, replacementSource, replacement
   return <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-300 bg-sky-50 p-4"><div><p className="text-sm font-semibold text-sky-950">{title}</p><p className="mt-1 text-xs text-sky-800">{text}</p></div><div className="flex gap-2"><button className="cursor-pointer rounded-lg px-3 py-2 text-sm text-sky-800 hover:bg-sky-100" onClick={onCancel} type="button">Cancelar</button>{mode !== "substitution-source" ? <button className="cursor-pointer rounded-lg bg-sky-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={!canContinue} onClick={onContinue} type="button">Revisar solicitud</button> : null}</div></div>;
 }
 
-function RequestReviewModal({ dates, kind, replacedDate, onClose }: { dates: string[]; kind: "additional" | "substitution"; replacedDate: string | null; onClose: () => void }) {
+export function RequestReviewModal({ dates, kind, replacedDate, onClose }: { dates: string[]; kind: "additional" | "substitution"; replacedDate: string | null; onClose: () => void }) {
   const { showToast } = useToast();
   const [state, action, pending] = useActionState(async (previousState: { error?: string; message?: string; ok?: boolean }, formData: FormData) => {
     if (formData.get("kind") === "additional" && !String(formData.get("comment") ?? "").trim()) {
@@ -223,7 +227,7 @@ function RequestReviewModal({ dates, kind, replacedDate, onClose }: { dates: str
   return <Dialog onDismiss={onClose}><Dialog.Panel className="max-w-md"><form action={action} className="space-y-4"><div className="flex items-start justify-between gap-4"><div><Dialog.Title>Revisar solicitud</Dialog.Title><p className="mt-1 text-sm text-zinc-600">{kind === "substitution" ? "El cambio se aplicará inmediatamente y quedará registrado." : "Un administrador tendrá que aprobarla antes de aplicarla."}</p></div><Dialog.Close onClick={onClose} /></div><div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-700">{kind === "substitution" ? <p>Cambiar <strong>{formatDateKeyForDisplay(replacedDate ?? "")}</strong> por <strong>{visibleDates}</strong></p> : <p>Días adicionales: <strong>{visibleDates}</strong></p>}</div><input name="kind" type="hidden" value={kind} /><input name="requestedDates" type="hidden" value={dates.join(",")} />{kind === "substitution" ? <input name="replacedDates" type="hidden" value={replacedDate ?? ""} /> : null}<label className="block text-sm font-medium text-zinc-800">Comentario <span className="font-normal text-zinc-500">(opcional)</span><textarea className="mt-1 min-h-20 w-full rounded-lg border border-zinc-300 px-3 py-2 font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" name="comment" /></label>{state.error ? <p aria-live="polite" className="text-sm text-red-600">{state.error}</p> : null}{state.message ? <p aria-live="polite" className="text-sm text-emerald-700">{state.message}</p> : null}<div className="flex justify-end gap-2"><button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} onClick={onClose} type="button">Cancelar</button><button className="cursor-pointer rounded-lg bg-zinc-950 px-3 py-2 text-sm font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} type="submit">{pending ? "Aplicando…" : kind === "substitution" ? "Aplicar sustitución" : "Enviar solicitud"}</button></div></form></Dialog.Panel></Dialog>;
 }
 
-function RemovalReviewModal({ dates, onClose }: { dates: string[]; onClose: () => void }) {
+export function RemovalReviewModal({ dates, onClose }: { dates: string[]; onClose: () => void }) {
   const { showToast } = useToast();
   const [state, action, pending] = useActionState(async (previousState: { error?: string; message?: string; ok?: boolean }, formData: FormData) => {
     const result = await createWfhRequestAction(previousState, formData);
