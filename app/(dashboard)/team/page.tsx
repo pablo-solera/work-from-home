@@ -63,7 +63,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
           <EmployeeCalendarFilter basePath="/team" employees={employees} month={month} selectedEmployeeId={selectedEmployeeId} year={year} />
           <EditableMonthCalendar
             cells={employeeCalendar.cells}
-            currentMonthHref={overviewNavigation.currentMonthHref}
+            currentMonthHref={navigation.currentMonthHref}
             month={month}
             monthName={employeeCalendar.monthName}
             nextMonthHref={navigation.nextMonthHref}
