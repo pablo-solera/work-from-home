@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AdminCalendar } from "@/components/admin/admin-calendar";
-import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-filter";
-import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
+import { CalendarDetailLayout, CalendarOverviewLayout } from "@/components/calendar/calendar-page-layout";
 import { requireAdmin } from "@/lib/auth/guards";
 import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
 import { parseCalendarMonth } from "@/lib/calendar/dates";
@@ -43,39 +41,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     if (userCalendar) {
       const navigation = getCalendarNavigation("/admin", year, month, selectedUserId);
       const selectableUsers = users.filter((user) => user.id !== admin.id);
-      return (
-        <section className="space-y-8">
-          <div>
-            <p className="text-sm font-medium text-zinc-500">Dashboard admin</p>
-            <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Teletrabajo de {userCalendar.user.name}</h1>
-          </div>
-          {adminLinks}
-          <EmployeeCalendarFilter
-            allLabel="Todos"
-            basePath="/admin"
-            employees={selectableUsers}
-            label="Usuario"
-            month={month}
-            selectedEmployeeId={selectedUserId}
-            year={year}
-          />
-          <EditableMonthCalendar
-            cells={userCalendar.cells}
-            currentMonthHref={navigation.currentMonthHref}
-            month={month}
-            monthName={userCalendar.monthName}
-            nextMonthHref={navigation.nextMonthHref}
-            previousMonthHref={navigation.previousMonthHref}
-             selectedDates={userCalendar.selectedDates}
-             weeklyAllowance={userCalendar.weeklyAllowance}
-             weeklyCounts={userCalendar.weeklyCounts}
-             enforceWeeklyAllowance={false}
-            showCurrentMonthLink={navigation.showCurrentMonthLink}
-            targetUserId={userCalendar.user.id}
-            year={year}
-          />
-        </section>
-      );
+      return <CalendarDetailLayout basePath="/admin" calendar={userCalendar} employees={selectableUsers} enforceWeeklyAllowance={false} eyebrow="Dashboard admin" headerContent={adminLinks} minimumEditableDate={undefined} month={month} navigation={navigation} selectedEmployeeId={selectedUserId} spacing="8" targetUserId={userCalendar.user.id} title={`Teletrabajo de ${userCalendar.user.name}`} year={year} />;
     }
   }
 
@@ -83,31 +49,5 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const selectableUsers = overview.users.filter((user) => user.id !== admin.id);
 
-  return (
-    <section className="space-y-8">
-      <div>
-        <p className="text-sm font-medium text-zinc-500">Dashboard admin</p>
-        <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Vista global de teletrabajo</h1>
-      </div>
-      {adminLinks}
-      <EmployeeCalendarFilter
-        allLabel="Todos"
-        basePath="/admin"
-         employees={selectableUsers}
-        label="Usuario"
-        month={month}
-        selectedEmployeeId="all"
-        year={year}
-      />
-      <AdminCalendar
-        cells={overview.cells}
-         currentMonthHref={overviewNavigation.currentMonthHref}
-        daySummariesByDate={overview.daySummariesByDate}
-        monthName={overview.monthName}
-         nextMonthHref={overviewNavigation.nextMonthHref}
-         previousMonthHref={overviewNavigation.previousMonthHref}
-         showCurrentMonthLink={overviewNavigation.showCurrentMonthLink}
-      />
-    </section>
-  );
+  return <CalendarOverviewLayout basePath="/admin" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} employees={selectableUsers} eyebrow="Dashboard admin" headerContent={adminLinks} month={month} monthName={overview.monthName} navigation={overviewNavigation} spacing="8" title="Vista global de teletrabajo" year={year} />;
 }

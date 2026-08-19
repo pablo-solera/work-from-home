@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
-import { AdminCalendar } from "@/components/admin/admin-calendar";
-import { EmployeeCalendarFilter } from "@/components/calendar/employee-calendar-filter";
-import { EditableMonthCalendar } from "@/components/calendar/month-calendar-variants";
+import { CalendarDetailLayout, CalendarOverviewLayout } from "@/components/calendar/calendar-page-layout";
 import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { getCoordinatorCalendarOverview, getCoordinatorCalendarUsers, getCoordinatorEmployeeCalendar, getMinimumEditableDate, getTeamCalendarForViewer } from "@/lib/calendar/calendar-service";
 import { parseCalendarMonth } from "@/lib/calendar/dates";
@@ -26,24 +24,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
     if (!overview) {
       redirect("/calendar");
     }
-    return (
-      <section className="space-y-6">
-        <div>
-          <p className="text-sm font-medium text-zinc-500">Mi equipo</p>
-          <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Teletrabajo del equipo</h1>
-        </div>
-        <AdminCalendar
-          cells={overview.cells}
-           currentMonthHref={overviewNavigation.currentMonthHref}
-          daySummariesByDate={overview.daySummariesByDate}
-          dayDetailEndpoint="/api/calendar/team/day"
-          monthName={overview.monthName}
-            nextMonthHref={overviewNavigation.nextMonthHref}
-            previousMonthHref={overviewNavigation.previousMonthHref}
-            showCurrentMonthLink={overviewNavigation.showCurrentMonthLink}
-        />
-      </section>
-    );
+    return <CalendarOverviewLayout basePath="/team" cells={overview.cells} dayDetailEndpoint="/api/calendar/team/day" daySummariesByDate={overview.daySummariesByDate} employees={[]} eyebrow="Mi equipo" month={month} monthName={overview.monthName} navigation={overviewNavigation} showFilter={false} title="Teletrabajo del equipo" year={year} />;
   }
 
   if (selectedEmployeeId !== "all") {
@@ -54,52 +35,11 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
 
     if (employeeCalendar) {
       const navigation = getCalendarNavigation("/team", year, month, selectedEmployeeId);
-      return (
-        <section className="space-y-6">
-          <div>
-            <p className="text-sm font-medium text-zinc-500">Mi equipo</p>
-            <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Teletrabajo de {employeeCalendar.employee.name}</h1>
-          </div>
-          <EmployeeCalendarFilter basePath="/team" employees={employees} month={month} selectedEmployeeId={selectedEmployeeId} year={year} />
-          <EditableMonthCalendar
-            cells={employeeCalendar.cells}
-            currentMonthHref={navigation.currentMonthHref}
-            month={month}
-            monthName={employeeCalendar.monthName}
-            nextMonthHref={navigation.nextMonthHref}
-            previousMonthHref={navigation.previousMonthHref}
-            selectedDates={employeeCalendar.selectedDates}
-            weeklyAllowance={employeeCalendar.weeklyAllowance}
-            weeklyCounts={employeeCalendar.weeklyCounts}
-            showCurrentMonthLink={navigation.showCurrentMonthLink}
-            targetUserId={employeeCalendar.employee.id}
-            enforceWeeklyAllowance={true}
-            minimumEditableDate={getMinimumEditableDate(user.role)}
-            year={year}
-          />
-        </section>
-      );
+      return <CalendarDetailLayout basePath="/team" calendar={employeeCalendar} employees={employees} enforceWeeklyAllowance={true} eyebrow="Mi equipo" filterLabel="Empleado" minimumEditableDate={getMinimumEditableDate(user.role)} month={month} navigation={navigation} selectedEmployeeId={selectedEmployeeId} targetUserId={employeeCalendar.employee.id} title={`Teletrabajo de ${employeeCalendar.employee.name}`} year={year} />;
     }
   }
 
   const overview = await getCoordinatorCalendarOverview(user.id, year, month);
 
-  return (
-    <section className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-zinc-500">Mi equipo</p>
-        <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Teletrabajo del equipo</h1>
-      </div>
-      <EmployeeCalendarFilter basePath="/team" employees={overview.employees} month={month} selectedEmployeeId="all" year={year} />
-      <AdminCalendar
-        cells={overview.cells}
-         currentMonthHref={overviewNavigation.currentMonthHref}
-        daySummariesByDate={overview.daySummariesByDate}
-        monthName={overview.monthName}
-         nextMonthHref={overviewNavigation.nextMonthHref}
-         previousMonthHref={overviewNavigation.previousMonthHref}
-         showCurrentMonthLink={overviewNavigation.showCurrentMonthLink}
-      />
-    </section>
-  );
+  return <CalendarOverviewLayout basePath="/team" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} employees={overview.employees} eyebrow="Mi equipo" filterLabel="Empleado" month={month} monthName={overview.monthName} navigation={overviewNavigation} title="Teletrabajo del equipo" year={year} />;
 }

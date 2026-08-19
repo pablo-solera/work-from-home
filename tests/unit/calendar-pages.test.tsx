@@ -62,8 +62,13 @@ function resetMocks() {
 
 function findComponent(node: unknown, name: string): { props: Record<string, unknown> } | null {
   if (!node || typeof node !== "object") return null;
-  const element = node as { type?: { name?: string }; props?: { children?: unknown } };
+  const element = node as { type?: { name?: string } | ((props: Record<string, unknown>) => unknown); props?: { children?: unknown } };
   if (element.type?.name === name) return { props: element.props as Record<string, unknown> };
+  if (typeof element.type === "function") {
+    const rendered = element.type(element.props as Record<string, unknown>);
+    const match = findComponent(rendered, name);
+    if (match) return match;
+  }
   const children = element.props?.children;
   if (Array.isArray(children)) {
     for (const child of children) {
