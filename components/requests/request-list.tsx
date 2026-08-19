@@ -6,6 +6,7 @@ import { MarkSubstitutionReadButton } from "@/components/requests/mark-substitut
 import { RequestDecisionForm } from "@/components/requests/request-decision-form";
 import { CancelRequestDateButton } from "@/components/requests/cancel-request-date-button";
 import { RequestCardSkeleton } from "@/components/common/request-skeleton";
+import { ActionFeedback } from "@/components/common/action-feedback";
 import { MarkAdminSubstitutionReadButton } from "@/components/requests/mark-admin-substitution-read-button";
 import type { RequestFilters, RequestPage } from "@/lib/requests/request-types";
 
@@ -103,7 +104,7 @@ function RequestList({ initialPage, coordinatorView = false, ownView = false, re
       {loading ? <div aria-label="Cargando más solicitudes" className="space-y-3" role="status"><RequestCardSkeleton coordinatorView={coordinatorView} /><RequestCardSkeleton coordinatorView={coordinatorView} /></div> : null}
       <div aria-live="polite" className="py-3 text-center text-sm text-zinc-500" ref={sentinelRef}>
         {error ? <button className="cursor-pointer font-medium text-zinc-950 underline" onClick={() => { setError(null); setRetryCount((count) => count + 1); }} type="button">Reintentar</button> : nextCursor ? "" : "No hay más solicitudes."}
-        {error ? <span className="ml-2 text-red-600">{error}</span> : null}
+        {error ? <ActionFeedback error={error} /> : null}
       </div>
     </div>
   );

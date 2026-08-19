@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { GeneratedAvatar } from "@/components/common/generated-avatar";
+import { ActionFeedback } from "@/components/common/action-feedback";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
 import { Dialog } from "@/components/common/dialog";
 import { DayDetailSkeleton } from "@/components/common/day-detail-skeleton";
@@ -57,7 +58,7 @@ export function AdminDayModal({ day, detail, error, loading, onClose }: AdminDay
           {loading ? (
             <DayDetailSkeleton />
           ) : error ? (
-            <p aria-live="polite" className="text-sm text-red-600">{error}</p>
+            <ActionFeedback error={error} />
           ) : hasPeople ? (
             sections.map((section) => {
               const isOpen = openSections.has(section.key);
