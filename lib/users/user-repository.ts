@@ -1,4 +1,5 @@
 import { eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { cache } from "react";
 import { getDb } from "@/db";
 import { type NewUser, users, workFromHomeDays } from "@/db/schema";
 
@@ -25,11 +26,11 @@ export function findUsersByOracleEmpIds(oracleEmpIds: number[]) {
   });
 }
 
-export function findUserById(id: string) {
+export const findUserById = cache((id: string) => {
   return getDb().query.users.findFirst({
     where: eq(users.id, id),
   });
-}
+});
 
 export function findAllUsers() {
   return getDb().query.users.findMany({

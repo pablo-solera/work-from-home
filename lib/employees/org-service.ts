@@ -209,10 +209,10 @@ export async function findEmployeeByCoordinatorId(employeeId: string, coordinato
   return employee;
 }
 
-export async function isUserInCoordinatorTeam(employeeId: string, coordinatorId: string) {
-  const [employee, coordinator, snapshot] = await Promise.all([findUserById(employeeId), findUserById(coordinatorId), getOrganizationSnapshot()]);
-  if (employee?.oracleEmpId === null || employee?.oracleEmpId === undefined || coordinator?.oracleEmpId === null || coordinator?.oracleEmpId === undefined) return false;
-  return snapshot.teamByCoordinatorEmpId.get(coordinator.oracleEmpId)?.has(employee.oracleEmpId) ?? false;
+export async function isUserInCoordinatorTeam(employeeId: string, coordinatorId: string, employee?: Awaited<ReturnType<typeof findUserById>>) {
+  const [resolvedEmployee, coordinator, snapshot] = await Promise.all([employee ? Promise.resolve(employee) : findUserById(employeeId), findUserById(coordinatorId), getOrganizationSnapshot()]);
+  if (resolvedEmployee?.oracleEmpId === null || resolvedEmployee?.oracleEmpId === undefined || coordinator?.oracleEmpId === null || coordinator?.oracleEmpId === undefined) return false;
+  return snapshot.teamByCoordinatorEmpId.get(coordinator.oracleEmpId)?.has(resolvedEmployee.oracleEmpId) ?? false;
 }
 
 export async function findStaffEmpIds() {

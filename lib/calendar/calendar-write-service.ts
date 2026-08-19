@@ -26,6 +26,7 @@ export async function setWorkFromHomeDayForActor(actor: SessionUser, targetUserI
 
 export async function replicateWorkFromHomeDays(actor: SessionUser, input: { month: number; scope: ReplicateWorkFromHomeScope; targetUserId: string; year: number }) {
   if (!Number.isInteger(input.year) || !Number.isInteger(input.month) || input.month < 1 || input.month > 12) throw new Error("Invalid month");
+  const targetUser = actor.role === "admin" ? null : await findUserById(input.targetUserId);
   await assertCanEditWorkFromHomeDays(actor, input.targetUserId);
 
   const sourceRange = getMonthRange(input.year, input.month);
@@ -35,7 +36,6 @@ export async function replicateWorkFromHomeDays(actor: SessionUser, input: { mon
   const sourceWeekdays = new Set(sourceEntries.map((entry) => getWeekdayFromDateKey(entry.date)));
 
   if (actor.role !== "admin") {
-    const targetUser = await findUserById(input.targetUserId);
     if (sourceWeekdays.size > (targetUser?.wfhDaysAllowance ?? 0)) throw new Error("La replicación supera el cupo semanal de teletrabajo.");
   }
   if (sourceWeekdays.size === 0 || (input.scope === "next" && input.month === 12)) return;

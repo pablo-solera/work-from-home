@@ -93,11 +93,11 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
 
     const requesterUser = await getRequester(user.id);
     if (!requesterUser) throw new Error("Solo usuarios activos pueden crear solicitudes.");
-    const coordinator = user.role === "coordinator" ? requesterUser : await findCoordinatorUser(requesterUser);
     const absenceRange = input.kind === "substitution" ? requestRange([...input.requestedDates, ...input.replacedDates]) : null;
-    const absenceSections = input.kind === "substitution"
-      ? await getAbsenceSectionsByDateStrict(absenceRange!.start, absenceRange!.end, [requesterUser])
-      : null;
+    const [coordinator, absenceSections] = await Promise.all([
+      user.role === "coordinator" ? Promise.resolve(requesterUser) : findCoordinatorUser(requesterUser),
+      input.kind === "substitution" ? getAbsenceSectionsByDateStrict(absenceRange!.start, absenceRange!.end, [requesterUser]) : Promise.resolve(null),
+    ]);
 
     const requestId = await runInRequestTransaction(async (tx) => {
       await lockUser(tx, user.id);
@@ -341,7 +341,7 @@ async function validateApproval(request: NonNullable<Awaited<ReturnType<typeof g
   }
 
   const requester = await getRequester(request.requesterId);
-  if (!requester || (!isAdmin && !(await isUserInCoordinatorTeam(requester.id, actor.id)))) {
+  if (!requester || (!isAdmin && !(await isUserInCoordinatorTeam(requester.id, actor.id, requester)))) {
     throw new Error("El empleado ya no pertenece a tu equipo.");
   }
 

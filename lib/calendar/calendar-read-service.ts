@@ -65,8 +65,9 @@ export async function getAdminCalendarOverview(year: number, month: number) {
 }
 
 async function getCalendarUsersForViewer(viewer: SessionUser) {
+  if (viewer.role === "admin") return filterVisibleStaff(await findAllUsers());
   const currentUser = await findUserById(viewer.id);
-  if (viewer.role === "admin" || currentUser?.canEditAllWfh) return filterVisibleStaff(await findAllUsers());
+  if (currentUser?.canEditAllWfh) return filterVisibleStaff(await findAllUsers());
   if (viewer.role === "coordinator") return filterVisibleStaff(await findUsersForCoordinator(viewer.id));
   const visibility = await findEmployeeTeamVisibility(viewer.id);
   if (!visibility?.teamWfhVisible) return null;
