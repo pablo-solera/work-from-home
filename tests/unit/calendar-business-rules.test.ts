@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasReachedWeeklyAllowance, WEEKLY_ALLOWANCE_ERROR } from "@/lib/calendar/calendar-business-rules";
+import { hasReachedWeeklyAllowance, WEEKLY_ALLOWANCE_ERROR } from "@/lib/calendar/calendar-repository";
 
 describe("weekly allowance rule", () => {
   it("reaches the allowance when usage equals the limit", () => {

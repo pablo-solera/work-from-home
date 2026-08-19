@@ -1,7 +1,12 @@
 import { and, asc, between, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users, workFromHomeDays } from "@/db/schema";
-import { hasReachedWeeklyAllowance, WEEKLY_ALLOWANCE_ERROR } from "./calendar-business-rules";
+
+export const WEEKLY_ALLOWANCE_ERROR = "Has alcanzado el cupo semanal de teletrabajo.";
+
+export function hasReachedWeeklyAllowance(usageCount: number, allowance: number) {
+  return usageCount >= allowance;
+}
 
 export function findUserWorkFromHomeDays(userId: string, start: string, end: string) {
   return getDb().query.workFromHomeDays.findMany({
