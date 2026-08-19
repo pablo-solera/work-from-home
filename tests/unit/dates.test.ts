@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  createMonthHref,
   formatDateKeyForDisplay,
   getCalendarDays,
   getCurrentCalendarMonth,
@@ -88,6 +87,5 @@ describe("calendar dates", () => {
     const calendar = getCalendarDays(2026, 8);
     expect(calendar.cells.some((cell) => cell?.date === "2026-08-04")).toBe(true);
     expect(calendar.monthName).toContain("agosto");
-    expect(createMonthHref("/calendar", { year: 2026, month: 8 })).toBe("/calendar?year=2026&month=8");
   });
 });

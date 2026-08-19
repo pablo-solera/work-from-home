@@ -141,10 +141,6 @@ export function getMonthsUntilYearEnd(year: number, month: number): CalendarMont
   return Array.from({ length: 12 - month }, (_, index) => ({ year, month: month + index + 1 }));
 }
 
-export function createMonthHref(pathname: string, { year, month }: CalendarMonthParams) {
-  return `${pathname}?year=${year}&month=${month}`;
-}
-
 export function isWeekendDateKey(date: string) {
   const day = new Date(`${date}T00:00:00.000Z`).getUTCDay();
 

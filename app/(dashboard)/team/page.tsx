@@ -26,8 +26,6 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
     if (!overview) {
       redirect("/calendar");
     }
-    const navigation = getCalendarNavigation("/team", year, month);
-
     return (
       <section className="space-y-6">
         <div>
@@ -36,13 +34,13 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
         </div>
         <AdminCalendar
           cells={overview.cells}
-           currentMonthHref={navigation.currentMonthHref}
+           currentMonthHref={overviewNavigation.currentMonthHref}
           daySummariesByDate={overview.daySummariesByDate}
           dayDetailEndpoint="/api/calendar/team/day"
           monthName={overview.monthName}
-           nextMonthHref={navigation.nextMonthHref}
-           previousMonthHref={navigation.previousMonthHref}
-           showCurrentMonthLink={navigation.showCurrentMonthLink}
+            nextMonthHref={overviewNavigation.nextMonthHref}
+            previousMonthHref={overviewNavigation.previousMonthHref}
+            showCurrentMonthLink={overviewNavigation.showCurrentMonthLink}
         />
       </section>
     );
@@ -65,7 +63,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
           <EmployeeCalendarFilter basePath="/team" employees={employees} month={month} selectedEmployeeId={selectedEmployeeId} year={year} />
           <EditableMonthCalendar
             cells={employeeCalendar.cells}
-            currentMonthHref={navigation.currentMonthHref}
+            currentMonthHref={overviewNavigation.currentMonthHref}
             month={month}
             monthName={employeeCalendar.monthName}
             nextMonthHref={navigation.nextMonthHref}
