@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { CalendarDetailLayout, CalendarOverviewLayout } from "@/components/calendar/calendar-page-layout";
 import { requireAuthorizedUser } from "@/lib/auth/guards";
-import { getCoordinatorCalendarOverview, getCoordinatorCalendarUsers, getCoordinatorEmployeeCalendar, getMinimumEditableDate, getTeamCalendarForViewer } from "@/lib/calendar/calendar-service";
+import { getMinimumEditableDate } from "@/lib/calendar/calendar-service";
+import { getDashboardCalendarDetail, getDashboardCalendarOverview } from "@/lib/calendar/dashboard-calendar-service";
 import { parseCalendarMonth } from "@/lib/calendar/dates";
 import { getCalendarNavigation } from "@/lib/calendar/calendar-view";
 
@@ -19,7 +20,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
   const overviewNavigation = getCalendarNavigation("/team", year, month);
 
   if (user.role === "employee") {
-    const overview = await getTeamCalendarForViewer(user, year, month);
+    const overview = await getDashboardCalendarOverview("team", user, year, month);
 
     if (!overview) {
       redirect("/calendar");
@@ -28,18 +29,16 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
   }
 
   if (selectedEmployeeId !== "all") {
-    const [employees, employeeCalendar] = await Promise.all([
-      getCoordinatorCalendarUsers(user.id),
-      getCoordinatorEmployeeCalendar(user.id, selectedEmployeeId, year, month),
-    ]);
+    const employeeCalendar = await getDashboardCalendarDetail("team", user, selectedEmployeeId, year, month);
 
     if (employeeCalendar) {
       const navigation = getCalendarNavigation("/team", year, month, selectedEmployeeId);
-      return <CalendarDetailLayout basePath="/team" calendar={employeeCalendar} employees={employees} enforceWeeklyAllowance={true} eyebrow="Mi equipo" filterLabel="Empleado" minimumEditableDate={getMinimumEditableDate(user.role)} month={month} navigation={navigation} selectedEmployeeId={selectedEmployeeId} targetUserId={employeeCalendar.employee.id} title={`Teletrabajo de ${employeeCalendar.employee.name}`} year={year} />;
+      return <CalendarDetailLayout basePath="/team" calendar={employeeCalendar.calendar} employees={employeeCalendar.people} enforceWeeklyAllowance={true} eyebrow="Mi equipo" filterLabel="Empleado" minimumEditableDate={getMinimumEditableDate(user.role)} month={month} navigation={navigation} selectedEmployeeId={selectedEmployeeId} targetUserId={employeeCalendar.person.id} title={`Teletrabajo de ${employeeCalendar.person.name}`} year={year} />;
     }
   }
 
-  const overview = await getCoordinatorCalendarOverview(user.id, year, month);
+  const overview = await getDashboardCalendarOverview("team", user, year, month);
+  if (!overview) return null;
 
-  return <CalendarOverviewLayout basePath="/team" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} employees={overview.employees} eyebrow="Mi equipo" filterLabel="Empleado" month={month} monthName={overview.monthName} navigation={overviewNavigation} title="Teletrabajo del equipo" year={year} />;
+  return <CalendarOverviewLayout basePath="/team" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} employees={overview.people} eyebrow="Mi equipo" filterLabel="Empleado" month={month} monthName={overview.monthName} navigation={overviewNavigation} title="Teletrabajo del equipo" year={year} />;
 }

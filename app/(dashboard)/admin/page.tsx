@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarDetailLayout, CalendarOverviewLayout } from "@/components/calendar/calendar-page-layout";
 import { requireAdmin } from "@/lib/auth/guards";
-import { getAdminCalendarOverview, getAdminCalendarUsers, getAdminUserCalendar } from "@/lib/calendar/calendar-service";
+import { getDashboardCalendarDetail, getDashboardCalendarOverview } from "@/lib/calendar/dashboard-calendar-service";
 import { parseCalendarMonth } from "@/lib/calendar/dates";
 import { getCalendarNavigation } from "@/lib/calendar/calendar-view";
 
@@ -33,21 +33,19 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   }
 
   if (selectedUserId !== "all") {
-    const [users, userCalendar] = await Promise.all([
-      getAdminCalendarUsers(),
-      getAdminUserCalendar(selectedUserId, year, month),
-    ]);
+    const userCalendar = await getDashboardCalendarDetail("admin", admin, selectedUserId, year, month);
 
     if (userCalendar) {
       const navigation = getCalendarNavigation("/admin", year, month, selectedUserId);
-      const selectableUsers = users.filter((user) => user.id !== admin.id);
-      return <CalendarDetailLayout basePath="/admin" calendar={userCalendar} employees={selectableUsers} enforceWeeklyAllowance={false} eyebrow="Dashboard admin" headerContent={adminLinks} minimumEditableDate={undefined} month={month} navigation={navigation} selectedEmployeeId={selectedUserId} spacing="8" targetUserId={userCalendar.user.id} title={`Teletrabajo de ${userCalendar.user.name}`} year={year} />;
+      const selectableUsers = userCalendar.people.filter((user) => user.id !== admin.id);
+      return <CalendarDetailLayout basePath="/admin" calendar={userCalendar.calendar} employees={selectableUsers} enforceWeeklyAllowance={false} eyebrow="Dashboard admin" headerContent={adminLinks} minimumEditableDate={undefined} month={month} navigation={navigation} selectedEmployeeId={selectedUserId} spacing="8" targetUserId={userCalendar.person.id} title={`Teletrabajo de ${userCalendar.person.name}`} year={year} />;
     }
   }
 
-  const overview = await getAdminCalendarOverview(year, month);
+  const overview = await getDashboardCalendarOverview("admin", admin, year, month);
+  if (!overview) return null;
 
-  const selectableUsers = overview.users.filter((user) => user.id !== admin.id);
+  const selectableUsers = overview.people.filter((user) => user.id !== admin.id);
 
   return <CalendarOverviewLayout basePath="/admin" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} employees={selectableUsers} eyebrow="Dashboard admin" headerContent={adminLinks} month={month} monthName={overview.monthName} navigation={overviewNavigation} spacing="8" title="Vista global de teletrabajo" year={year} />;
 }

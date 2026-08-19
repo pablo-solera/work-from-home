@@ -30,6 +30,15 @@ vi.mock("@/lib/calendar/calendar-service", () => ({
   getMinimumEditableDate: mocks.getMinimumEditableDate,
   getTeamCalendarForViewer: mocks.getTeamCalendarForViewer,
 }));
+vi.mock("@/lib/calendar/calendar-read-service", () => ({
+  getAdminCalendarOverview: mocks.getAdminCalendarOverview,
+  getAdminCalendarUsers: mocks.getAdminCalendarUsers,
+  getAdminUserCalendar: mocks.getAdminUserCalendar,
+  getCoordinatorCalendarOverview: mocks.getCoordinatorCalendarOverview,
+  getCoordinatorCalendarUsers: mocks.getCoordinatorCalendarUsers,
+  getCoordinatorEmployeeCalendar: mocks.getCoordinatorEmployeeCalendar,
+  getTeamCalendarForViewer: mocks.getTeamCalendarForViewer,
+}));
 vi.mock("@/components/admin/admin-calendar", () => ({ AdminCalendar: function MockAdminCalendar() { return null; } }));
 vi.mock("@/components/calendar/employee-calendar-filter", () => ({ EmployeeCalendarFilter: function MockEmployeeCalendarFilter() { return null; } }));
 vi.mock("@/components/calendar/month-calendar-variants", () => ({
