@@ -215,18 +215,6 @@ function RequestReviewModal({ dates, kind, replacedDate, onClose }: { dates: str
   }, {});
   const visibleDates = dates.map(formatDateKeyForDisplay).join(", ");
   useEffect(() => {
-    const textarea = document.querySelector<HTMLTextAreaElement>('textarea[name="comment"]');
-    const marker = textarea?.parentElement?.querySelector("span");
-
-    if (!textarea || !marker) return;
-
-    const required = kind === "additional";
-    textarea.required = required;
-    textarea.setAttribute("aria-required", String(required));
-    marker.textContent = required ? "*" : "(opcional)";
-  }, [kind]);
-
-  useEffect(() => {
     if (state.ok) {
       onClose();
     }
