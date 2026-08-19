@@ -70,7 +70,8 @@ export function MonthCalendar({
 
   const requestDates = mode === "additional" || mode === "removal" ? additionalDates : replacementTarget ? [replacementTarget] : [];
   const canContinue = mode === "additional" || mode === "removal" ? additionalDates.length > 0 : Boolean(replacementSource && replacementTarget);
-  const substitutionWeek = replacementSource ? getWeekRange(replacementSource) : undefined;
+  const substitutionWeek = useMemo(() => replacementSource ? getWeekRange(replacementSource) : undefined, [replacementSource]);
+  const navigation = useMemo(() => ({ currentMonthHref, nextMonthHref, previousMonthHref, showCurrentMonthLink }), [currentMonthHref, nextMonthHref, previousMonthHref, showCurrentMonthLink]);
 
   function resetRequest() {
     setMode(null);
@@ -131,7 +132,7 @@ export function MonthCalendar({
   return (
     <CalendarPanel
       monthName={monthName}
-      navigation={{ currentMonthHref, nextMonthHref, previousMonthHref, showCurrentMonthLink }}
+      navigation={navigation}
       tools={canEdit ? <ReplicateControls month={month} selectedCount={selectedDates.length} targetUserId={targetUserId} year={year} /> : null}
     >
       <div className="mb-6 space-y-4">

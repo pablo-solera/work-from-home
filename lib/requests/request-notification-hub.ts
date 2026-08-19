@@ -1,9 +1,10 @@
 import { listenForRequestNotifications } from "./request-repository";
+import type { UserRole } from "@/lib/auth/session";
 
 const encoder = new TextEncoder();
 
 type Connection = {
-  role: "admin" | "coordinator" | "employee";
+  role: UserRole;
   userId: string;
   controller: ReadableStreamDefaultController<Uint8Array>;
 };

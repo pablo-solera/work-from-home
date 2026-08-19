@@ -21,7 +21,7 @@ export function RequestListSkeleton({ coordinatorView = false, count = 10, label
   return (
     <div aria-busy="true" className="space-y-3">
       <SkeletonStatus label={label} />
-      {Array.from({ length: count }, (_, index) => <RequestCardSkeleton coordinatorView={coordinatorView} key={index} />)}
+      {Array.from({ length: count }, (_, index) => <RequestCardSkeleton coordinatorView={coordinatorView} key={`request-${index}`} />)}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { useEffect, useState, useTransition } from "react";
 import { ChevronLeftIcon } from "@/components/icons/chevron-left-icon";
 import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
+import type { UserRole } from "@/lib/auth/session";
 import { SyncUsersButton } from "./sync-users-button";
 
 const UserFormModal = dynamic(() => import("./user-form-modal").then((module) => module.UserFormModal));
@@ -25,7 +26,7 @@ export type ManagedUser = {
   hasWfh: boolean | null;
   id: string;
   name: string;
-  role: "admin" | "coordinator" | "employee";
+  role: UserRole;
   wfhDaysAllowance: number | null;
   wdNumber: string | null;
 };
