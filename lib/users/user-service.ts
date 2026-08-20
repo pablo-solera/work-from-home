@@ -4,7 +4,7 @@ import { findActiveEmployeeByEmail } from "@/lib/employees/employee-repository";
 import { resolveUserRole } from "@/lib/employees/org-service";
 import { findTestAccountByEmail, verifyTestAccountPassword } from "@/lib/employees/test-accounts";
 import { cache } from "react";
-import { findUserByFallbackEmail, findUserById, findUserByOracleEmpId, updateUser } from "./user-repository";
+import { findUserByFallbackEmail, findUserById, findUserByOracleEmpId, updateTeamWfhVisibility, updateUser } from "./user-repository";
 
 export const getUserById = cache((id: string) => findUserById(id));
 
@@ -90,5 +90,14 @@ export async function updateUserById(_actor: SessionUser, input: UpdateUserInput
     return { message: "Usuario actualizado correctamente.", ok: true };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "No se pudo actualizar el usuario." };
+  }
+}
+
+export async function updateTeamVisibility(_actor: SessionUser, teamWfhVisible: boolean) {
+  try {
+    await updateTeamWfhVisibility(_actor.id, teamWfhVisible);
+    return { ok: true as const };
+  } catch (error) {
+    return { ok: false as const, error: error instanceof Error ? error.message : "No se pudo actualizar la visibilidad del equipo." };
   }
 }

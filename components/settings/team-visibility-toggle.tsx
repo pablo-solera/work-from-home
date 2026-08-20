@@ -19,11 +19,10 @@ export function TeamVisibilityToggle({ initialEnabled }: TeamVisibilityTogglePro
     setError(null);
 
     startTransition(async () => {
-      try {
-        await updateTeamVisibilityAction(nextEnabled);
-      } catch {
+      const result = await updateTeamVisibilityAction(nextEnabled);
+      if (!result.ok) {
         setEnabled(!nextEnabled);
-        setError("No se pudo guardar el cambio. Inténtalo de nuevo.");
+        setError(result.error);
       }
     });
   }

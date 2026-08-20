@@ -22,3 +22,5 @@ export const updateUserSchema = z.object({
   id: z.string().uuid(),
   wfhDaysAllowance: optionalNonNegativeInt,
 });
+
+export const updateTeamVisibilitySchema = z.object({ teamWfhVisible: z.boolean() });

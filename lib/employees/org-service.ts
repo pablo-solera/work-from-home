@@ -1,4 +1,5 @@
 import type { UserRole } from "@/lib/auth/session";
+import { TtlCache } from "@/lib/cache/ttl-cache";
 import { findOrganizationRows, getExcludedGroupIds } from "@/lib/employees/org-repository";
 import { findTestAccountByEmpId, getTestAccounts } from "@/lib/employees/test-accounts";
 import { findUserById, findUsersByOracleEmpIds } from "@/lib/users/user-repository";
@@ -16,22 +17,12 @@ type OrganizationSnapshot = {
   teamByCoordinatorEmpId: Map<number, Set<number>>;
 };
 
-type SnapshotState = {
-  loadedAt: number;
-  promise: Promise<OrganizationSnapshot> | null;
-  snapshot: OrganizationSnapshot | null;
-};
-
 declare global {
-  var __wfhOrganizationSnapshot: SnapshotState | undefined;
+  var __wfhOrganizationSnapshot: TtlCache<string, OrganizationSnapshot> | undefined;
 }
 
-const state: SnapshotState = globalThis.__wfhOrganizationSnapshot ?? {
-  loadedAt: 0,
-  promise: null,
-  snapshot: null,
-};
-globalThis.__wfhOrganizationSnapshot = state;
+const organizationCache = globalThis.__wfhOrganizationSnapshot ?? new TtlCache<string, OrganizationSnapshot>();
+globalThis.__wfhOrganizationSnapshot = organizationCache;
 
 function configuredGroupId(name: string, fallback: number) {
   const value = Number(process.env[name] ?? fallback);
@@ -106,30 +97,19 @@ function findTestAccountRows(adminGroupId: number, coordinatorGroupId: number) {
 }
 
 export async function getOrganizationSnapshot() {
-  const now = Date.now();
-  if (state.snapshot && now - state.loadedAt < getTtlMs()) return state.snapshot;
-  if (!state.promise) {
-    state.promise = findOrganizationRows(
-      configuredGroupId("ORACLE_ADMIN_GROUP_ID", ADMIN_GROUP_ID),
-      configuredGroupId("ORACLE_COORDINATOR_GROUP_ID", COORDINATOR_GROUP_ID),
-    )
-      .then(buildSnapshot)
-      .catch((error) => {
-        if (!getTestAccounts()) throw error;
-        console.error("Oracle organization unavailable; using test account organization.", error);
-        return buildSnapshot({ roles: [], hierarchy: [] });
-      })
-      .then((snapshot) => {
-        state.snapshot = snapshot;
-        state.loadedAt = Date.now();
-        return snapshot;
-      })
-      .finally(() => {
-        state.promise = null;
-      });
-  }
-
-  return state.promise;
+  return organizationCache.get("snapshot", async () => {
+    try {
+      const rows = await findOrganizationRows(
+        configuredGroupId("ORACLE_ADMIN_GROUP_ID", ADMIN_GROUP_ID),
+        configuredGroupId("ORACLE_COORDINATOR_GROUP_ID", COORDINATOR_GROUP_ID),
+      );
+      return new Map([["snapshot", buildSnapshot(rows)]]);
+    } catch (error) {
+      if (!getTestAccounts()) throw error;
+      console.error("Oracle organization unavailable; using test account organization.", error);
+      return new Map([["snapshot", buildSnapshot({ roles: [], hierarchy: [] })]]);
+    }
+  }, () => getTtlMs());
 }
 
 export async function resolveUserRole(user: { oracleEmpId: number | null }): Promise<UserRole> {
