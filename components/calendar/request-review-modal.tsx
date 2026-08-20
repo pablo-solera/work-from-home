@@ -6,6 +6,7 @@ import { ActionFeedback } from "@/components/common/action-feedback";
 import { Dialog } from "@/components/common/dialog";
 import { useToast } from "@/components/common/toast-provider";
 import { formatDateKeyForDisplay } from "@/lib/calendar/dates";
+import type { RequestFormState } from "@/lib/requests/request-types";
 
 type RequestReviewModalProps = {
   dates: string[];
@@ -16,7 +17,7 @@ type RequestReviewModalProps = {
 
 export function RequestReviewModal({ dates, kind, replacedDate, onClose }: RequestReviewModalProps) {
   const { showToast } = useToast();
-  const [state, action, pending] = useActionState(async (previousState: { error?: string; message?: string; ok?: boolean }, formData: FormData) => {
+  const [state, action, pending] = useActionState(async (previousState: RequestFormState, formData: FormData) => {
     if (formData.get("kind") === "additional" && !String(formData.get("comment") ?? "").trim()) {
       return { error: "Debes indicar un comentario para solicitar días adicionales." };
     }

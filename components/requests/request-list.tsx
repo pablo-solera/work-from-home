@@ -41,13 +41,18 @@ function RequestList({ initialPage, coordinatorView = false, ownView = false, re
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef(false);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel || !nextCursor || error) return;
 
     const observer = new IntersectionObserver((entries) => {
-      if (!entries[0]?.isIntersecting || loading) return;
+       if (!entries[0]?.isIntersecting || loadingRef.current) return;
 
       setLoading(true);
       setError(null);
@@ -67,7 +72,7 @@ function RequestList({ initialPage, coordinatorView = false, ownView = false, re
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [adminNotificationView, adminView, error, filters.date, filters.status, loading, nextCursor, ownView, retryCount]);
+  }, [adminNotificationView, adminView, error, filters.date, filters.status, nextCursor, ownView, retryCount]);
 
   if (requests.length === 0) {
     return <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-600">{filtered ? "No hay solicitudes que coincidan con los filtros seleccionados." : "No hay solicitudes."}</p>;

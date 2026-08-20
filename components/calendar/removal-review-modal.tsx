@@ -6,12 +6,13 @@ import { ActionFeedback } from "@/components/common/action-feedback";
 import { Dialog } from "@/components/common/dialog";
 import { useToast } from "@/components/common/toast-provider";
 import { formatDateKeyForDisplay } from "@/lib/calendar/dates";
+import type { RequestFormState } from "@/lib/requests/request-types";
 
 type RemovalReviewModalProps = { dates: string[]; onClose: () => void };
 
 export function RemovalReviewModal({ dates, onClose }: RemovalReviewModalProps) {
   const { showToast } = useToast();
-  const [state, action, pending] = useActionState(async (previousState: { error?: string; message?: string; ok?: boolean }, formData: FormData) => {
+  const [state, action, pending] = useActionState(async (previousState: RequestFormState, formData: FormData) => {
     const result = await createWfhRequestAction(previousState, formData);
     if (result.ok) showToast(result.message ?? "Anulación aplicada correctamente.");
     return result;

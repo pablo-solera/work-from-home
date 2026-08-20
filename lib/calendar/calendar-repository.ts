@@ -14,6 +14,7 @@ export function findUserWorkFromHomeDays(userId: string, start: string, end: str
       eq(workFromHomeDays.userId, userId),
       between(workFromHomeDays.date, start, end)
     ),
+    columns: { date: true },
     orderBy: asc(workFromHomeDays.date),
   });
 }
