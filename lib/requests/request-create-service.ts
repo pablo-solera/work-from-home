@@ -4,7 +4,7 @@ import { getHolidayName, getMadridTodayDateKey, isDateInWeek, isSubstitutionLock
 import { findCoordinatorUser } from "@/lib/employees/org-service";
 import type { RequestFormState, RequestKind } from "./request-types";
 import { requestRange } from "./request-shared";
-import { deleteWorkFromHomeDays, findPendingRequestDates as findPendingRequestDatesFromRepository, findRequester, findRequesterById, findWorkFromHomeDays, insertRequest, insertRequestDates, insertWorkFromHomeDays, lockUser, runInRequestTransaction } from "./request-repository";
+import { deleteWorkFromHomeDays, findPendingRequestDates as findPendingRequestDatesFromRepository, findRequesterById, findRequesterId, findWorkFromHomeDays, insertRequest, insertRequestDates, insertWorkFromHomeDays, lockUser, runInRequestTransaction } from "./request-repository";
 
 type RequestInput = { kind: RequestKind; requestedDates: string[]; replacedDates: string[]; comment: string | null };
 
@@ -39,7 +39,7 @@ export async function createWfhRequest(user: SessionUser, input: RequestInput): 
 
     const requestId = await runInRequestTransaction(async (tx) => {
       await lockUser(tx, user.id);
-      const requester = await findRequester(tx, user.id);
+      const requester = await findRequesterId(tx, user.id);
       if (!requester || user.role === "admin") throw new Error("Solo empleados y coordinadores pueden crear solicitudes.");
       const pendingDates = await findPendingRequestDatesFromRepository(tx, user.id);
       const requestedDates = new Set(input.requestedDates);

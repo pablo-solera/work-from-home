@@ -4,7 +4,7 @@ import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { filterVisibleStaff } from "@/lib/employees/staff-service";
 import { findEmployeeByCoordinatorId, findEmployeeTeamVisibility, findExcludedEmpIds, findUsersForCoordinator } from "@/lib/employees/org-service";
 import { findAllUsers, findUserById } from "@/lib/users/user-repository";
-import { getPendingRequestedDates } from "@/lib/requests/request-service";
+import { getPendingRequestedDates } from "@/lib/requests/request-list-service";
 import { findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds } from "./calendar-repository";
 import { buildDaySummaries, buildSectionsByDate } from "./calendar-transform";
 import { getCalendarDays, getCurrentCalendarMonth, getMadridTodayDateKey, getMonthRange, getNextMonth, getWeekRange, isValidDateKey } from "./dates";

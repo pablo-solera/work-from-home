@@ -1,4 +1,4 @@
-import { isNotNull, relations } from "drizzle-orm";
+import { isNotNull, relations, sql } from "drizzle-orm";
 import { boolean, index, date, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const wfhRequestKind = pgEnum("wfh_request_kind", ["additional", "substitution", "removal"]);
@@ -83,7 +83,12 @@ export const wfhChangeRequestDates = pgTable(
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelledById: uuid("cancelled_by_id").references(() => users.id, { onDelete: "set null" }),
   },
-  (table) => [uniqueIndex("wfh_change_request_dates_request_date_idx").on(table.requestId, table.requestedDate), index("wfh_change_request_dates_active_date_idx").on(table.requestedDate)],
+  (table) => [
+    uniqueIndex("wfh_change_request_dates_request_date_idx").on(table.requestId, table.requestedDate),
+    index("wfh_change_request_dates_active_date_idx").on(table.requestedDate),
+    index("wfh_change_request_dates_cancelled_idx").on(table.requestId, table.cancelledAt).where(sql`${table.cancelledAt} IS NOT NULL`),
+    index("wfh_change_request_dates_pending_date_idx").on(table.requestedDate, table.requestId).where(sql`${table.cancelledAt} IS NULL`),
+  ],
 );
 
 export const wfhChangeRequestsRelations = relations(wfhChangeRequests, ({ many, one }) => ({

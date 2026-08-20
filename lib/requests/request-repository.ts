@@ -28,6 +28,10 @@ export function findRequester(executor: RequestExecutor, userId: string) {
   return executor.query.users.findFirst({ where: eq(users.id, userId) });
 }
 
+export function findRequesterId(executor: RequestExecutor, userId: string) {
+  return executor.query.users.findFirst({ columns: { id: true }, where: eq(users.id, userId) });
+}
+
 export function lockUser(executor: RequestTransaction, userId: string) {
   return executor.execute(sql`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`);
 }
@@ -38,6 +42,30 @@ export function lockRequest(executor: RequestTransaction, requestId: string) {
 
 export function lockRequestDate(executor: RequestTransaction, requestId: string, dateId: string) {
   return executor.execute(sql`SELECT id FROM wfh_change_request_dates WHERE id = ${dateId} AND request_id = ${requestId} FOR UPDATE`);
+}
+
+export function lockRequestAndDateForCancellation(executor: RequestTransaction, requestId: string, dateId: string) {
+  return executor.execute(sql`
+    SELECT
+      r.id AS request_id,
+      r.requester_id,
+      r.kind,
+      r.status,
+      d.id AS date_id,
+      d.requested_date,
+      d.cancelled_at,
+      (
+        SELECT count(*)
+        FROM wfh_change_request_dates remaining
+        WHERE remaining.request_id = r.id
+          AND remaining.id <> d.id
+          AND remaining.cancelled_at IS NULL
+      ) AS active_dates_remaining
+    FROM wfh_change_requests r
+    INNER JOIN wfh_change_request_dates d ON d.request_id = r.id
+    WHERE r.id = ${requestId} AND d.id = ${dateId}
+    FOR UPDATE OF r, d
+  `);
 }
 
 function matchingRequestIds(filters: RequestFilters) {
@@ -96,8 +124,9 @@ export function findRequesterRequestsPage(userId: string, filters: RequestFilter
 
 export function findPendingRequestsWithDates(userId: string) {
   return getDb().query.wfhChangeRequests.findMany({
+    columns: { id: true },
     where: and(eq(wfhChangeRequests.requesterId, userId), eq(wfhChangeRequests.status, "pending")),
-    with: { dates: true },
+    with: { dates: { columns: { requestedDate: true, replacedDate: true, cancelledAt: true } } },
   });
 }
 

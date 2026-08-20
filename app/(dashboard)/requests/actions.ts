@@ -1,11 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { requireAuthorizedUser } from "@/lib/auth/guards";
-import { cancelWfhRequestDate, createWfhRequest, decideWfhRequest, markAdminSubstitutionAsRead, markSubstitutionAsRead, type RequestFormState } from "@/lib/requests/request-service";
+import { cancelWfhRequestDate, createWfhRequest, markAdminSubstitutionAsRead, markSubstitutionAsRead, type RequestFormState } from "@/lib/requests/request-service";
+import { decideWfhRequestForActor } from "@/lib/requests/request-decision-service";
 import { sendAdditionalRequestCreatedEmail } from "@/lib/requests/request-mail-service";
 import { cancelWfhRequestDateSchema, createWfhRequestSchema, decideWfhRequestSchema, formDataObject, requestIdSchema } from "@/lib/requests/request-validation";
+import { revalidateWfhViews } from "@/lib/revalidation";
+import { revalidatePath } from "next/cache";
 
 export async function createWfhRequestAction(_state: RequestFormState, formData: FormData) {
   const user = await requireAuthorizedUser();
@@ -15,12 +17,7 @@ export async function createWfhRequestAction(_state: RequestFormState, formData:
   const result = await createWfhRequest(user, parsed.data);
 
   if (result.ok) {
-    revalidatePath("/requests");
-    revalidatePath("/calendar");
-    revalidatePath("/team");
-    revalidatePath("/admin");
-    revalidatePath("/coverage");
-    revalidatePath("/(dashboard)", "layout");
+    revalidateWfhViews();
     if (kind === "additional" && result.requestId) {
       after(() => sendAdditionalRequestCreatedEmail(result.requestId!));
     }
@@ -36,19 +33,14 @@ export async function decideWfhRequestAction(formData: FormData) {
 
   const parsed = decideWfhRequestSchema.safeParse(formDataObject(formData, ["id", "status", "comment"]));
   if (!parsed.success) return { ok: false as const, error: "Los datos de la decisión no son válidos." };
-  const result = await decideWfhRequest(user, parsed.data.id, parsed.data.status, parsed.data.comment);
+  const result = await decideWfhRequestForActor(user, parsed.data.id, parsed.data.status, parsed.data.comment);
 
   if (result.ok) {
-    revalidatePath("/requests");
-    revalidatePath("/calendar");
-    revalidatePath("/team");
-    revalidatePath("/admin");
-    revalidatePath("/coverage");
-    revalidatePath("/(dashboard)", "layout");
+    revalidateWfhViews();
     return { ok: true as const };
   }
 
-  return { ok: false as const, error: result.error ?? "No se pudo resolver la solicitud." };
+  return result;
 }
 
 export async function markSubstitutionAsReadAction(formData: FormData) {
@@ -87,11 +79,6 @@ export async function cancelWfhRequestDateAction(formData: FormData) {
     return { ok: false as const, error: result.error ?? "No se pudo cancelar la fecha." };
   }
 
-  revalidatePath("/requests");
-  revalidatePath("/calendar");
-  revalidatePath("/team");
-  revalidatePath("/admin");
-  revalidatePath("/coverage");
-  revalidatePath("/(dashboard)", "layout");
+  revalidateWfhViews();
   return result;
 }

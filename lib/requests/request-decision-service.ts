@@ -49,3 +49,8 @@ export async function decideWfhRequest(actor: SessionUser, id: string, status: "
     return { error: error instanceof Error ? error.message : "No se pudo resolver la solicitud." };
   }
 }
+
+export async function decideWfhRequestForActor(actor: SessionUser, id: string, status: "accepted" | "rejected", comment: string | null) {
+  const result = await decideWfhRequest(actor, id, status, comment);
+  return result.ok ? { ok: true as const } : { ok: false as const, error: result.error ?? "No se pudo resolver la solicitud." };
+}
