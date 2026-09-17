@@ -6,6 +6,7 @@ import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { getUserById } from "@/lib/users/user-service";
 import { findEmployeeTeamVisibility } from "@/lib/employees/org-service";
 import { getRequestNotificationSummary } from "@/lib/requests/request-service";
+import { AssistantWidget } from "@/components/assistant/assistant-widget";
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireAuthorizedUser();
@@ -21,6 +22,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         <div className="flex-1 bg-zinc-50">
           <AppHeader canCover={user.role !== "admin" && (dbUser?.canEditAllWfh ?? false)} canViewTeam={teamVisibility?.teamWfhVisible ?? false} notificationSummary={notificationSummary} user={user} />
           <main className="mx-auto w-full max-w-6xl px-6 py-8">{children}</main>
+          {user.role !== "employee" ? <AssistantWidget /> : null}
         </div>
       </RequestNotificationProvider></ErrorModalProvider>
     </ToastProvider>
