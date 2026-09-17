@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   currentUser: { id: "user-1", name: "Usuario", email: "user@example.com", role: "admin" as "admin" | "coordinator" | "employee" },
@@ -89,6 +89,10 @@ function findComponent(node: unknown, name: string): { props: Record<string, unk
 }
 
 describe("dashboard calendar pages", () => {
+  beforeAll(() => {
+    vi.useFakeTimers({ now: new Date("2026-08-12T12:00:00.000Z") });
+  });
+
   it("allows admin access and renders the admin overview", async () => {
     resetMocks();
     const page = await AdminPage({ searchParams: Promise.resolve({ year: "2026", month: "8" }) });

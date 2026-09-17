@@ -22,7 +22,7 @@ export function getWeekdayFromDateKey(date: string) {
   return new Date(`${date}T00:00:00.000Z`).getUTCDay();
 }
 
-function addDateKey(dateKey: string, days: number) {
+export function addDateKey(dateKey: string, days: number) {
   const date = new Date(`${dateKey}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return toDateKey(date);
