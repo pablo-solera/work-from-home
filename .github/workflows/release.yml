@@ -47,7 +47,9 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ vars.DOCKERHUB_USERNAME }}/work-from-home-web
-          tags: type=semver,pattern={{raw}}
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -63,6 +65,9 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            DEPLOYMENT_VERSION=${{ github.sha }}
+            INSTANTCLIENT_SHA256=${{ vars.INSTANTCLIENT_SHA256 }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

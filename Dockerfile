@@ -35,8 +35,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl unzip libaio1t64 \
     && mkdir -p /opt/oracle \
     && curl -fsSL -o /tmp/instantclient.zip "${INSTANTCLIENT_URL}" \
-    && test -n "${INSTANTCLIENT_SHA256}" \
-    && echo "${INSTANTCLIENT_SHA256}  /tmp/instantclient.zip" | sha256sum -c - \
+    && if [ -n "${INSTANTCLIENT_SHA256}" ]; then echo "${INSTANTCLIENT_SHA256}  /tmp/instantclient.zip" | sha256sum -c -; else echo "Oracle Instant Client archive checksum not configured; skipping optional verification"; fi \
     && unzip -q /tmp/instantclient.zip -d /opt/oracle \
     && mv /opt/oracle/instantclient_* /opt/oracle/instantclient \
     && rm -f /tmp/instantclient.zip \

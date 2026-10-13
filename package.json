@@ -1,5 +1,5 @@
 {
-  "name": "myapp",
+  "name": "work-from-home",
   "version": "2.10.0",
   "private": true,
   "scripts": {
@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "db:studio": "drizzle-kit studio",
     "sync:users": "bun run scripts/sync-users-timertask.ts",
     "sync:users:apply": "bun run scripts/sync-users-timertask.ts --apply",
@@ -24,7 +25,6 @@
   },
   "dependencies": {
     "@ai-sdk/azure": "^4.0.71",
-    "@ai-sdk/react": "^4.0.105",
     "ai": "^7.0.102",
     "drizzle-orm": "^0.45.2",
     "jsonwebtoken": "^9.0.3",
