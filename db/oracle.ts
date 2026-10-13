@@ -24,6 +24,8 @@ export function getOracleSchema() {
 type OracleState = {
   pool: oracledb.Pool | null;
   poolPromise: Promise<oracledb.Pool> | null;
+  assistantPool: oracledb.Pool | null;
+  assistantPoolPromise: Promise<oracledb.Pool> | null;
   thickClientInitialized: boolean;
 };
 
@@ -34,6 +36,8 @@ declare global {
 const state: OracleState = globalThis.__wfhOracleState ?? {
   pool: null,
   poolPromise: null,
+  assistantPool: null,
+  assistantPoolPromise: null,
   thickClientInitialized: false,
 };
 globalThis.__wfhOracleState = state;
@@ -106,6 +110,28 @@ async function createOraclePool() {
   });
 }
 
+async function getAssistantOraclePool() {
+  if (state.assistantPool) return state.assistantPool;
+  if (state.assistantPoolPromise) return state.assistantPoolPromise;
+  state.assistantPoolPromise = createAssistantOraclePool();
+  try {
+    state.assistantPool = await state.assistantPoolPromise;
+    return state.assistantPool;
+  } catch (error) {
+    state.assistantPoolPromise = null;
+    throw error;
+  }
+}
+
+async function createAssistantOraclePool() {
+  const user = process.env.ORACLE_USER;
+  const password = process.env.ORACLE_PASSWORD;
+  const connectString = process.env.ORACLE_CONNECT_STRING;
+  if (!user || !password || !connectString) throw new Error("Oracle credentials are required for assistant queries.");
+  initThickClient();
+  return oracledb.createPool({ user, password, connectString, poolMin: 0, poolMax: 4, poolIncrement: 1, poolTimeout: 30, queueTimeout: 2000 });
+}
+
 /**
  * Runs a read-only query against the Oracle database and returns the rows as objects.
  * Connections are always released back to the pool.
@@ -122,6 +148,21 @@ export async function queryOracle<T>(sql: string, binds: oracledb.BindParameters
 
     return result.rows ?? [];
   } finally {
+    await connection.close();
+  }
+}
+
+/** Runs one query using a small dedicated pool and a read-only Oracle transaction. */
+export async function queryOracleReadOnly<T>(sql: string, binds: oracledb.BindParameters = {}, maxRows = 201): Promise<T[]> {
+  const oraclePool = await getAssistantOraclePool();
+  const connection = await oraclePool.getConnection();
+  try {
+    connection.callTimeout = 5000;
+    await connection.execute("SET TRANSACTION READ ONLY");
+    const result = await connection.execute<T>(sql, binds, { outFormat: oracledb.OUT_FORMAT_OBJECT, maxRows });
+    return result.rows ?? [];
+  } finally {
+    await connection.rollback().catch(() => undefined);
     await connection.close();
   }
 }
