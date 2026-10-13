@@ -16,22 +16,27 @@ RUN bun run build
 # Runner uses a glibc base (Debian slim) instead of Alpine/musl because the
 # Oracle Instant Client (required by node-oracledb thick mode for Oracle 11g)
 # is not supported on musl.
-FROM node:lts-slim AS runner
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 \
+    DEPLOYMENT_VERSION=${DEPLOYMENT_VERSION} \
     ORACLE_CLIENT_LIB_DIR=/opt/oracle/instantclient \
     LD_LIBRARY_PATH=/opt/oracle/instantclient
 
 # Oracle Instant Client Basic Light + its runtime dependency (libaio).
 ARG INSTANTCLIENT_ZIP=instantclient-basiclite-linux.x64-21.13.0.0.0dbru.zip
 ARG INSTANTCLIENT_URL=https://download.oracle.com/otn_software/linux/instantclient/2113000/${INSTANTCLIENT_ZIP}
+ARG INSTANTCLIENT_SHA256
+ARG DEPLOYMENT_VERSION
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl unzip libaio1 \
+    && apt-get install -y --no-install-recommends ca-certificates curl unzip libaio1t64 \
     && mkdir -p /opt/oracle \
     && curl -fsSL -o /tmp/instantclient.zip "${INSTANTCLIENT_URL}" \
+    && test -n "${INSTANTCLIENT_SHA256}" \
+    && echo "${INSTANTCLIENT_SHA256}  /tmp/instantclient.zip" | sha256sum -c - \
     && unzip -q /tmp/instantclient.zip -d /opt/oracle \
     && mv /opt/oracle/instantclient_* /opt/oracle/instantclient \
     && rm -f /tmp/instantclient.zip \

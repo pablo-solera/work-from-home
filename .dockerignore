@@ -16,3 +16,11 @@ bun-debug.log*
 README.md
 CLAUDE.md
 AGENTS.md
+.agents
+.claude
+tests
+coverage
+skills-lock.json
+*.tsbuildinfo
+.env
+.env.*

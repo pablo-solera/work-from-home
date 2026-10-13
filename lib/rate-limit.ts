@@ -11,9 +11,14 @@ globalThis.__wfhRateLimitBuckets = buckets;
 export function checkRateLimit(key: string, limit: number, windowMs: number, now = Date.now()) {
   let bucket = buckets.get(key);
   if (!bucket || bucket.resetAt <= now) {
-    if (buckets.size > 10_000) {
+    if (buckets.size >= 10_000) {
       for (const [entryKey, entry] of buckets) {
         if (entry.resetAt <= now) buckets.delete(entryKey);
+      }
+      while (buckets.size >= 10_000) {
+        const oldest = buckets.keys().next().value as string | undefined;
+        if (!oldest) break;
+        buckets.delete(oldest);
       }
     }
     bucket = { count: 0, resetAt: now + windowMs };

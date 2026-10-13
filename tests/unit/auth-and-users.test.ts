@@ -19,6 +19,13 @@ describe("session tokens", () => {
     expect(verifySessionToken(jwt.sign({ id: "1", name: "Admin", email: "admin@example.com", role: "unknown" }, process.env.SESSION_SECRET!))).toBeNull();
   });
 
+  it("rejects sessions revoked by logout", async () => {
+    const token = createSessionToken(user);
+    cookieStore.get.mockReturnValueOnce({ value: token });
+    await clearSessionCookie();
+    expect(verifySessionToken(token)).toBeNull();
+  });
+
   it("reads, sets and clears the session cookie", async () => {
     cookieStore.get.mockReturnValueOnce(undefined).mockReturnValueOnce({ value: createSessionToken(user) });
     expect(await getCurrentUser()).toBeNull();
@@ -27,7 +34,7 @@ describe("session tokens", () => {
     await setSessionCookie(user);
     expect(cookieStore.set).toHaveBeenCalledWith("session", expect.any(String), expect.objectContaining({ httpOnly: true, secure: true }));
     await clearSessionCookie();
-    expect(cookieStore.delete).toHaveBeenCalledWith("session");
+    expect(cookieStore.set).toHaveBeenLastCalledWith("session", "", expect.objectContaining({ maxAge: 0, path: "/", secure: true }));
     delete process.env.SESSION_COOKIE_SECURE;
   });
 
@@ -42,6 +49,16 @@ describe("session tokens", () => {
       expect.objectContaining({ secure: false }),
     );
 
+    vi.unstubAllEnvs();
+  });
+
+  it("enables secure cookies by default in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    delete process.env.SESSION_COOKIE_SECURE;
+
+    await setSessionCookie(user);
+
+    expect(cookieStore.set).toHaveBeenLastCalledWith("session", expect.any(String), expect.objectContaining({ secure: true }));
     vi.unstubAllEnvs();
   });
 });

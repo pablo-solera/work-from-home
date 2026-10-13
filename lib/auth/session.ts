@@ -1,8 +1,11 @@
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
+import { randomUUID } from "node:crypto";
 
 const SESSION_COOKIE = "session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
+const revokedSessionIds = new Set<string>();
+const revokedSessionOrder: string[] = [];
 
 export type UserRole = "admin" | "coordinator" | "employee";
 
@@ -27,11 +30,11 @@ function shouldUseSecureSessionCookie() {
     return process.env.SESSION_COOKIE_SECURE === "true";
   }
 
-  return false;
+  return process.env.NODE_ENV === "production";
 }
 
 export function createSessionToken(user: SessionUser) {
-  return jwt.sign(user, getSessionSecret(), { expiresIn: "1d" });
+  return jwt.sign({ ...user, jti: randomUUID() }, getSessionSecret(), { expiresIn: "1d" });
 }
 
 export function verifySessionToken(token: string): SessionUser | null {
@@ -50,6 +53,8 @@ export function verifySessionToken(token: string): SessionUser | null {
     ) {
       return null;
     }
+
+    if (typeof payload.jti !== "string" || revokedSessionIds.has(payload.jti)) return null;
 
     return {
       id: payload.id,
@@ -83,5 +88,29 @@ export async function setSessionCookie(user: SessionUser) {
 }
 
 export async function clearSessionCookie() {
-  (await cookies()).delete(SESSION_COOKIE);
+  const store = await cookies();
+  const token = store.get(SESSION_COOKIE)?.value;
+  if (token) {
+    try {
+      const payload = jwt.verify(token, getSessionSecret(), { algorithms: ["HS256"] });
+      if (typeof payload !== "string" && typeof payload.jti === "string") {
+        revokedSessionIds.add(payload.jti);
+        revokedSessionOrder.push(payload.jti);
+        if (revokedSessionOrder.length > 20_000) {
+          const oldest = revokedSessionOrder.shift();
+          if (oldest) revokedSessionIds.delete(oldest);
+        }
+      }
+    } catch {
+      // Expired or invalid sessions are already unusable.
+    }
+  }
+  store.set(SESSION_COOKIE, "", {
+    expires: new Date(0),
+    httpOnly: true,
+    maxAge: 0,
+    path: "/",
+    sameSite: "lax",
+    secure: shouldUseSecureSessionCookie(),
+  });
 }
