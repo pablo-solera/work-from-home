@@ -29,7 +29,7 @@ export function CalendarPanel({ children, monthName, navigation, tools }: { chil
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
       <div className="mb-6 space-y-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold first-letter:uppercase text-zinc-950">{monthName}</h2>
           <MonthNavigation {...navigation} />
         </div>
@@ -42,8 +42,8 @@ export function CalendarPanel({ children, monthName, navigation, tools }: { chil
 
 export function CalendarGrid({ children, label }: { children: React.ReactNode; label: string }) {
   return (
-    <div aria-label={label} className="grid grid-cols-7 gap-2" role="grid">
-      {WEEK_DAYS.map((weekDay) => <div key={weekDay} className="py-2 text-center text-xs font-semibold uppercase tracking-wide text-zinc-500" role="columnheader">{weekDay}</div>)}
+    <div aria-label={label} className="grid grid-cols-7 gap-2">
+      {WEEK_DAYS.map((weekDay) => <div key={weekDay} className="py-2 text-center text-xs font-semibold uppercase tracking-wide text-zinc-500">{weekDay}</div>)}
       {children}
     </div>
   );

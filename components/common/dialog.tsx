@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useId } from "react";
+import { createContext, useContext, useId, useMemo } from "react";
 import { CloseIcon } from "@/components/icons/close-icon";
 import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
 
@@ -15,9 +15,13 @@ function useDialogContext() {
 
 function DialogRoot({ children, onDismiss }: { children: React.ReactNode; onDismiss: () => void }) {
   const titleId = useId();
+  const contextValue = useMemo(() => ({ onDismiss, titleId }), [onDismiss, titleId]);
+  function handleBackdropClick(event: React.MouseEvent<HTMLDivElement>) {
+    if (event.target === event.currentTarget) onDismiss();
+  }
   return (
-    <DialogContext.Provider value={{ onDismiss, titleId }}>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4" onClick={onDismiss}>
+    <DialogContext.Provider value={contextValue}>
+      <div aria-hidden="true" className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-zinc-950/50 px-4 py-6" onClick={handleBackdropClick}>
         {children}
       </div>
     </DialogContext.Provider>
@@ -28,7 +32,7 @@ function DialogPanel({ children, className = "max-w-lg" }: { children: React.Rea
   const { onDismiss, titleId } = useDialogContext();
   const panelRef = useModalDismiss<HTMLElement>(onDismiss);
 
-  return <section aria-labelledby={titleId} aria-modal="true" className={`w-full rounded-2xl bg-white p-6 shadow-xl ${className}`} onClick={(event) => event.stopPropagation()} ref={panelRef} role="dialog" tabIndex={-1}>{children}</section>;
+  return <section aria-labelledby={titleId} aria-modal="true" className={`max-h-[calc(100dvh-3rem)] w-full overflow-y-auto overscroll-contain rounded-2xl bg-white p-6 shadow-xl ${className}`} onClick={(event) => event.stopPropagation()} ref={panelRef} role="dialog" tabIndex={-1}>{children}</section>;
 }
 
 function DialogTitle({ children }: { children: React.ReactNode }) {
@@ -37,7 +41,7 @@ function DialogTitle({ children }: { children: React.ReactNode }) {
 }
 
 function DialogClose({ onClick }: { onClick: () => void }) {
-  return <button aria-label="Cerrar" className="inline-flex cursor-pointer items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" onClick={onClick} type="button"><CloseIcon className="size-5" /></button>;
+  return <button aria-label="Cerrar" className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" onClick={onClick} type="button"><CloseIcon className="size-5" /></button>;
 }
 
 function DialogBody({ children, className = "" }: { children: React.ReactNode; className?: string }) {

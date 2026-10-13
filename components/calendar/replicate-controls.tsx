@@ -18,7 +18,7 @@ function ReplicateButton({ disabled, label, pending }: { disabled: boolean; labe
       disabled={disabled || pending}
       type="submit"
     >
-      {pending ? "Replicando..." : label}
+      {pending ? "Replicando…" : label}
     </button>
   );
 }
@@ -41,9 +41,14 @@ export function ReplicateControls({ month, selectedCount, targetUserId, year }: 
       return;
     }
     setPending(true);
-    const result = await replicateWorkFromHomeDaysAction(new FormData(event.currentTarget));
-    setPending(false);
-    if (!result.ok) showError(result.error);
+    try {
+      const result = await replicateWorkFromHomeDaysAction(new FormData(event.currentTarget));
+      if (!result.ok) showError(result.error);
+    } catch {
+      showError("No se pudo replicar el patrón. Inténtalo de nuevo.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (

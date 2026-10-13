@@ -9,13 +9,13 @@ import type { RequestNotificationSummary } from "@/lib/requests/request-service"
 export function AppHeader({ canCover = false, canViewTeam = false, notificationSummary, user }: { canCover?: boolean; canViewTeam?: boolean; notificationSummary: RequestNotificationSummary | null; user: SessionUser }) {
   return (
     <header className="border-b border-zinc-200 bg-white">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
         <div className="flex items-center gap-4">
           <Link className="cursor-pointer text-base font-semibold text-zinc-950" href={user.role === "admin" ? "/admin" : "/calendar"}>Work From Home</Link>
 
         </div>
-        <nav className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
+        <nav aria-label="Navegación principal" className="flex flex-1 flex-wrap items-center justify-end gap-2 text-sm sm:flex-initial sm:gap-4">
+          <div className="flex flex-wrap items-center justify-end gap-1 sm:gap-2">
             <ActiveNavLink href="/calendar">Mi calendario</ActiveNavLink>
             {user.role !== "admin" ? <ActiveNavLink href="/requests"><span>Solicitudes</span>{user.role === "coordinator" && notificationSummary ? <RequestBadges {...notificationSummary} /> : null}</ActiveNavLink> : null}
             {user.role === "coordinator" || canViewTeam ? <ActiveNavLink href="/team">Mi equipo</ActiveNavLink> : null}

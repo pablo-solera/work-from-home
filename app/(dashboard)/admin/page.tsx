@@ -24,7 +24,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </Link>
       <Link className="cursor-pointer rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-400" href="/admin/users">
         <h2 className="font-semibold text-zinc-950">Gestión de usuarios</h2>
-        <p className="mt-2 text-sm text-zinc-600">Crea usuarios de forma masiva pegando correos.</p>
+        <p className="mt-2 text-sm text-zinc-600">Administra los permisos de teletrabajo del personal.</p>
       </Link>
     </div>
   );
@@ -43,7 +43,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   }
 
   const overview = await getDashboardCalendarOverview("admin", admin, year, month);
-  if (!overview) return null;
+  if (!overview) return <section aria-labelledby="admin-empty-title" className="rounded-xl border border-zinc-200 bg-white p-6"><h1 className="text-xl font-semibold text-zinc-950" id="admin-empty-title">No hay personas disponibles</h1><p className="mt-2 text-sm text-zinc-600">No se encontraron empleados para mostrar en este calendario.</p></section>;
 
   const selectableUsers = overview.people.filter((user) => user.id !== admin.id);
 

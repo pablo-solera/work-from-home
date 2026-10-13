@@ -1,6 +1,23 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: light;
+  --wfh-canvas: #fafafa;
+  --wfh-ink: #09090b;
+  --wfh-focus: #0369a1;
+}
+
 body {
-  background: #fafafa;
-  color: #09090b;
+  background: var(--wfh-canvas);
+  color: var(--wfh-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--wfh-focus);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: #bae6fd;
+  color: #082f49;
 }

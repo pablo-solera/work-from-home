@@ -47,7 +47,7 @@ type ModalState =
 const roleLabels: Record<ManagedUser["role"], string> = {
   admin: "Admin",
   coordinator: "Coordinador",
-  employee: "Employee",
+  employee: "Empleado",
 };
 
 const roleBadgeClasses: Record<ManagedUser["role"], string> = {
@@ -58,8 +58,9 @@ const roleBadgeClasses: Record<ManagedUser["role"], string> = {
 
 export function UsersTable({ currentUserId, page, query, totalPages, totalUsers, users }: UsersTableProps) {
   const [modal, setModal] = useState<ModalState>(null);
-  const [search, setSearch] = useState(query);
-  const debouncedSearch = useDebouncedValue(search);
+  const [search, setSearch] = useState({ value: query, query });
+  const searchValue = search.query === query ? search.value : query;
+  const debouncedSearch = useDebouncedValue(searchValue);
   const pathname = usePathname();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -96,12 +97,12 @@ export function UsersTable({ currentUserId, page, query, totalPages, totalUsers,
       <form aria-busy={isPending} className="mt-5 max-w-md" onSubmit={(event) => event.preventDefault()}>
         <label className="block flex-1 space-y-2">
           <span className="text-sm font-medium text-zinc-700">Buscar</span>
-           <input id="admin-user-search" name="query" className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950 focus-visible:ring-2 focus-visible:ring-zinc-950" onChange={(event) => setSearch(event.target.value)} placeholder="Nombre, email, rol o coordinador…" type="search" value={search} />
+            <input id="admin-user-search" name="query" autoComplete="off" className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base focus:border-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 sm:text-sm" onChange={(event) => setSearch({ value: event.target.value, query })} placeholder="Nombre, email, rol o coordinador…" type="search" value={searchValue} />
         </label>
       </form>
 
       <div className="mt-6 overflow-x-auto">
-        <table className="w-full min-w-[80rem] text-left text-sm">
+        <table className="w-full min-w-[64rem] text-left text-sm">
           <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500">
             <tr>
               <th className="py-3 pr-4 font-semibold">WD</th>

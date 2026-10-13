@@ -44,7 +44,7 @@ export function RequestBadges(initialSummary: RequestBadgeSummary) {
       summaryRef.current = next;
       setSummary(next);
 
-        if (refreshPage && changed && pathname === "/admin/requests" && !refreshScheduledRef.current) {
+      if (refreshPage && changed && pathname === "/admin/requests" && !refreshScheduledRef.current) {
         refreshScheduledRef.current = true;
         window.setTimeout(() => {
           refreshScheduledRef.current = false;
@@ -63,23 +63,23 @@ export function RequestBadges(initialSummary: RequestBadgeSummary) {
     const unsubscribe = subscribe((event) => {
       if (event === "ready" || event === "requests-changed") poll();
     });
-    const interval = window.setInterval(poll, POLL_INTERVAL_MS);
     const handleVisibility = () => {
       if (document.visibilityState === "visible") poll();
     };
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible" && !requestRef.current) poll();
+    }, POLL_INTERVAL_MS);
     document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("focus", poll);
 
     return () => {
       window.clearInterval(interval);
       unsubscribe();
       document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("focus", poll);
       requestRef.current?.abort();
     };
   }, [fetchSummary, subscribe]);
 
   const accessibleSummary = `${summary.actionableRequestCount} solicitudes pendientes que requieren acción. ${summary.informationalRequestCount} avisos informativos.`;
   const hasBadges = summary.actionableRequestCount > 0 || summary.informationalRequestCount > 0;
-  return <span aria-atomic="true" aria-label={accessibleSummary} className={`${hasBadges ? "ml-2 " : ""}inline-flex items-center`} aria-live="polite"><span aria-hidden="true" className="inline-flex items-center gap-0.5">{summary.actionableRequestCount > 0 ? <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-4 text-white">{summary.actionableRequestCount}</span> : null}{summary.informationalRequestCount > 0 ? <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-sky-600 px-1 text-[10px] font-bold leading-4 text-white">{summary.informationalRequestCount}</span> : null}</span></span>;
+  return <span className={`${hasBadges ? "ml-2 " : ""}inline-flex items-center`}><span aria-atomic="true" aria-live="polite" className="sr-only">{accessibleSummary}</span><span aria-hidden="true" className="inline-flex items-center gap-0.5">{summary.actionableRequestCount > 0 ? <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-4 text-white">{summary.actionableRequestCount}</span> : null}{summary.informationalRequestCount > 0 ? <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-sky-600 px-1 text-[10px] font-bold leading-4 text-white">{summary.informationalRequestCount}</span> : null}</span></span>;
 }

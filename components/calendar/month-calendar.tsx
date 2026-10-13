@@ -11,6 +11,7 @@ import { CalendarGrid, CalendarPanel, EmptyCalendarCell } from "./calendar-shell
 
 const LazyRequestReviewModal = dynamic(() => import("./request-review-modal").then((module) => module.RequestReviewModal));
 const LazyRemovalReviewModal = dynamic(() => import("./removal-review-modal").then((module) => module.RemovalReviewModal));
+const EMPTY_SELECTION: string[] = [];
 
 export type MonthCalendarProps = {
   canEdit: boolean;
@@ -37,7 +38,7 @@ export function MonthCalendar({
   canRequest = false,
   cells,
   monthName,
-  selectedDates,
+  selectedDates = EMPTY_SELECTION,
   weeklyAllowance,
   weeklyCounts,
   enforceWeeklyAllowance = true,
@@ -63,12 +64,21 @@ export function MonthCalendar({
   const [reviewOpen, setReviewOpen] = useState(false);
   const pending = useMemo(() => new Set(pendingDates), [pendingDates]);
   const saving = useMemo(() => new Set(savingDates), [savingDates]);
+  const additionalDateSet = useMemo(() => new Set(additionalDates), [additionalDates]);
   const weekStartByDate = useMemo(() => new Map(cells.flatMap((cell) => cell ? [[cell.date, getWeekRange(cell.date).start] as const] : [])), [cells]);
 
   const requestDates = mode === "additional" || mode === "removal" ? additionalDates : replacementTarget ? [replacementTarget] : [];
   const canContinue = mode === "additional" || mode === "removal" ? additionalDates.length > 0 : Boolean(replacementSource && replacementTarget);
   const substitutionWeek = useMemo(() => replacementSource ? getWeekRange(replacementSource) : undefined, [replacementSource]);
   const navigation = useMemo(() => ({ currentMonthHref, nextMonthHref, previousMonthHref, showCurrentMonthLink }), [currentMonthHref, nextMonthHref, previousMonthHref, showCurrentMonthLink]);
+  const formDataFactory = useMemo(() => (date: string, enabled: boolean) => {
+    const formData = new FormData();
+    formData.set("date", date);
+    formData.set("enabled", String(enabled));
+    formData.set("targetUserId", targetUserId);
+    formData.set("sourcePath", window.location.pathname);
+    return formData;
+  }, [targetUserId]);
 
   function resetRequest() {
     setMode(null);
@@ -83,20 +93,22 @@ export function MonthCalendar({
   }
 
   function toggleWorkFromHomeDay(date: string, enabled: boolean) {
-    const formData = new FormData();
-    formData.set("date", date);
-    formData.set("enabled", String(enabled));
-    formData.set("targetUserId", targetUserId);
-    formData.set("sourcePath", window.location.pathname);
+    const formData = formDataFactory(date, enabled);
     setSavingDates((current) => [...current, date]);
     startTransition(async () => {
-      updateOptimisticSelectedDates({ date, enabled });
-      const result = await toggleWorkFromHomeDayAction(formData);
-      if (!result.ok) {
+      try {
+        updateOptimisticSelectedDates({ date, enabled });
+        const result = await toggleWorkFromHomeDayAction(formData);
+        if (!result.ok) {
+          updateOptimisticSelectedDates({ date, enabled: !enabled });
+          showError(result.error);
+        }
+      } catch {
         updateOptimisticSelectedDates({ date, enabled: !enabled });
-        showError(result.error);
+        showError("No se pudo actualizar el día. Inténtalo de nuevo.");
+      } finally {
+        setSavingDates((current) => current.filter((value) => value !== date));
       }
-      setSavingDates((current) => current.filter((value) => value !== date));
     });
   }
 
@@ -152,8 +164,8 @@ export function MonthCalendar({
                 <p className="mt-1 text-xs text-sky-800">Solo se pueden seleccionar días laborables de hoy en adelante.</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button className="cursor-pointer rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-medium text-sky-900 hover:bg-sky-100" onClick={() => setMode("additional")} type="button">Añadir días</button>
-                <button className="cursor-pointer rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-medium text-sky-900 hover:bg-sky-100" onClick={() => setMode("removal")} type="button">Anular días</button>
+        <button className="cursor-pointer rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-medium text-sky-900 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700" onClick={() => setMode("additional")} type="button">Añadir días</button>
+                <button className="cursor-pointer rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-medium text-sky-900 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700" onClick={() => setMode("removal")} type="button">Anular días</button>
                 <button className="cursor-pointer rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-medium text-sky-900 hover:bg-sky-100" onClick={() => setMode("substitution-source")} type="button">Sustituir un día</button>
                 <button className="cursor-pointer rounded-lg px-3 py-2 text-sm text-sky-800 hover:bg-sky-100" onClick={resetRequest} type="button">Cancelar</button>
               </div>
@@ -178,7 +190,7 @@ export function MonthCalendar({
              pending={pending.has(cell.date)}
               saving={saving.has(cell.date)}
             requestMode={mode && mode !== "chooser" ? mode : null}
-            requestSelected={additionalDates.includes(cell.date) || replacementTarget === cell.date}
+            requestSelected={additionalDateSet.has(cell.date) || replacementTarget === cell.date}
              selected={optimisticSelected.has(cell.date)}
               weeklyAllowance={weeklyAllowance}
               weeklyCount={weeklyCounts?.[weekStartByDate.get(cell.date) ?? ""] ?? 0}

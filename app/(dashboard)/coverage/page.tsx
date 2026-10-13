@@ -33,7 +33,7 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
   }
 
   const overview = await getDashboardCalendarOverview("coverage", user, year, month);
-  if (!overview) return null;
+  if (!overview) return <section aria-labelledby="coverage-empty-title" className="rounded-xl border border-zinc-200 bg-white p-6"><h1 className="text-xl font-semibold text-zinc-950" id="coverage-empty-title">No hay personas disponibles</h1><p className="mt-2 text-sm text-zinc-600">No se encontraron empleados para mostrar en este calendario.</p></section>;
 
   return <CalendarOverviewLayout basePath="/coverage" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} description="Edita días de teletrabajo en situaciones de cobertura, sin acceder a la gestión de usuarios." employees={overview.people} eyebrow="Cobertura" month={month} monthName={overview.monthName} navigation={overviewNavigation} title="Vista global de teletrabajo" year={year} />;
 }

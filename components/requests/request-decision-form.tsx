@@ -36,11 +36,11 @@ export function RequestDecisionForm({ requestId, adminView = false }: { requestI
 
   return (
     <div className="mt-4 space-y-3 border-t border-zinc-100 pt-4">
-        <label className="block"><span className="sr-only">Comentario opcional</span><input aria-label="Comentario opcional" className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" disabled={pending} onChange={(event) => setComment(event.target.value)} placeholder="Comentario opcional" value={comment} /></label>
+        <label className="block"><span className="sr-only">Comentario opcional</span><input autoComplete="off" name="comment" className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 sm:text-sm" disabled={pending} onChange={(event) => setComment(event.target.value)} placeholder="Comentario opcional…" value={comment} /></label>
       <ActionFeedback error={error} />
       <div className="flex gap-2">
-        <button className="cursor-pointer rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} onClick={() => decide("accepted")} type="button">{pending ? "Procesando..." : "Aceptar"}</button>
-        <button className="cursor-pointer rounded-lg bg-red-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} onClick={() => decide("rejected")} type="button">{pending ? "Procesando..." : "Rechazar"}</button>
+        <button className="cursor-pointer rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} onClick={() => decide("accepted")} type="button">{pending ? "Procesando…" : "Aceptar"}</button>
+        <button className="cursor-pointer rounded-lg bg-red-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} onClick={() => { if (window.confirm("¿Rechazar esta solicitud?")) decide("rejected"); }} type="button">{pending ? "Procesando…" : "Rechazar"}</button>
       </div>
     </div>
   );

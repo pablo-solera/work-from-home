@@ -36,7 +36,7 @@ export function RemovalReviewModal({ dates, onClose }: RemovalReviewModalProps) 
           <div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-700"><p>Días a anular: <strong>{dates.map(formatDateKeyForDisplay).join(", ")}</strong></p></div>
           <input name="kind" type="hidden" value="removal" />
           <input name="requestedDates" type="hidden" value={dates.join(",")} />
-          <label className="block text-sm font-medium text-zinc-800">Comentario <span className="font-normal text-zinc-500">(opcional)</span><textarea className="mt-1 min-h-20 w-full rounded-lg border border-zinc-300 px-3 py-2 font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" name="comment" /></label>
+            <label className="block text-sm font-medium text-zinc-800">Comentario <span className="font-normal text-zinc-500">(opcional)</span><textarea autoComplete="off" className="mt-1 min-h-20 w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 sm:text-sm" name="comment" /></label>
           <ActionFeedback error={state.error} />
           <div className="flex justify-end gap-2">
             <button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm" disabled={pending} onClick={onClose} type="button">Cancelar</button>

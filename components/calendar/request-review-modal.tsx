@@ -52,7 +52,7 @@ export function RequestReviewModal({ dates, kind, replacedDate, onClose }: Reque
           {kind === "substitution" ? <input name="replacedDates" type="hidden" value={replacedDate ?? ""} /> : null}
           <label className="block text-sm font-medium text-zinc-800">
             Comentario <span className="font-normal text-zinc-500">{commentRequired ? "*" : "(opcional)"}</span>
-            <textarea aria-required={commentRequired} className="mt-1 min-h-20 w-full rounded-lg border border-zinc-300 px-3 py-2 font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" name="comment" required={commentRequired} />
+            <textarea aria-required={commentRequired} autoComplete="off" className="mt-1 min-h-20 w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 sm:text-sm" name="comment" required={commentRequired} />
           </label>
           <ActionFeedback error={state.error} message={state.message} />
           <div className="flex justify-end gap-2">

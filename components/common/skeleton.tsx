@@ -7,5 +7,5 @@ export function Skeleton({ className = "" }: SkeletonProps) {
 }
 
 export function SkeletonStatus({ label = "Cargando" }: { label?: string }) {
-  return <div aria-label={label} className="sr-only" role="status" />;
+  return <div className="sr-only" role="status">{label}</div>;
 }

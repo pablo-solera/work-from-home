@@ -34,6 +34,10 @@ type RequestListItem = {
   adminAcknowledgedAt?: Date | string | null;
 };
 
+function getPageKey(page: RequestPage<RequestListItem>) {
+  return page.requests.map((request) => `${request.id}:${request.status}:${request.decisionComment ?? ""}:${request.coordinatorAcknowledgedAt ?? ""}:${request.adminAcknowledgedAt ?? ""}:${request.dates.map((date) => `${date.id}:${date.cancelledAt ?? ""}`).join(",")}`).join("|") || "empty";
+}
+
 function RequestList({ initialPage, coordinatorView = false, ownView = false, requesterView = false, adminView = false, adminNotificationView = false, filtered = false, filters }: { coordinatorView?: boolean; ownView?: boolean; requesterView?: boolean; adminView?: boolean; adminNotificationView?: boolean; filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
   const [requests, setRequests] = useState(initialPage.requests);
   const [nextCursor, setNextCursor] = useState(initialPage.nextCursor);
@@ -133,8 +137,4 @@ export function AdminSubstitutionNotificationList({ initialPage }: { initialPage
 
 export function RequesterRequestList({ filtered = false, initialPage, filters }: { filtered?: boolean; initialPage: RequestPage<RequestListItem>; filters: RequestFilters }) {
   return <RequestList key={getPageKey(initialPage)} filtered={filtered} filters={filters} initialPage={initialPage} requesterView />;
-}
-
-function getPageKey(page: RequestPage<RequestListItem>) {
-  return page.requests.map((request) => `${request.id}:${request.status}:${request.decisionComment ?? ""}:${request.coordinatorAcknowledgedAt ?? ""}`).join("|") || "empty";
 }

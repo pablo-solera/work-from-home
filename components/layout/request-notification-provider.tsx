@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 type NotificationEvent = "ready" | "requests-changed";
 type Listener = (event: NotificationEvent) => void;
@@ -50,13 +50,15 @@ export function RequestNotificationProvider({ children }: Readonly<{ children: R
     };
     const handleVisibility = () => {
       if (document.visibilityState === "visible") connect();
+      else {
+        events?.close();
+        events = null;
+        if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
     };
-    const handlePageShow = () => connect();
-    connect();
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("pageshow", handlePageShow);
-
-    return () => {
+    const handlePageShow = () => { if (document.visibilityState === "visible") connect(); };
+    const cleanup = () => {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("pageshow", handlePageShow);
       if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
@@ -64,9 +66,15 @@ export function RequestNotificationProvider({ children }: Readonly<{ children: R
       events?.removeEventListener("requests-changed", handleChange);
       events?.close();
     };
+    connect();
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pageshow", handlePageShow);
+
+    return cleanup;
   }, [hasSubscribers]);
 
-  return <RequestNotificationContext.Provider value={{ subscribe }}>{children}</RequestNotificationContext.Provider>;
+  const value = useMemo(() => ({ subscribe }), [subscribe]);
+  return <RequestNotificationContext.Provider value={value}>{children}</RequestNotificationContext.Provider>;
 }
 
 export function useRequestNotifications() {

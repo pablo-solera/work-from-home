@@ -50,7 +50,9 @@ export function UserMenu({ user }: { user: SessionUser }) {
     <div className="relative border-l border-zinc-200 pl-4" ref={menuRef}>
       <button
         aria-expanded={open}
-        className="flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1 text-left hover:bg-zinc-100"
+        aria-haspopup="menu"
+        aria-label={`Menú de usuario: ${user.name}`}
+        className="flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1 text-left hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700"
         onClick={() => setOpen((current) => !current)}
         type="button"
       >

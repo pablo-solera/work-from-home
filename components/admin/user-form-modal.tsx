@@ -61,7 +61,7 @@ export function UserFormModal({ onClose, user }: UserFormModalProps) {
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-zinc-700">Cupo de días de teletrabajo</span>
                 <input
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-950"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base focus-visible:border-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700"
                   defaultValue={user.wfhDaysAllowance ?? ""}
                   min={0}
                   name="wfhDaysAllowance"
