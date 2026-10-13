@@ -103,12 +103,14 @@ export async function searchEmployees(query: string, offset: number, limit: numb
     (lineBinds as Record<string, number>)[`line${index}`] = lineId;
     return `:line${index}`;
   });
-  const binds = { ...lineBinds, searchTerm, offset: Math.max(0, offset), limit: Math.max(1, Math.min(limit, 100)) };
+  const pageOffset = Math.max(0, offset);
+  const pageLimit = Math.max(1, Math.min(limit, 100));
+  const binds = { ...lineBinds, searchTerm, offset: pageOffset, endRow: pageOffset + pageLimit };
   const schema = getOracleSchema();
   const fromAndScope = `FROM ${schema}.templeados e WHERE e.emp_esempleado = 1 AND e.emp_fec_baja IS NULL AND EXISTS (SELECT 1 FROM ${schema}.templeado_grupos eg JOIN ${schema}.tgrupos g ON g.grupo_id = eg.grupo_id WHERE eg.emp_id = e.emp_id AND eg.fecha_baja IS NULL AND g.linea_id IN (${linePlaceholders.join(", ")})) AND (LOWER(e.emp_nombre || ' ' || e.emp_apellido1 || ' ' || e.emp_apellido2) LIKE :searchTerm ESCAPE '\\' OR LOWER(e.emp_email) LIKE :searchTerm ESCAPE '\\')`;
   const [countRows, rows] = await Promise.all([
     queryOracle<{ TOTAL: number }>(`SELECT COUNT(DISTINCT e.emp_id) AS total ${fromAndScope}`, binds),
-    queryOracle<EmployeeRow>(`SELECT e.emp_id AS emp_id, e.emp_nombre AS emp_nombre, e.emp_apellido1 AS emp_apellido1, e.emp_apellido2 AS emp_apellido2, e.emp_email AS emp_email, e.emp_tel1 AS emp_tel1 ${fromAndScope} ORDER BY e.emp_nombre, e.emp_apellido1 OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`, binds),
+    queryOracle<EmployeeRow>(`SELECT emp_id, emp_nombre, emp_apellido1, emp_apellido2, emp_email, emp_tel1 FROM (SELECT page_rows.*, ROWNUM AS row_num FROM (SELECT e.emp_id AS emp_id, e.emp_nombre AS emp_nombre, e.emp_apellido1 AS emp_apellido1, e.emp_apellido2 AS emp_apellido2, e.emp_email AS emp_email, e.emp_tel1 AS emp_tel1 ${fromAndScope} ORDER BY e.emp_nombre, e.emp_apellido1) page_rows WHERE ROWNUM <= :endRow) WHERE row_num > :offset`, binds),
   ]);
   return { employees: rows.map(mapRow), total: Number(countRows[0]?.TOTAL ?? 0) };
 }
