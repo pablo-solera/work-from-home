@@ -11,8 +11,12 @@ type AssistantStatus = "en oficina" | "teletrabajo" | "ausente";
 export async function getAssistantDaySummary(actor: SessionUser, date: string) {
   const valid = validateAssistantDate(date);
   if ("error" in valid) return valid;
-  const users = await getAssistantVisibleUsers(actor);
-  const sections = users ? await getCalendarDayDetailForUsers(users, date) : null;
+  const sections = await loadAssistantDaySections(actor, date);
+  if (!sections) return { error: "No tienes permiso para consultar ese día." };
+  return buildAssistantDaySummary(date, sections);
+}
+
+function buildAssistantDaySummary(date: string, sections: Awaited<ReturnType<typeof getCalendarDayDetailForUsers>>) {
   if (!sections) return { error: "No tienes permiso para consultar ese día." };
   const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)));
   const cell = calendar.cells.find((entry) => entry?.date === date);
@@ -28,22 +32,29 @@ export async function getAssistantDaySummary(actor: SessionUser, date: string) {
   };
 }
 
-export async function getAssistantDayOverview(actor: SessionUser, date: string, status?: AssistantStatus) {
-  const summary = await getAssistantDaySummary(actor, date);
-  if ("error" in summary) return summary;
-  if (!status) return summary;
+async function loadAssistantDaySections(actor: SessionUser, date: string) {
   const users = await getAssistantVisibleUsers(actor);
-  const sections = users ? await getCalendarDayDetailForUsers(users, date) : null;
+  return users ? getCalendarDayDetailForUsers(users, date) : null;
+}
+
+export async function getAssistantDayOverview(actor: SessionUser, date: string, status?: AssistantStatus) {
+  const valid = validateAssistantDate(date);
+  if ("error" in valid) return valid;
+  const sections = await loadAssistantDaySections(actor, date);
   if (!sections) return { error: "No tienes permiso para consultar ese día." };
-  const entries = status === "en oficina" ? sections.enOficina : status === "teletrabajo" ? sections.teletrabajo : [...sections.vacaciones, ...sections.ausencias, ...sections.bajas, ...sections.viajes, ...sections.permisos, ...sections.excedencia, ...sections.mudanza];
+  const summary = buildAssistantDaySummary(date, sections);
+  if (!status) return summary;
+  const entries = status === "en oficina" ? sections.enOficina : status === "teletrabajo" ? sections.teletrabajo : [...sections.vacaciones, ...sections.ausencias, ...sections.viajes, ...sections.permisos, ...sections.excedencia, ...sections.mudanza];
   return { ...summary, status, people: entries.map((entry) => entry.userName) };
 }
 
 export async function getAssistantRangeOverview(actor: SessionUser, from: string, to: string) {
   const range = validateAssistantRange(from, to);
   if ("error" in range) return range;
+  if (!await getAssistantVisibleUsers(actor)) return { error: "No tienes permiso para consultar este ámbito." };
   const months = new Set<string>();
-  for (let date = from; date <= to; date = new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)) months.add(date.slice(0, 7));
+  months.add(from.slice(0, 7));
+  months.add(to.slice(0, 7));
   const overviews = await Promise.all([...months].map((month) => getDashboardCalendarOverview("admin", actor, Number(month.slice(0, 4)), Number(month.slice(5, 7)))));
   const summaries = overviews.flatMap((overview) => overview?.daySummariesByDate ? Object.values(overview.daySummariesByDate) : []).filter((summary) => summary.date >= from && summary.date <= to);
   return { from, to, days: summaries.map((summary) => ({ date: summary.date, label: formatAssistantDate(summary.date), officeCount: summary.officeCount, remoteCount: summary.remoteCount, absenceCount: summary.absenceCount })) };

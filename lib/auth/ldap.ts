@@ -57,10 +57,11 @@ export async function findLdapUserDn(email: string): Promise<string | null> {
 
     const { searchEntries } = await client.search(config.baseSearchGroup, {
       scope: "sub",
-      filter: `(|(mail=${email})(userPrincipalName=${email}))`,
+       filter: `(|(mail=${escapeLdapFilterValue(email)})(userPrincipalName=${escapeLdapFilterValue(email)}))`,
       attributes: ["distinguishedName"],
     });
 
+    if (searchEntries.length !== 1) return null;
     const entry = searchEntries[0];
 
     return entry ? String(entry.dn) : null;
@@ -77,6 +78,7 @@ export async function findLdapUserDn(email: string): Promise<string | null> {
  * LDAP server cannot be reached.
  */
 export async function verifyLdapCredentials(dn: string, password: string): Promise<boolean> {
+  if (!dn || password.length === 0) return false;
   const config = getLdapConfig();
   const client = createClient(config.url);
 
@@ -92,6 +94,15 @@ export async function verifyLdapCredentials(dn: string, password: string): Promi
   } finally {
     await client.unbind().catch(() => undefined);
   }
+}
+
+function escapeLdapFilterValue(value: string) {
+  return value
+    .replace(/\\/g, "\\5c")
+    .replace(/\*/g, "\\2a")
+    .replace(/\(/g, "\\28")
+    .replace(/\)/g, "\\29")
+    .replace(/\0/g, "\\00");
 }
 
 function isInvalidCredentialsError(error: unknown) {

@@ -13,7 +13,7 @@ try {
 
   console.log(`Azure endpoint: ${config.baseURL}`);
   console.log(`Azure deployment: ${config.deployment}`);
-  console.log(`Azure API key: configurada (${config.apiKey.length} caracteres)`);
+  console.log("Azure API key: configurada");
   console.log(`Azure URL mode: ${config.isFoundryProject ? "Foundry project" : config.useDeploymentBasedUrls ? "deployment-based" : "versioned v1"}`);
 
   const result = await generateText({ model, maxOutputTokens: 8, prompt: "Responde únicamente: OK" });

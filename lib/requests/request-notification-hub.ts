@@ -2,6 +2,7 @@ import { listenForRequestNotifications } from "./request-repository";
 import type { UserRole } from "@/lib/auth/session";
 
 const encoder = new TextEncoder();
+const MAX_CONNECTIONS_PER_USER = 3;
 
 type Connection = {
   role: UserRole;
@@ -86,6 +87,12 @@ export async function subscribeToRequestNotifications(userId: string, role: Conn
   await ensureListener();
   const connection = { role, userId, controller };
   const connections = hub.connections.get(userId) ?? new Set<Connection>();
+  while (connections.size >= MAX_CONNECTIONS_PER_USER) {
+    const oldest = connections.values().next().value as Connection | undefined;
+    if (!oldest) break;
+    connections.delete(oldest);
+    try { oldest.controller.close(); } catch { /* already closed */ }
+  }
   connections.add(connection);
   hub.connections.set(userId, connections);
   send(connection, "ready");

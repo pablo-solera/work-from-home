@@ -10,10 +10,11 @@ export type CalendarMonthParams = { year: number; month: number };
 export type RequestDateFilter = "all" | "month" | "week";
 
 export const SUBSTITUTION_CUTOFF_MINUTES = 10 * 60 + 15;
+const madridTimeFormatter = new Intl.DateTimeFormat("en", { hour: "2-digit", hourCycle: "h23", minute: "2-digit", timeZone: "Europe/Madrid" });
 
 export function isSubstitutionLocked(dateKey: string, now = new Date()) {
   if (dateKey !== getMadridTodayDateKey(now)) return false;
-  const parts = new Intl.DateTimeFormat("en", { hour: "2-digit", hourCycle: "h23", minute: "2-digit", timeZone: "Europe/Madrid" }).formatToParts(now);
+  const parts = madridTimeFormatter.formatToParts(now);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return Number(values.hour) * 60 + Number(values.minute) >= SUBSTITUTION_CUTOFF_MINUTES;
 }

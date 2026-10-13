@@ -7,8 +7,10 @@ export function getTodayDateKey() {
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
+const madridDateFormatter = new Intl.DateTimeFormat("en", { day: "2-digit", month: "2-digit", timeZone: "Europe/Madrid", year: "numeric" });
+
 export function getMadridTodayDateKey(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en", { day: "2-digit", month: "2-digit", timeZone: "Europe/Madrid", year: "numeric" }).formatToParts(date);
+  const parts = madridDateFormatter.formatToParts(date);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
 }

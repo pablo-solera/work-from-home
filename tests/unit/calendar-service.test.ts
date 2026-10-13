@@ -43,7 +43,7 @@ describe("calendar service", () => {
       [{ date, userId: "remote" }],
       users,
       identities,
-      { [date]: { vacaciones: [{ userId: "remote", userName: "Bea Remota", userEmail: "bea@example.com" }] } },
+      { [date]: { enOficina: [], teletrabajo: [], vacaciones: [{ userId: "remote", userName: "Bea Remota", userEmail: "bea@example.com" }], ausencias: [], bajas: [], viajes: [], permisos: [], excedencia: [], mudanza: [], noComprende: [] } },
       calendar,
       new Set([3]),
     );

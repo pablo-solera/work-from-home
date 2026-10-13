@@ -34,9 +34,9 @@ export async function getVisibleAssistantEmployees(actor: SessionUser): Promise<
 
 export async function resolveEmployeeByName(actor: SessionUser, query: string) {
   const normalizedQuery = normalize(query);
-  if (!normalizedQuery) return { matches: [] as AssistantEmployee[], query };
+  if (normalizedQuery.length < 3) return { matches: [] as AssistantEmployee[], query, error: "Indica al menos tres caracteres del nombre o email." };
 
   const employees = await getVisibleAssistantEmployees(actor);
-  const matches = employees.filter((employee) => normalize(`${employee.name} ${employee.email}`).includes(normalizedQuery));
-  return { matches, query };
+  const allMatches = employees.filter((employee) => normalize(`${employee.name} ${employee.email}`).includes(normalizedQuery));
+  return { matches: allMatches.slice(0, 10), query, truncated: allMatches.length > 10 };
 }

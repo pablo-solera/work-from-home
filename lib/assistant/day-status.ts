@@ -10,7 +10,6 @@ import { validateAssistantRange } from "./assistant-policy";
 const ABSENCE_LABELS: Record<string, string> = {
   vacaciones: "vacaciones",
   ausencias: "ausencia",
-  bajas: "baja",
   viajes: "viaje",
   permisos: "permiso",
   excedencia: "excedencia",

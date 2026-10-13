@@ -12,14 +12,14 @@ type RequestsPageProps = {
 
 export default async function RequestsPage({ searchParams }: RequestsPageProps) {
   const user = await requireAuthorizedUser();
-  const filters = parseRequestFilters(await searchParams);
+  const params = await searchParams;
+  const filters = parseRequestFilters(params);
 
   if (user.role === "admin") {
     redirect("/admin/requests");
   }
 
   if (user.role === "coordinator") {
-    const params = await searchParams;
     const view = parseRequestView(params, ["team", "own"] as const, "team");
     const [requests, notificationSummary] = await Promise.all([
       view === "team" ? getRequestsForCoordinator(user.id, filters) : getRequestsForRequester(user.id, filters),
