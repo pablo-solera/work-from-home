@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, lte, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import { getDb, getPostgresClient } from "@/db";
 import { users, wfhChangeRequestDates, wfhChangeRequests, workFromHomeDays } from "@/db/schema";
 import { getRequestDateRange } from "@/lib/calendar/dates";
