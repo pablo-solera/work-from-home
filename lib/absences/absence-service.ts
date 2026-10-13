@@ -70,7 +70,8 @@ async function groupAbsencesByDate(absences: Absence[], users?: CalendarUser[]):
  */
 export async function getAbsenceSectionsByDate(start: string, end: string, users?: CalendarUser[]): Promise<Record<string, DaySections>> {
   try {
-    return groupAbsencesByDate(await findAbsencesByDateRange(start, end), users);
+    const empIds = users?.map((user) => user.oracleEmpId).filter((id): id is number => id !== null && id !== undefined) ?? [];
+    return groupAbsencesByDate(await findAbsencesByDateRange(start, end, empIds), users);
   } catch (error) {
     console.error("Failed to read absences from Oracle:", error);
     return {};
@@ -79,7 +80,8 @@ export async function getAbsenceSectionsByDate(start: string, end: string, users
 
 /** Same grouping as the calendar view, but propagates Oracle failures. */
 export async function getAbsenceSectionsByDateStrict(start: string, end: string, users?: CalendarUser[]): Promise<Record<string, DaySections>> {
-  return groupAbsencesByDate(await findAbsencesByDateRange(start, end), users);
+  const empIds = users?.map((user) => user.oracleEmpId).filter((id): id is number => id !== null && id !== undefined) ?? [];
+  return groupAbsencesByDate(await findAbsencesByDateRange(start, end, empIds), users);
 }
 
 export { createEmptySections };

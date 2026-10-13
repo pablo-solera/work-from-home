@@ -31,7 +31,7 @@ function toDateKey(value: Date): string {
  * TIMERTASK schema for a date range. Only the day types mapped to a visible
  * absence section are returned. `start` and `end` are `YYYY-MM-DD` keys.
  */
-export async function findAbsencesByDateRange(start: string, end: string): Promise<OracleAbsence[]> {
+export async function findAbsencesByDateRange(start: string, end: string, empIds: number[] = []): Promise<OracleAbsence[]> {
   const schema = getOracleSchema();
   const tdiaBinds = ABSENCE_TDIA_IDS.map((_, index) => `:tdia${index}`).join(", ");
 
@@ -43,6 +43,18 @@ export async function findAbsencesByDateRange(start: string, end: string): Promi
   ABSENCE_TDIA_IDS.forEach((tdiaId, index) => {
     (binds as Record<string, unknown>)[`tdia${index}`] = tdiaId;
   });
+
+  const filteredEmpIds = [...new Set(empIds)].filter((empId) => Number.isInteger(empId));
+  const employeeClauses = Array.from({ length: Math.ceil(filteredEmpIds.length / 900) }, (_, chunkIndex) => {
+    const chunk = filteredEmpIds.slice(chunkIndex * 900, (chunkIndex + 1) * 900);
+    const placeholders = chunk.map((empId, index) => {
+      const bindName = `emp${chunkIndex * 900 + index}`;
+      (binds as Record<string, unknown>)[bindName] = empId;
+      return `:${bindName}`;
+    });
+    return `d.emp_id IN (${placeholders.join(", ")})`;
+  });
+  const employeeFilter = employeeClauses.length > 0 ? `AND (${employeeClauses.join(" OR ")})` : "";
 
   const sql = `
     SELECT d.emp_id       AS emp_id,
@@ -56,6 +68,9 @@ export async function findAbsencesByDateRange(start: string, end: string): Promi
      WHERE d.tdia_id IN (${tdiaBinds})
        AND d.ehr_fecha >= TO_DATE(:startDate, 'YYYY-MM-DD')
        AND d.ehr_fecha <= TO_DATE(:endDate, 'YYYY-MM-DD')
+       AND e.emp_esempleado = 1
+       AND e.emp_fec_baja IS NULL
+       ${employeeFilter}
   `;
 
   const rows = await queryOracle<AbsenceRow>(sql, binds);

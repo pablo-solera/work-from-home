@@ -1,5 +1,6 @@
 import type { BindParameters } from "oracledb";
 import { getOracleSchema, queryOracle } from "@/db/oracle";
+import { getStaffLineIds } from "@/lib/employees/org-repository";
 
 export type OracleEmployee = {
   empId: number;
@@ -77,13 +78,36 @@ export async function findEmployeesByIds(empIds: number[]): Promise<Map<number, 
     return new Map();
   }
 
-  const binds: BindParameters = {};
-  const placeholders = uniqueIds.map((id, index) => {
-    (binds as Record<string, unknown>)[`id${index}`] = id;
-    return `:id${index}`;
+  const results = await Promise.all(Array.from({ length: Math.ceil(uniqueIds.length / 900) }, async (_, chunkIndex) => {
+    const chunk = uniqueIds.slice(chunkIndex * 900, (chunkIndex + 1) * 900);
+    const binds: BindParameters = {};
+    const placeholders = chunk.map((id, index) => {
+      (binds as Record<string, unknown>)[`id${index}`] = id;
+      return `:id${index}`;
+    });
+    return queryOracle<EmployeeRow>(sql(`WHERE e.emp_id IN (${placeholders.join(", ")})`), binds);
+  }));
+
+  return new Map(results.flat().map((row) => [row.EMP_ID, mapRow(row)]));
+}
+
+/** Fetches an admin identity page by Oracle employee IDs, avoiding a full staff scan. */
+export async function searchEmployees(query: string, offset: number, limit: number): Promise<{ employees: OracleEmployee[]; total: number }> {
+  const normalizedQuery = query.trim().slice(0, 120).toLowerCase();
+  const escapedQuery = normalizedQuery.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
+  const searchTerm = `%${escapedQuery}%`;
+  const lineIds = getStaffLineIds();
+  const lineBinds: BindParameters = {};
+  const linePlaceholders = lineIds.map((lineId, index) => {
+    (lineBinds as Record<string, number>)[`line${index}`] = lineId;
+    return `:line${index}`;
   });
-
-  const rows = await queryOracle<EmployeeRow>(sql(`WHERE e.emp_id IN (${placeholders.join(", ")})`), binds);
-
-  return new Map(rows.map((row) => [row.EMP_ID, mapRow(row)]));
+  const binds = { ...lineBinds, searchTerm, offset: Math.max(0, offset), limit: Math.max(1, Math.min(limit, 100)) };
+  const schema = getOracleSchema();
+  const fromAndScope = `FROM ${schema}.templeados e WHERE e.emp_esempleado = 1 AND e.emp_fec_baja IS NULL AND EXISTS (SELECT 1 FROM ${schema}.templeado_grupos eg JOIN ${schema}.tgrupos g ON g.grupo_id = eg.grupo_id WHERE eg.emp_id = e.emp_id AND eg.fecha_baja IS NULL AND g.linea_id IN (${linePlaceholders.join(", ")})) AND (LOWER(e.emp_nombre || ' ' || e.emp_apellido1 || ' ' || e.emp_apellido2) LIKE :searchTerm ESCAPE '\\' OR LOWER(e.emp_email) LIKE :searchTerm ESCAPE '\\')`;
+  const [countRows, rows] = await Promise.all([
+    queryOracle<{ TOTAL: number }>(`SELECT COUNT(DISTINCT e.emp_id) AS total ${fromAndScope}`, binds),
+    queryOracle<EmployeeRow>(`SELECT e.emp_id AS emp_id, e.emp_nombre AS emp_nombre, e.emp_apellido1 AS emp_apellido1, e.emp_apellido2 AS emp_apellido2, e.emp_email AS emp_email, e.emp_tel1 AS emp_tel1 ${fromAndScope} ORDER BY e.emp_nombre, e.emp_apellido1 OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`, binds),
+  ]);
+  return { employees: rows.map(mapRow), total: Number(countRows[0]?.TOTAL ?? 0) };
 }

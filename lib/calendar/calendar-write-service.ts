@@ -2,7 +2,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { findUserById } from "@/lib/users/user-repository";
 import { createWorkFromHomeDay, deleteWorkFromHomeDay, findUserWorkFromHomeDays, replaceWorkFromHomeDays } from "./calendar-repository";
 import { assertCanEditWorkFromHomeDays, getMinimumEditableDate } from "./calendar-authorization";
-import { getCalendarDays, getMadridTodayDateKey, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
+import { getCalendarDays, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
 
 type ReplicateWorkFromHomeScope = "next" | "untilYearEnd";
 
@@ -25,7 +25,8 @@ export async function setWorkFromHomeDayForActor(actor: SessionUser, targetUserI
     await setWorkFromHomeDay(targetUserId, date, enabled, actor.role !== "admin");
     return { ok: true as const };
   } catch (error) {
-    return { ok: false as const, error: error instanceof Error ? error.message : "No se pudo actualizar el día." };
+    console.error("Failed to update work-from-home day:", error);
+    return { ok: false as const, error: "No tienes permiso para modificar este día o no se pudo actualizar." };
   }
 }
 
@@ -36,8 +37,8 @@ export async function replicateWorkFromHomeDays(actor: SessionUser, input: { mon
     await assertCanEditWorkFromHomeDays(actor, input.targetUserId);
 
     const sourceRange = getMonthRange(input.year, input.month);
-    const preserveOwnHistory = actor.role === "coordinator" && input.targetUserId === actor.id;
-    const effectiveStart = preserveOwnHistory ? (sourceRange.start > getMadridTodayDateKey() ? sourceRange.start : getMadridTodayDateKey()) : sourceRange.start;
+    const minimumEditableDate = getMinimumEditableDate(actor.role);
+    const effectiveStart = minimumEditableDate && sourceRange.start < minimumEditableDate ? minimumEditableDate : sourceRange.start;
     const sourceEntries = await findUserWorkFromHomeDays(input.targetUserId, sourceRange.start, sourceRange.end);
     const sourceWeekdays = new Set(sourceEntries.map((entry) => getWeekdayFromDateKey(entry.date)));
 
@@ -56,9 +57,10 @@ export async function replicateWorkFromHomeDays(actor: SessionUser, input: { mon
     }));
     const lastMonth = targetMonths[targetMonths.length - 1];
     const targetRange = getMonthRange(lastMonth.year, lastMonth.month);
-    if (effectiveStart <= targetRange.end) await replaceWorkFromHomeDays(input.targetUserId, effectiveStart, targetRange.end, values);
+    if (effectiveStart <= targetRange.end) await replaceWorkFromHomeDays(input.targetUserId, effectiveStart, targetRange.end, values, true, actor);
     return { ok: true as const };
   } catch (error) {
-    return { ok: false as const, error: error instanceof Error ? error.message : "No se pudo replicar el patrón." };
+    console.error("Failed to replicate work-from-home days:", error);
+    return { ok: false as const, error: "No tienes permiso para replicar este patrón o no se pudo actualizar." };
   }
 }

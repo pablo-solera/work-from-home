@@ -9,7 +9,8 @@ const BLOCKED_WORDS = new Set([
   "insert", "update", "delete", "merge", "drop", "alter", "create", "truncate", "grant", "revoke",
   "copy", "call", "execute", "commit", "rollback", "savepoint", "vacuum", "analyze", "refresh",
   "attach", "detach", "pragma", "into", "lock", "set", "reset", "do", "begin",
-  "information_schema", "pg_catalog",
+  "information_schema", "pg_catalog", "pg_roles", "pg_authid", "pg_stat_activity", "pg_settings", "pg_user", "pg_shadow",
+  "all_users", "all_tables", "all_tab_columns", "dba_users", "user_tables", "user_tab_columns",
 ]);
 
 const BLOCKED_FUNCTIONS = new Set([
@@ -29,7 +30,6 @@ const SAFE_FUNCTIONS = new Set([
   "jsonb_build_object", "nulls_first", "nulls_last", "overlaps", "percentile_cont", "percentile_disc", "string_to_array",
   "timezone", "to_json", "to_jsonb", "xmlagg",
 ]);
-
 type Token = { value: string; kind: "identifier" | "literal" | "symbol" };
 
 function tokenize(query: string): Token[] {
@@ -94,13 +94,22 @@ function validateReadOnlyShape(query: string) {
   if (depth !== 0) throw new Error("Paréntesis SQL desbalanceados.");
   const first = tokens[0]?.kind === "identifier" ? tokens[0].value : undefined;
   if (first !== "select" && first !== "with") throw new Error("Solo se permiten consultas SELECT o WITH ... SELECT.");
+  const names = tokens.filter((token) => token.kind === "identifier").map((token) => token.value);
+  for (const name of names) {
+    if (BLOCKED_WORDS.has(name)) throw new Error(`La consulta contiene una operación no permitida: ${name}.`);
+    if (BLOCKED_FUNCTIONS.has(name) && tokens.some((token, index) => token.value === name && (tokens[index + 1]?.value === "(" || tokens[index - 1]?.value === "."))) throw new Error(`La función ${name} no está permitida.`);
+  }
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (token.kind !== "identifier") continue;
-    if (BLOCKED_WORDS.has(token.value)) throw new Error(`La consulta contiene una operación no permitida: ${token.value}.`);
-    if (BLOCKED_FUNCTIONS.has(token.value) && tokens[index + 1]?.value === "(") throw new Error(`La función ${token.value} no está permitida.`);
-    if (tokens[index + 1]?.value === "(" && !SAFE_FUNCTIONS.has(token.value) && !["in", "exists", "over", "partition", "values", "select", "as", "with", "from", "join"].includes(token.value)) {
-      throw new Error(`La función SQL ${token.value} no está en la lista permitida.`);
+    const next = tokens[index + 1]?.value;
+    if (next === "(" && !SAFE_FUNCTIONS.has(token.value) && !["in", "exists", "over", "partition", "values", "select", "as", "with", "from", "join"].includes(token.value)) throw new Error(`La función SQL ${token.value} no está en la lista permitida.`);
+    if (tokens[index - 1]?.value === "." && next === "(" && !SAFE_FUNCTIONS.has(token.value)) throw new Error(`La función SQL ${token.value} no está en la lista permitida.`);
+    if (next === "." && (token.value === "public" || token.value === "timertask_es")) {
+      if (token.value !== "public" && token.value !== "timertask_es") throw new Error("La consulta referencia un esquema no permitido.");
+      const qualifiedName = tokens[index + 2]?.value;
+      if (tokens[index + 3]?.value === "(") throw new Error("No se permiten funciones SQL cualificadas por esquema.");
+      if (token.value === "public" && qualifiedName && !POSTGRES_TABLES.has(qualifiedName)) throw new Error("La consulta solo puede acceder a las tablas permitidas.");
     }
   }
   return tokens;
@@ -160,6 +169,7 @@ function validateSources(tokens: Token[], allowed: Set<string>, ctes: Set<string
   const expectAtDepth = new Set<number>();
   let depth = 0;
   const boundaries = new Set(["where", "group", "order", "having", "limit", "offset", "fetch", "union", "intersect", "except", "window", "for", "connect", "start", "model"]);
+  const relations: { index: number; depth: number }[] = [];
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (token.value === "(" && expectAtDepth.has(depth)) {
@@ -174,9 +184,9 @@ function validateSources(tokens: Token[], allowed: Set<string>, ctes: Set<string
       continue;
     }
     if (token.value === "(") { depth += 1; continue; }
-
     if (expectAtDepth.has(depth)) {
       validateSource(tokens, index, allowed, ctes, expectedSchema, requireQualified);
+      relations.push({ index, depth });
       expectAtDepth.delete(depth);
       continue;
     }

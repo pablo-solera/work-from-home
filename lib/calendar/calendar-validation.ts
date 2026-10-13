@@ -14,7 +14,7 @@ export const toggleWorkFromHomeDaySchema = z.object({
 
 export const replicateWorkFromHomeDaysSchema = z.object({
   targetUserId: z.string().uuid(),
-  year: formNumber,
+  year: formNumber.pipe(z.number().min(2000).max(2100)),
   month: formNumber.pipe(z.number().min(1).max(12)),
   scope: z.enum(["next", "untilYearEnd"]),
 });

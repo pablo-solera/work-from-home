@@ -1,11 +1,17 @@
-import { and, asc, between, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, between, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import type { SessionUser } from "@/lib/auth/session";
 import { getDb } from "@/db";
 import { users, workFromHomeDays } from "@/db/schema";
+import { getWeekRange } from "./dates";
 
 export const WEEKLY_ALLOWANCE_ERROR = "Has alcanzado el cupo semanal de teletrabajo.";
 
 export function hasReachedWeeklyAllowance(usageCount: number, allowance: number) {
   return usageCount >= allowance;
+}
+
+function canExceedWeeklyAllowance(enforceAllowance: boolean, actor: SessionUser | undefined, targetUserId: string) {
+  return !enforceAllowance || actor?.role === "admin" || (actor?.role === "coordinator" && actor.id !== targetUserId);
 }
 
 export function findUserWorkFromHomeDays(userId: string, start: string, end: string) {
@@ -72,7 +78,7 @@ export function createWorkFromHomeDay(userId: string, date: string, enforceAllow
     const usage = await tx
       .select({ count: sql<number>`count(*)` })
       .from(workFromHomeDays)
-      .where(and(eq(workFromHomeDays.userId, userId), sql`date_trunc('week', ${workFromHomeDays.date})::date = ${weekStart}`));
+      .where(and(eq(workFromHomeDays.userId, userId), gte(workFromHomeDays.date, weekStart), lt(workFromHomeDays.date, sql`${weekStart} + 7`)));
 
     if (enforceAllowance && hasReachedWeeklyAllowance(Number(usage[0]?.count ?? 0), user?.wfhDaysAllowance ?? 0)) {
       throw new Error(WEEKLY_ALLOWANCE_ERROR);
@@ -87,9 +93,35 @@ export async function replaceWorkFromHomeDays(
   start: string,
   end: string,
   values: Array<{ userId: string; date: string }>,
+  enforceAllowance = true,
+  actor?: SessionUser,
 ) {
   await getDb().transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`);
+    const checkAllowance = enforceAllowance && (actor ? !canExceedWeeklyAllowance(enforceAllowance, actor, userId) : true);
+    if (checkAllowance && values.length > 0) {
+      const user = await tx.query.users.findFirst({
+        columns: { wfhDaysAllowance: true },
+        where: eq(users.id, userId),
+      });
+      const effectiveAllowance = user?.wfhDaysAllowance ?? 0;
+      const valuesByWeek = new Map<string, number>();
+      for (const value of values) {
+        const weekStart = getWeekRange(value.date).start;
+        valuesByWeek.set(weekStart, (valuesByWeek.get(weekStart) ?? 0) + 1);
+      }
+      const existingRows = await tx.execute(sql<{ weekStart: string; count: string }>`
+        SELECT date_trunc('week', date::date)::date::text AS "weekStart", count(*)::text AS count
+        FROM work_from_home_days
+        WHERE user_id = ${userId}
+          AND date >= ${[...valuesByWeek.keys()].toSorted()[0]}::date
+          AND date < ${[...valuesByWeek.keys()].toSorted().at(-1)}::date + 7
+          AND (date < ${start} OR date > ${end})
+        GROUP BY 1
+      `) as unknown as { weekStart: string; count: string }[];
+      const existingByWeek = new Map(existingRows.map((row) => [String(row.weekStart).slice(0, 10), Number(row.count)]));
+      if ([...valuesByWeek].some(([weekStart, count]) => (existingByWeek.get(weekStart) ?? 0) + count > effectiveAllowance)) throw new Error(WEEKLY_ALLOWANCE_ERROR);
+    }
     await tx.delete(workFromHomeDays).where(and(eq(workFromHomeDays.userId, userId), between(workFromHomeDays.date, start, end)));
 
     if (values.length > 0) {

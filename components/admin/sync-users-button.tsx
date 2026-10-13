@@ -10,6 +10,7 @@ export function SyncUsersButton() {
   const [pending, startTransition] = useTransition();
 
   function handleSync() {
+    if (!window.confirm("Los usuarios que ya no están activos se desactivarán y conservarán su historial. ¿Continuar con la sincronización?")) return;
     startTransition(async () => {
       const result = await syncUsersAction();
       setState(result);
@@ -27,7 +28,7 @@ export function SyncUsersButton() {
         {pending ? "Sincronizando…" : "Sincronizar con TimerTask"}
       </button>
 
-      <ActionFeedback error={state.error} message={state.ok ? `Creados: ${state.created} · Borrados: ${state.deleted}` : null} />
+      <ActionFeedback error={state.error} message={state.ok ? `Creados: ${state.created} · Desactivados: ${state.deactivated}` : null} />
 
     </div>
   );

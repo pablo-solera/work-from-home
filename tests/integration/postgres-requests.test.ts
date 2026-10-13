@@ -138,6 +138,7 @@ describe("request persistence on PostgreSQL", () => {
     });
 
     expect(result).toMatchObject({ ok: true });
+    if (!result.requestId) throw new Error("The removal request should return its id.");
     const requests = await sql`SELECT kind, status, coordinator_notified_at FROM wfh_change_requests WHERE id = ${result.requestId}`;
     const days = await sql`SELECT date FROM work_from_home_days WHERE user_id = ${teamEmployee.id} AND date = '2099-01-12'`;
     expect(requests[0]).toMatchObject({ kind: "removal", status: "accepted" });

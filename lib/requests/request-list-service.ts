@@ -1,23 +1,23 @@
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import type { RequestCursor, RequestFilters, RequestPage } from "./request-types";
-import { findAdminRequestsPage, findAdminSubstitutionNotificationsPage, findCoordinatorRequestsPage, findPendingRequestsWithDates, findRequesterRequestsPage } from "./request-repository";
+import { z } from "zod";
+import { findAdminRequestsPage, findAdminSubstitutionNotificationsPage, findCoordinatorRequestsPage, findPendingRequestedDatesInRange, findRequesterRequestsPage } from "./request-repository";
 
 export const REQUEST_PAGE_SIZE = 10;
 
 function decodeCursor(value: string | undefined): RequestCursor | undefined {
   if (!value) return undefined;
   try {
-    const decoded = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<RequestCursor>;
-    if (typeof decoded.createdAt !== "string" || typeof decoded.id !== "string" || !decoded.id) return undefined;
-    const createdAt = new Date(decoded.createdAt);
-    return Number.isNaN(createdAt.getTime()) ? undefined : { createdAt: createdAt.toISOString(), id: decoded.id };
+    const decoded = z.object({ createdAt: z.string().datetime(), id: z.string().uuid() }).safeParse(JSON.parse(Buffer.from(value, "base64url").toString("utf8")));
+    return decoded.success ? decoded.data : undefined;
   } catch {
     return undefined;
   }
 }
 
 function encodeCursor(request: { createdAt: Date; id: string }) {
-  return Buffer.from(JSON.stringify({ createdAt: request.createdAt.toISOString(), id: request.id })).toString("base64url");
+  const createdAt = new Date(Math.floor(request.createdAt.getTime())).toISOString();
+  return Buffer.from(JSON.stringify({ createdAt, id: request.id })).toString("base64url");
 }
 
 function toRequestPage<T extends { id: string; createdAt: Date }>(requests: T[]): RequestPage<T> {
@@ -32,8 +32,8 @@ export async function getRequestsForRequester(userId: string, filters: RequestFi
 }
 
 export async function getPendingRequestedDates(userId: string, start: string, end: string) {
-  const requests = await findPendingRequestsWithDates(userId);
-  return requests.flatMap((request) => request.dates.filter((date) => !date.cancelledAt).flatMap((date) => [date.requestedDate, ...(date.replacedDate ? [date.replacedDate] : [])].filter((value) => value >= start && value <= end)));
+  const requests = await findPendingRequestedDatesInRange(userId, start, end);
+  return requests.flatMap((date) => [date.requestedDate, ...(date.replacedDate ? [date.replacedDate] : [])].filter((value) => value >= start && value <= end));
 }
 
 export async function getRequestsForCoordinator(coordinatorId: string, filters: RequestFilters, cursorValue?: string): Promise<RequestPage<Awaited<ReturnType<typeof findCoordinatorRequestsPage>>[number] & { requesterName: string; requesterEmail: string }>> {

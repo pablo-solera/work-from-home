@@ -35,6 +35,9 @@ describe("assistant SQL guard", () => {
     "SELECT 1 FROM (public.users JOIN pg_catalog.pg_roles ON true)",
     "SELECT 1 FROM public.users))",
     "SELECT 1 FROM public.users WHERE id = (SELECT id FROM public.users",
+    "SELECT role FROM public.users UNION SELECT rolname FROM pg_roles",
+    "SELECT public.dangerous_function() FROM public.users",
+    "SELECT pg_catalog.pg_read_file('/etc/passwd') FROM public.users",
   ])("rejects unsafe Postgres query %s", (query) => {
     expect(() => validatePostgresQuery(query)).toThrow();
   });
@@ -43,6 +46,7 @@ describe("assistant SQL guard", () => {
     expect(validateOracleQuery("SELECT emp_id FROM TIMERTASK_ES.TEMPLEADOS WHERE emp_id = 1")).toContain("TIMERTASK_ES");
     expect(() => validateOracleQuery("SELECT username FROM SYS.ALL_USERS")).toThrow();
     expect(() => validateOracleQuery("SELECT emp_id FROM TEMPLEADOS")).toThrow();
+    expect(() => validateOracleQuery("SELECT SYS.UTL_HTTP.REQUEST('http://example.com') FROM TIMERTASK_ES.TEMPLEADOS")).toThrow();
     expect(() => validateOracleQuery("SELECT 1 FROM TIMERTASK_ES.TEMPLEADOS) a, SYS.ALL_USERS b, (SELECT 1 FROM TIMERTASK_ES.TEMPLEADOS")).toThrow();
     expect(() => validateOracleQuery("SELECT 1 FROM (TIMERTASK_ES.TEMPLEADOS JOIN SYS.ALL_USERS ON 1 = 1)")).toThrow();
   });

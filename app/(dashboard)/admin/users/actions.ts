@@ -42,7 +42,7 @@ export async function syncUsersAction(): Promise<SyncUsersState> {
     return {
       ok: true,
       created: result.created,
-      deleted: result.deleted,
+      deactivated: result.deactivated,
     };
   } catch (error) {
     console.error("Failed to sync users from Oracle:", error);

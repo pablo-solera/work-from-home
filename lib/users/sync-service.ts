@@ -1,6 +1,6 @@
 import { findAllActiveEmployees } from "@/lib/employees/employee-repository";
 import { getTestAccountEmpIds } from "@/lib/employees/test-accounts";
-import { countWorkFromHomeDaysByUserIds, createUsers, deleteUsers, findUsersWithOracleEmpId } from "@/lib/users/user-repository";
+import { applyUserSync, countWorkFromHomeDaysByUserIds, findUsersWithOracleEmpId } from "@/lib/users/user-repository";
 
 // Oracle employees that are not real people and must never become app users.
 const IGNORED_EMP_IDS = new Set<number>([
@@ -8,19 +8,21 @@ const IGNORED_EMP_IDS = new Set<number>([
 ]);
 
 export type SyncPlan = {
+  mappedUserCount: number;
+  toReactivate: { userId: string; empId: number }[];
   toCreate: { empId: number; name: string; email: string }[];
   toDelete: { userId: string; empId: number; wfhDays: number }[];
 };
 
 export type SyncResult = {
   created: number;
-  deleted: number;
+  deactivated: number;
 };
 
 /**
  * Reconciles the app users (PostgreSQL) against the active employees in Oracle:
  * plans which active employees are missing (to create) and which mapped users
- * are no longer active employees (to delete). Read-only; does not modify data.
+ * are no longer active employees (to deactivate). Read-only; does not modify data.
  */
 export async function buildSyncPlan(): Promise<SyncPlan> {
   const [employees, mappedUsers] = await Promise.all([findAllActiveEmployees(), findUsersWithOracleEmpId()]);
@@ -33,7 +35,10 @@ export async function buildSyncPlan(): Promise<SyncPlan> {
     .map((employee) => ({ empId: employee.empId, name: employee.name, email: employee.email }));
 
   const testAccountEmpIds = getTestAccountEmpIds();
-  const usersToDelete = mappedUsers.filter((user) => !testAccountEmpIds.has(user.oracleEmpId as number) && !activeEmpIds.has(user.oracleEmpId as number));
+  const toReactivate = mappedUsers
+    .filter((user) => user.deactivatedAt && activeEmpIds.has(user.oracleEmpId as number) && !IGNORED_EMP_IDS.has(user.oracleEmpId as number))
+    .map((user) => ({ userId: user.id, empId: user.oracleEmpId as number }));
+  const usersToDelete = mappedUsers.filter((user) => !user.deactivatedAt && !testAccountEmpIds.has(user.oracleEmpId as number) && !activeEmpIds.has(user.oracleEmpId as number));
 
   // Count WFH days that would be lost per user to be deleted.
   const deleteIds = usersToDelete.map((user) => user.id);
@@ -48,23 +53,24 @@ export async function buildSyncPlan(): Promise<SyncPlan> {
 
   const toDelete = usersToDelete.map((user) => ({ userId: user.id, empId: user.oracleEmpId as number, wfhDays: wfhCounts.get(user.id) ?? 0 }));
 
-  return { toCreate, toDelete };
+  return { mappedUserCount: mappedUsers.filter((user) => !user.deactivatedAt).length, toCreate, toDelete, toReactivate };
 }
 
 /**
- * Applies the sync: creates missing employees and deletes users that are no
- * longer active employees.
+ * Applies the sync: creates missing employees and deactivates users that are no
+ * longer active employees while preserving their historical records.
  */
-export async function runUserSync(): Promise<SyncResult> {
-  const plan = await buildSyncPlan();
-
-  // Concurrency-safe against a parallel sync (cron + on-demand): ignore rows
-  // whose oracle_emp_id already exists.
-  const created = await createUsers(plan.toCreate.map((employee) => ({ oracleEmpId: employee.empId, hasWfh: false })));
-
-  if (plan.toDelete.length > 0) {
-    await deleteUsers(plan.toDelete.map((entry) => entry.userId));
+export async function runUserSync(plan?: SyncPlan): Promise<SyncResult> {
+  const syncPlan = plan ?? await buildSyncPlan();
+  if (syncPlan.mappedUserCount > 0 && syncPlan.toDelete.length > Math.max(5, Math.ceil(syncPlan.mappedUserCount * 0.1))) {
+    throw new Error("La sincronización supera el umbral de bajas permitido; requiere revisión manual.");
   }
 
-  return { created: created.length, deleted: plan.toDelete.length };
+  const result = await applyUserSync(
+    syncPlan.toCreate.map((employee) => ({ oracleEmpId: employee.empId, hasWfh: false })),
+    syncPlan.toReactivate.map((entry) => entry.userId),
+    syncPlan.toDelete.map((entry) => entry.userId),
+  );
+
+  return { created: result.created.length, deactivated: result.deactivated.length };
 }

@@ -15,10 +15,12 @@ export const users = pgTable("users", {
   teamWfhVisible: boolean("team_wfh_visible").notNull().default(false),
   canEditAllWfh: boolean("can_edit_all_wfh").notNull().default(false),
   wfhDaysAllowance: integer("wfh_days_allowance"),
+  deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("users_oracle_emp_id_unique").on(table.oracleEmpId).where(isNotNull(table.oracleEmpId)),
   uniqueIndex("users_fallback_email_unique").on(table.fallbackEmail).where(isNotNull(table.fallbackEmail)),
+  index("users_deactivated_at_idx").on(table.deactivatedAt).where(sql`${table.deactivatedAt} IS NOT NULL`),
 ]);
 
 export const workFromHomeDays = pgTable(
@@ -65,12 +67,15 @@ export const wfhChangeRequests = pgTable("wfh_change_requests", {
   adminAcknowledgedAt: timestamp("admin_acknowledged_at", { withTimezone: true }),
 }, (table) => [
   index("wfh_change_requests_requester_status_idx").on(table.requesterId, table.status),
+  index("wfh_change_requests_requester_status_created_idx").on(table.requesterId, table.status, table.createdAt, table.id),
   index("wfh_change_requests_requester_created_idx").on(table.requesterId, table.createdAt, table.id),
   index("wfh_change_requests_coordinator_status_idx").on(table.coordinatorId, table.status),
+  index("wfh_change_requests_coordinator_status_created_idx").on(table.coordinatorId, table.status, table.createdAt, table.id),
   index("wfh_change_requests_coordinator_created_idx").on(table.coordinatorId, table.createdAt, table.id),
   index("wfh_change_requests_kind_status_created_idx").on(table.kind, table.status, table.createdAt, table.id),
   index("wfh_change_requests_coordinator_notification_idx").on(table.coordinatorId, table.coordinatorNotifiedAt, table.coordinatorAcknowledgedAt),
   index("wfh_change_requests_admin_notification_idx").on(table.adminNotifiedAt, table.adminAcknowledgedAt),
+  index("wfh_change_requests_admin_substitution_feed_idx").on(table.createdAt, table.id).where(sql`${table.kind} = 'substitution' AND ${table.adminNotifiedAt} IS NOT NULL`),
 ]);
 
 export const wfhChangeRequestDates = pgTable(

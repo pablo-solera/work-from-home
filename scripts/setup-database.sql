@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   team_wfh_visible boolean DEFAULT false NOT NULL,
   can_edit_all_wfh boolean DEFAULT false NOT NULL,
   wfh_days_allowance integer,
+  deactivated_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
@@ -24,6 +25,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS has_wfh boolean;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS team_wfh_visible boolean DEFAULT false NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS can_edit_all_wfh boolean DEFAULT false NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS wfh_days_allowance integer;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deactivated_at timestamp with time zone;
 ALTER TABLE users DROP COLUMN IF EXISTS password_hash;
 
 -- The Workday number (wd_number) now lives in Oracle (TEMPLEADOS.EMP_TEL1).
@@ -49,6 +51,7 @@ ALTER TABLE users DROP COLUMN IF EXISTS role;
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_oracle_emp_id_unique ON users (oracle_emp_id) WHERE oracle_emp_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS users_fallback_email_unique ON users (fallback_email) WHERE fallback_email IS NOT NULL;
+CREATE INDEX IF NOT EXISTS users_deactivated_at_idx ON users (deactivated_at) WHERE deactivated_at IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS work_from_home_days (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,

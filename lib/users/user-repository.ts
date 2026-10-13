@@ -1,4 +1,4 @@
-import { eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { cache } from "react";
 import { getDb } from "@/db";
 import { type NewUser, users, workFromHomeDays } from "@/db/schema";
@@ -6,13 +6,13 @@ import { type NewUser, users, workFromHomeDays } from "@/db/schema";
 /** System accounts (no Oracle employee) log in with fallback_email. */
 export function findUserByFallbackEmail(email: string) {
   return getDb().query.users.findFirst({
-    where: eq(users.fallbackEmail, email),
+    where: and(eq(users.fallbackEmail, email), isNull(users.deactivatedAt)),
   });
 }
 
 export function findUserByOracleEmpId(oracleEmpId: number) {
   return getDb().query.users.findFirst({
-    where: eq(users.oracleEmpId, oracleEmpId),
+    where: and(eq(users.oracleEmpId, oracleEmpId), isNull(users.deactivatedAt)),
   });
 }
 
@@ -22,17 +22,17 @@ export function findUsersByOracleEmpIds(oracleEmpIds: number[]) {
   }
 
   return getDb().query.users.findMany({
-    where: inArray(users.oracleEmpId, oracleEmpIds),
+    where: and(inArray(users.oracleEmpId, oracleEmpIds), isNull(users.deactivatedAt)),
   });
 }
 
 export const findUserById = cache((id: string) => {
   return getDb().query.users.findFirst({
-    where: eq(users.id, id),
+    where: and(eq(users.id, id), isNull(users.deactivatedAt)),
   });
 });
 
-export function findAllUsers() {
+export const findAllUsers = cache(() => {
   return getDb().query.users.findMany({
     columns: {
       id: true,
@@ -40,8 +40,9 @@ export function findAllUsers() {
       fallbackName: true,
       fallbackEmail: true,
     },
+    where: isNull(users.deactivatedAt),
   });
-}
+});
 
 export function findUsersForAdmin() {
   return getDb().query.users.findMany({
@@ -55,6 +56,7 @@ export function findUsersForAdmin() {
       fallbackEmail: true,
       wfhDaysAllowance: true,
     },
+    where: isNull(users.deactivatedAt),
   });
 }
 
@@ -64,6 +66,7 @@ export function findUsersWithOracleEmpId() {
     columns: {
       id: true,
       oracleEmpId: true,
+      deactivatedAt: true,
     },
     where: isNotNull(users.oracleEmpId),
   });
@@ -98,10 +101,17 @@ export function updateTeamWfhVisibility(coordinatorId: string, teamWfhVisible: b
   return getDb().update(users).set({ teamWfhVisible }).where(eq(users.id, coordinatorId)).returning();
 }
 
-export function deleteUsers(ids: string[]) {
-  if (ids.length === 0) {
-    return Promise.resolve([]);
-  }
-
-  return getDb().delete(users).where(inArray(users.id, ids)).returning();
+export function applyUserSync(createValues: NewUser[], reactivateIds: string[], deactivateIds: string[]) {
+  return getDb().transaction(async (tx) => {
+    const created = createValues.length > 0
+      ? await tx.insert(users).values(createValues).onConflictDoNothing({ target: users.oracleEmpId, where: isNotNull(users.oracleEmpId) }).returning({ id: users.id })
+      : [];
+    const reactivated = reactivateIds.length > 0
+      ? await tx.update(users).set({ deactivatedAt: null }).where(and(inArray(users.id, reactivateIds), isNotNull(users.deactivatedAt))).returning({ id: users.id })
+      : [];
+    const deactivated = deactivateIds.length > 0
+      ? await tx.update(users).set({ deactivatedAt: new Date() }).where(and(inArray(users.id, deactivateIds), isNull(users.deactivatedAt))).returning({ id: users.id })
+      : [];
+    return { created, reactivated, deactivated };
+  });
 }

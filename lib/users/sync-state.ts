@@ -2,7 +2,7 @@ export type SyncUsersState = {
   ok?: boolean;
   error?: string;
   created?: number;
-  deleted?: number;
+  deactivated?: number;
 };
 
 export const initialSyncUsersState: SyncUsersState = {};

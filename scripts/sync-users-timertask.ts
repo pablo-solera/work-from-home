@@ -10,7 +10,7 @@ async function main() {
   }
 
   const totalWfhLost = plan.toDelete.reduce((sum, entry) => sum + entry.wfhDays, 0);
-  console.log(`\nUsuarios que ya no son empleados activos (a borrar): ${plan.toDelete.length} (se perderían ${totalWfhLost} días de teletrabajo)`);
+  console.log(`\nUsuarios que ya no son empleados activos (a desactivar): ${plan.toDelete.length} (se conservarán ${totalWfhLost} días de teletrabajo históricos)`);
   for (const entry of plan.toDelete) {
     console.log(`   - user=${entry.userId} emp_id=${entry.empId} (${entry.wfhDays} días WFH)`);
   }
@@ -20,9 +20,9 @@ async function main() {
     return;
   }
 
-  const result = await runUserSync();
+  const result = await runUserSync(plan);
 
-  console.log(`\n[apply] Creados: ${result.created} | Borrados: ${result.deleted}`);
+  console.log(`\n[apply] Creados: ${result.created} | Desactivados: ${result.deactivated}`);
 }
 
 main()
