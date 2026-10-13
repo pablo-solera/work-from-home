@@ -23,6 +23,11 @@ export const users = pgTable("users", {
   index("users_deactivated_at_idx").on(table.deactivatedAt).where(sql`${table.deactivatedAt} IS NOT NULL`),
 ]);
 
+export const sessionRevocations = pgTable("session_revocations", {
+  jti: text("jti").primaryKey(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+}, (table) => [index("session_revocations_expires_at_idx").on(table.expiresAt)]);
+
 export const workFromHomeDays = pgTable(
   "work_from_home_days",
   {

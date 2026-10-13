@@ -19,9 +19,15 @@ function DialogRoot({ children, onDismiss }: { children: React.ReactNode; onDism
   function handleBackdropClick(event: React.MouseEvent<HTMLDivElement>) {
     if (event.target === event.currentTarget) onDismiss();
   }
+  function handleBackdropKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onDismiss();
+    }
+  }
   return (
     <DialogContext.Provider value={contextValue}>
-      <div aria-hidden="true" className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-zinc-950/50 px-4 py-6" onClick={handleBackdropClick}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-zinc-950/50 px-4 py-6" onClick={handleBackdropClick} onKeyDown={handleBackdropKeyDown}>
         {children}
       </div>
     </DialogContext.Provider>

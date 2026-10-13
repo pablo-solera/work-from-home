@@ -3,7 +3,12 @@ import jwt from "jsonwebtoken";
 
 const cookieStore = vi.hoisted(() => ({ get: vi.fn(), set: vi.fn(), delete: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: vi.fn(async () => cookieStore) }));
+vi.mock("@/lib/auth/session-repository", () => ({
+  isSessionRevoked: vi.fn(async () => false),
+  revokeSession: vi.fn(async () => undefined),
+}));
 
+import { isSessionRevoked, revokeSession } from "@/lib/auth/session-repository";
 import { clearSessionCookie, createSessionToken, getCurrentUser, setSessionCookie, verifySessionToken } from "@/lib/auth/session";
 
 describe("session tokens", () => {
@@ -23,7 +28,10 @@ describe("session tokens", () => {
     const token = createSessionToken(user);
     cookieStore.get.mockReturnValueOnce({ value: token });
     await clearSessionCookie();
-    expect(verifySessionToken(token)).toBeNull();
+    expect(revokeSession).toHaveBeenCalledWith(expect.any(String), expect.any(Date));
+    vi.mocked(isSessionRevoked).mockResolvedValueOnce(true);
+    cookieStore.get.mockReturnValueOnce({ value: token });
+    expect(await getCurrentUser()).toBeNull();
   });
 
   it("reads, sets and clears the session cookie", async () => {

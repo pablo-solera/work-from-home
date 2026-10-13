@@ -1,11 +1,9 @@
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
-import { randomUUID } from "node:crypto";
+import { isSessionRevoked, revokeSession } from "./session-repository";
 
 const SESSION_COOKIE = "session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
-const revokedSessionIds = new Set<string>();
-const revokedSessionOrder: string[] = [];
 
 export type UserRole = "admin" | "coordinator" | "employee";
 
@@ -34,7 +32,7 @@ function shouldUseSecureSessionCookie() {
 }
 
 export function createSessionToken(user: SessionUser) {
-  return jwt.sign({ ...user, jti: randomUUID() }, getSessionSecret(), { expiresIn: "1d" });
+  return jwt.sign({ ...user, jti: crypto.randomUUID() }, getSessionSecret(), { expiresIn: "1d" });
 }
 
 export function verifySessionToken(token: string): SessionUser | null {
@@ -54,7 +52,7 @@ export function verifySessionToken(token: string): SessionUser | null {
       return null;
     }
 
-    if (typeof payload.jti !== "string" || revokedSessionIds.has(payload.jti)) return null;
+    if (typeof payload.jti !== "string") return null;
 
     return {
       id: payload.id,
@@ -74,7 +72,11 @@ export async function getCurrentUser() {
     return null;
   }
 
-  return verifySessionToken(token);
+  const user = verifySessionToken(token);
+  if (!user) return null;
+  const payload = jwt.verify(token, getSessionSecret(), { algorithms: ["HS256"] });
+  if (typeof payload === "string" || typeof payload.jti !== "string") return null;
+  return await isSessionRevoked(payload.jti) ? null : user;
 }
 
 export async function setSessionCookie(user: SessionUser) {
@@ -94,12 +96,8 @@ export async function clearSessionCookie() {
     try {
       const payload = jwt.verify(token, getSessionSecret(), { algorithms: ["HS256"] });
       if (typeof payload !== "string" && typeof payload.jti === "string") {
-        revokedSessionIds.add(payload.jti);
-        revokedSessionOrder.push(payload.jti);
-        if (revokedSessionOrder.length > 20_000) {
-          const oldest = revokedSessionOrder.shift();
-          if (oldest) revokedSessionIds.delete(oldest);
-        }
+        const expiresAt = typeof payload.exp === "number" ? new Date(payload.exp * 1000) : new Date();
+        await revokeSession(payload.jti, expiresAt);
       }
     } catch {
       // Expired or invalid sessions are already unusable.

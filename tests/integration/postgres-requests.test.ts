@@ -60,6 +60,7 @@ describe("request persistence on PostgreSQL", () => {
     await sql`DELETE FROM wfh_change_request_dates`;
     await sql`DELETE FROM wfh_change_requests`;
     await sql`DELETE FROM work_from_home_days`;
+    await sql`DELETE FROM session_revocations`;
     await sql`DELETE FROM users WHERE id IN (${admin.id}, ${coordinator.id}, ${employee.id}, ${teamEmployee.id})`;
     await seedUsers();
   });
@@ -68,6 +69,7 @@ describe("request persistence on PostgreSQL", () => {
     await sql`DELETE FROM wfh_change_request_dates`;
     await sql`DELETE FROM wfh_change_requests`;
     await sql`DELETE FROM work_from_home_days`;
+    await sql`DELETE FROM session_revocations`;
     await sql`DELETE FROM users WHERE id IN (${admin.id}, ${coordinator.id}, ${employee.id}, ${teamEmployee.id})`;
     await sql.end();
   });
@@ -279,6 +281,12 @@ describe("request persistence on PostgreSQL", () => {
     ]);
     expect(results.filter((result) => result.ok)).toHaveLength(1);
     expect(results.filter((result) => result.error)).toHaveLength(1);
+  });
+
+  it("persists session revocation until token expiry", async () => {
+    const [{ jti }] = await sql`INSERT INTO session_revocations (jti, expires_at) VALUES ('integration-revoked-session', now() + interval '1 day') RETURNING jti`;
+    const rows = await sql`SELECT jti FROM session_revocations WHERE jti = ${jti}`;
+    expect(rows).toHaveLength(1);
   });
 
   it("reports notification counts and paginates requester requests", async () => {

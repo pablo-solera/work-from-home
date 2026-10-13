@@ -53,6 +53,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_oracle_emp_id_unique ON users (oracle_em
 CREATE UNIQUE INDEX IF NOT EXISTS users_fallback_email_unique ON users (fallback_email) WHERE fallback_email IS NOT NULL;
 CREATE INDEX IF NOT EXISTS users_deactivated_at_idx ON users (deactivated_at) WHERE deactivated_at IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS session_revocations (
+  jti text PRIMARY KEY,
+  expires_at timestamp with time zone NOT NULL
+);
+CREATE INDEX IF NOT EXISTS session_revocations_expires_at_idx ON session_revocations (expires_at);
+
 CREATE TABLE IF NOT EXISTS work_from_home_days (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   user_id uuid NOT NULL,
