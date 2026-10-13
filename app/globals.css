@@ -5,6 +5,9 @@
   --wfh-canvas: #fafafa;
   --wfh-ink: #09090b;
   --wfh-focus: #0369a1;
+  --wfh-primary: #09090b;
+  --wfh-danger: #b91c1c;
+  --wfh-success: #047857;
 }
 
 body {
@@ -20,4 +23,46 @@ body {
 ::selection {
   background: #bae6fd;
   color: #082f49;
+}
+
+.wfh-button-primary,
+.wfh-button-danger,
+.wfh-button-success {
+  min-height: 2.75rem;
+  border-radius: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.wfh-button-primary {
+  background-color: var(--wfh-primary);
+  color: white;
+}
+
+.wfh-button-primary:hover:not(:disabled) { background-color: #27272a; }
+.wfh-button-danger { background-color: var(--wfh-danger); color: white; }
+.wfh-button-danger:hover:not(:disabled) { background-color: #991b1b; }
+.wfh-button-success { background-color: var(--wfh-success); color: white; }
+.wfh-button-success:hover:not(:disabled) { background-color: #065f46; }
+
+.wfh-button-primary:focus-visible,
+.wfh-button-danger:focus-visible,
+.wfh-button-success:focus-visible {
+  outline: 2px solid var(--wfh-focus);
+  outline-offset: 2px;
+}
+
+.wfh-button-primary:disabled,
+.wfh-button-danger:disabled,
+.wfh-button-success:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wfh-button-primary,
+  .wfh-button-danger,
+  .wfh-button-success { transition: none; }
 }

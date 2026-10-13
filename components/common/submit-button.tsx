@@ -10,12 +10,12 @@ type SubmitButtonProps = {
 };
 
 const variants = {
-  danger: "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-700",
-  primary: "bg-zinc-950 text-white hover:bg-zinc-800 focus-visible:ring-zinc-950",
-  secondary: "border border-zinc-300 text-zinc-700 hover:bg-zinc-100 focus-visible:ring-zinc-950",
+  danger: "wfh-button-danger",
+  primary: "wfh-button-primary",
+  secondary: "min-h-11 rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950",
 } as const;
 
 export function SubmitButton({ children, className = "", pendingLabel = "Guardando…", variant = "primary" }: SubmitButtonProps) {
   const { pending } = useFormStatus();
-  return <button aria-busy={pending} className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`} disabled={pending} type="submit">{pending ? pendingLabel : children}</button>;
+  return <button aria-busy={pending} className={`cursor-pointer focus-visible:outline-none ${variants[variant]} ${className}`} disabled={pending} type="submit">{pending ? pendingLabel : children}</button>;
 }
