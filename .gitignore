@@ -19,6 +19,9 @@
 .DS_Store
 *.pem
 .claude/
+.agents/
+playwright-report/
+test-results/
 
 # debug
 npm-debug.log*
