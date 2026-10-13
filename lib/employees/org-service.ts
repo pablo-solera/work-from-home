@@ -3,6 +3,7 @@ import { TtlCache } from "@/lib/cache/ttl-cache";
 import { findOrganizationRows, getExcludedGroupIds } from "@/lib/employees/org-repository";
 import { findTestAccountByEmpId, getTestAccounts } from "@/lib/employees/test-accounts";
 import { findUserById, findUsersByOracleEmpIds } from "@/lib/users/user-repository";
+import { cache } from "react";
 
 const DEFAULT_TTL_SECONDS = 60;
 const COORDINATOR_GROUP_ID = 1017;
@@ -168,13 +169,13 @@ export async function findUsersForCoordinator(coordinatorId: string) {
   return findUsersByOracleEmpIds([...teamEmpIds]);
 }
 
-export async function findEmployeeTeamVisibility(employeeId: string) {
+export const findEmployeeTeamVisibility = cache(async (employeeId: string) => {
   const employee = await findUserById(employeeId);
   if (!employee) return null;
   const coordinator = await findCoordinatorUser(employee);
   if (!coordinator) return null;
   return { coordinatorId: coordinator.id, teamWfhVisible: coordinator.teamWfhVisible };
-}
+});
 
 export async function findEmployeeByCoordinatorId(employeeId: string, coordinatorId: string, coordinator?: Awaited<ReturnType<typeof findUserById>>) {
   const [employee, resolvedCoordinator, snapshot] = await Promise.all([

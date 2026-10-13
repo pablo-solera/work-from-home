@@ -3,6 +3,7 @@ import type { SessionUser } from "./session";
 import { getUserById } from "@/lib/users/user-service";
 import { resolveUserRole } from "@/lib/employees/org-service";
 import { getCurrentUser } from "./session";
+import { cache } from "react";
 
 export async function requireAdmin() {
   const user = await requireAuthorizedUser();
@@ -33,7 +34,7 @@ export async function requireAuthorizedUser(): Promise<SessionUser> {
 }
 
 /** Revalidates the signed role without redirecting, for JSON route handlers. */
-export async function getAuthorizedUser(): Promise<SessionUser | null> {
+export const getAuthorizedUser = cache(async (): Promise<SessionUser | null> => {
   const user = await getCurrentUser();
   if (!user) return null;
 
@@ -42,4 +43,4 @@ export async function getAuthorizedUser(): Promise<SessionUser | null> {
   if (!dbUser) return null;
 
   return { ...user, role: await resolveUserRole(dbUser) };
-}
+});

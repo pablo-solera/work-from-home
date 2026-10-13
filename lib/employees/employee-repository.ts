@@ -97,6 +97,7 @@ export async function searchEmployees(query: string, offset: number, limit: numb
   const escapedQuery = normalizedQuery.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
   const searchTerm = `%${escapedQuery}%`;
   const lineIds = getStaffLineIds();
+  if (lineIds.length === 0) return { employees: [], total: 0 };
   const lineBinds: BindParameters = {};
   const linePlaceholders = lineIds.map((lineId, index) => {
     (lineBinds as Record<string, number>)[`line${index}`] = lineId;

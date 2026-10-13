@@ -10,8 +10,8 @@ type WithOracleEmpId = {
  * ORACLE_STAFF_LINE_IDS). System accounts (no oracleEmpId) are kept only when
  * `includeSystemUsers` is true.
  *
- * If Oracle is unavailable the list is returned unfiltered (mapped users) so the
- * app keeps working instead of showing an empty staff.
+ * If Oracle is unavailable, keep the mapped users available to avoid turning a
+ * temporary directory outage into an empty calendar.
  */
 export async function filterVisibleStaff<T extends WithOracleEmpId>(users: T[], options: { includeSystemUsers?: boolean } = {}): Promise<T[]> {
   const { includeSystemUsers = false } = options;

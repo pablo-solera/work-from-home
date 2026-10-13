@@ -8,12 +8,12 @@ export type OrganizationOracleRows = {
   roles: { EMP_ID: number; GROUP_ID: number }[];
 };
 
-function getLineIds() {
+export function getStaffLineIds() {
   const values = (process.env.ORACLE_STAFF_LINE_IDS ?? "")
     .split(",")
     .map((value) => Number(value.trim()))
     .filter((value) => Number.isInteger(value));
-  return values.length > 0 ? values : DEFAULT_STAFF_LINE_IDS;
+  return values.length > 0 ? [...new Set(values)] : DEFAULT_STAFF_LINE_IDS;
 }
 
 export function getExcludedGroupIds() {
@@ -40,7 +40,7 @@ const ACTIVE_EMPLOYEE_FILTER = "e.emp_esempleado = 1 AND e.emp_fec_baja IS NULL"
 export async function findOrganizationRows(adminGroupId: number, coordinatorGroupId: number): Promise<OrganizationOracleRows> {
   const schema = getOracleSchema();
   const groupList = bindList("group", [adminGroupId, coordinatorGroupId, ...getExcludedGroupIds()]);
-  const lineList = bindList("line", getLineIds());
+  const lineList = bindList("line", getStaffLineIds());
 
   const [roles, hierarchy] = await Promise.all([
     queryOracle<{ EMP_ID: number; GROUP_ID: number }>(
