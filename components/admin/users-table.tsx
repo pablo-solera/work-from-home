@@ -64,7 +64,7 @@ export function UsersTable({ currentUserId, page, query, totalPages, totalUsers,
   const pathname = usePathname();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const pageHref = (nextPage: number) => `/admin/users?query=${encodeURIComponent(query)}&page=${nextPage}`;
+  const pageHref = (nextPage: number) => `/admin/users?${query ? `query=${encodeURIComponent(query)}&` : ""}page=${nextPage}`;
 
   useEffect(() => {
     if (debouncedSearch === query) return;
