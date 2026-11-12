@@ -4,8 +4,8 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import type { CalendarCell } from "@/lib/calendar/dates";
 import type { AdminCalendarDaySummary } from "@/lib/calendar/calendar-service";
-import { CalendarGrid, CalendarPanel, EmptyCalendarCell } from "@/components/calendar/calendar-shell";
-import { AdminDayCell } from "./admin-day-cell";
+import { CalendarGrid, CalendarPanel, EmptyCalendarCell, OVERVIEW_LEGEND } from "@/components/calendar/calendar-shell";
+import { AdminDayCell, canOpenDayDetails } from "./admin-day-cell";
 
 const AdminDayModal = dynamic(() => import("./admin-day-modal").then((module) => module.AdminDayModal));
 
@@ -42,6 +42,12 @@ export function AdminCalendar({
   const [loadingDate, setLoadingDate] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
 
+  const days = cells.flatMap((cell) => (cell ? [{ ...cell, ...(daySummariesByDate[cell.date] ?? { absenceCount: 0, officeCount: 0, remoteCount: 0 }) }] : []));
+  const openableDays = days.filter(canOpenDayDetails);
+  const selectedIndex = selectedDay ? openableDays.findIndex((day) => day.date === selectedDay.date) : -1;
+  const previousDay = selectedIndex > 0 ? openableDays[selectedIndex - 1] : undefined;
+  const nextDay = selectedIndex !== -1 ? openableDays[selectedIndex + 1] : undefined;
+
   function selectDay(day: AdminCalendarDay) {
     setSelectedDay(day);
     setDetailError(null);
@@ -59,7 +65,7 @@ export function AdminCalendar({
   }
 
   return (
-    <CalendarPanel monthName={monthName} navigation={{ currentMonthHref, nextMonthHref, previousMonthHref, showCurrentMonthLink }}>
+    <CalendarPanel legend={OVERVIEW_LEGEND} monthName={monthName} navigation={{ currentMonthHref, nextMonthHref, previousMonthHref, showCurrentMonthLink }}>
       <CalendarGrid label={`Calendario de ${monthName}`}>
         {cells.map((cell, index) => {
           if (!cell) {
@@ -75,7 +81,7 @@ export function AdminCalendar({
         })}
       </CalendarGrid>
 
-      {selectedDay ? <AdminDayModal day={selectedDay} detail={details[selectedDay.date] ?? null} error={detailError} loading={loadingDate === selectedDay.date} onClose={() => setSelectedDay(null)} /> : null}
+      {selectedDay ? <AdminDayModal day={selectedDay} detail={details[selectedDay.date] ?? null} error={detailError} loading={loadingDate === selectedDay.date} onClose={() => setSelectedDay(null)} onNextDay={nextDay ? () => selectDay(nextDay) : undefined} onPreviousDay={previousDay ? () => selectDay(previousDay) : undefined} /> : null}
     </CalendarPanel>
   );
 }

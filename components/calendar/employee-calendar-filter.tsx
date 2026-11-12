@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { fieldClasses } from "@/components/common/form-classes";
 import { createCalendarHref } from "@/lib/calendar/links";
 
 type EmployeeCalendarFilterProps = {
@@ -21,7 +22,7 @@ export function EmployeeCalendarFilter({ allLabel = "Todos", basePath, employees
       <span className="text-sm font-medium text-zinc-700">{label}</span>
       <select
         autoComplete="off"
-        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-base focus-visible:border-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700"
+        className={`${fieldClasses} cursor-pointer`}
         name="employee"
         onChange={(event) => router.push(createCalendarHref(basePath, { employeeId: event.target.value, month, year }))}
         value={selectedEmployeeId}
