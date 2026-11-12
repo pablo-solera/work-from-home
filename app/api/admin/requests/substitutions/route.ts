@@ -7,5 +7,10 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   if (user.role !== "admin") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   const url = new URL(request.url);
-  return NextResponse.json(await getAdminSubstitutionNotifications(url.searchParams.get("cursor") ?? undefined), { headers: { "Cache-Control": "private, no-store" } });
+  try {
+    return NextResponse.json(await getAdminSubstitutionNotifications(url.searchParams.get("cursor") ?? undefined), { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    console.error("Failed to load admin substitution notifications:", error);
+    return NextResponse.json({ error: "No se pudieron cargar las notificaciones." }, { status: 500 });
+  }
 }

@@ -9,6 +9,11 @@ export async function GET(request: Request) {
   if (user.role !== "admin") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
   const url = new URL(request.url);
-  const page = await getRequestsForAdmin(parseRequestFilters(url.searchParams, "pending"), url.searchParams.get("cursor") ?? undefined);
-  return NextResponse.json(page, { headers: { "Cache-Control": "private, no-store" } });
+  try {
+    const page = await getRequestsForAdmin(parseRequestFilters(url.searchParams, "pending"), url.searchParams.get("cursor") ?? undefined);
+    return NextResponse.json(page, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    console.error("Failed to load admin request list:", error);
+    return NextResponse.json({ error: "No se pudieron cargar las solicitudes." }, { status: 500 });
+  }
 }

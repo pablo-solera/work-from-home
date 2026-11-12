@@ -12,9 +12,13 @@ export async function GET(request: Request) {
   const filters = parseRequestFilters(url.searchParams);
   const cursor = url.searchParams.get("cursor") ?? undefined;
   const own = url.searchParams.get("own") === "true";
-  const page = user.role === "coordinator" && !own
-    ? await getRequestsForCoordinator(user.id, filters, cursor)
-    : await getRequestsForRequester(user.id, filters, cursor);
-
-  return NextResponse.json(page, { headers: { "Cache-Control": "private, no-store" } });
+  try {
+    const page = user.role === "coordinator" && !own
+      ? await getRequestsForCoordinator(user.id, filters, cursor)
+      : await getRequestsForRequester(user.id, filters, cursor);
+    return NextResponse.json(page, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    console.error("Failed to load request list:", error);
+    return NextResponse.json({ error: "No se pudieron cargar las solicitudes." }, { status: 500 });
+  }
 }
