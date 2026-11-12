@@ -8,6 +8,7 @@ import { Dialog } from "@/components/common/dialog";
 import { fieldClasses } from "@/components/common/form-classes";
 import { useToast } from "@/components/common/toast-provider";
 import { formatDateKeyForDisplay } from "@/lib/calendar/dates";
+import { markLocalMutation } from "@/lib/local-mutation";
 import type { RequestFormState } from "@/lib/requests/request-types";
 
 type RequestReviewModalProps = {
@@ -24,6 +25,7 @@ export function RequestReviewModal({ dates, kind, replacedDate, onClose }: Reque
       return { error: "Debes indicar un comentario para solicitar días adicionales." };
     }
 
+    markLocalMutation();
     const result = await createWfhRequestAction(previousState, formData);
     if (result.ok) showToast(result.message ?? "Solicitud enviada correctamente.");
     return result;

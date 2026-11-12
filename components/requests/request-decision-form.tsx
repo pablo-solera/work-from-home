@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { decideWfhRequestAction } from "@/app/(dashboard)/requests/actions";
 import { decideAdminWfhRequestAction } from "@/app/(dashboard)/admin/requests/actions";
@@ -8,9 +7,9 @@ import { ActionFeedback } from "@/components/common/action-feedback";
 import { Button } from "@/components/common/button";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { fieldClasses } from "@/components/common/form-classes";
+import { markLocalMutation } from "@/lib/local-mutation";
 
 export function RequestDecisionForm({ requestId, adminView = false }: { requestId: string; adminView?: boolean }) {
-  const router = useRouter();
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [confirmingReject, setConfirmingReject] = useState(false);
@@ -19,6 +18,7 @@ export function RequestDecisionForm({ requestId, adminView = false }: { requestI
   function decide(status: "accepted" | "rejected") {
     setError(null);
     setConfirmingReject(false);
+    markLocalMutation();
     startTransition(async () => {
       try {
         const formData = new FormData();
@@ -31,7 +31,7 @@ export function RequestDecisionForm({ requestId, adminView = false }: { requestI
           setError(message);
           return;
         }
-        router.refresh();
+        // The server action revalidates the affected pages, so no router.refresh() is needed.
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : "No se pudo resolver la solicitud.";
         setError(message);

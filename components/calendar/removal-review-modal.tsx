@@ -8,6 +8,7 @@ import { Dialog } from "@/components/common/dialog";
 import { fieldClasses } from "@/components/common/form-classes";
 import { useToast } from "@/components/common/toast-provider";
 import { formatDateKeyForDisplay } from "@/lib/calendar/dates";
+import { markLocalMutation } from "@/lib/local-mutation";
 import type { RequestFormState } from "@/lib/requests/request-types";
 
 type RemovalReviewModalProps = { dates: string[]; onClose: () => void };
@@ -15,6 +16,7 @@ type RemovalReviewModalProps = { dates: string[]; onClose: () => void };
 export function RemovalReviewModal({ dates, onClose }: RemovalReviewModalProps) {
   const { showToast } = useToast();
   const [state, action, pending] = useActionState(async (previousState: RequestFormState, formData: FormData) => {
+    markLocalMutation();
     const result = await createWfhRequestAction(previousState, formData);
     if (result.ok) showToast(result.message ?? "Anulación aplicada correctamente.");
     return result;

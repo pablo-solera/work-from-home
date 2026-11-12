@@ -2,7 +2,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { createEmptySections, getAbsenceSectionsByDate } from "@/lib/absences/absence-service";
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { filterVisibleStaff } from "@/lib/employees/staff-service";
-import { findEmployeeByCoordinatorId, findEmployeeTeamVisibility, findExcludedEmpIds, findUsersForCoordinator } from "@/lib/employees/org-service";
+import { findEmployeeByCoordinatorId, findEmployeeTeamVisibility, findExcludedEmpIds, findUsersForCoordinator, findUsersForCoordinatorEmpId } from "@/lib/employees/org-service";
 import { getTestAccountEmpIds } from "@/lib/employees/test-accounts";
 import { findAllUsers, findUserById } from "@/lib/users/user-repository";
 import { getPendingRequestedDates } from "@/lib/requests/request-list-service";
@@ -13,6 +13,12 @@ import { measure } from "@/lib/perf";
 import { getHolidayDates } from "./holiday-service";
 
 const UNKNOWN_IDENTITY = { name: "Usuario", email: null } as const;
+
+type TeamVisibility = { coordinatorId: string; coordinatorOracleEmpId: number | null };
+
+function findTeamForVisibility(visibility: TeamVisibility) {
+  return visibility.coordinatorOracleEmpId === null ? Promise.resolve([]) : findUsersForCoordinatorEmpId(visibility.coordinatorOracleEmpId);
+}
 
 function excludeTestAccounts<T extends { oracleEmpId: number | null }>(users: T[]) {
   const testEmpIds = getTestAccountEmpIds();
@@ -88,7 +94,7 @@ async function getCalendarUsersForViewer(viewer: SessionUser) {
   if (viewer.role === "coordinator") return filterVisibleStaff(await findUsersForCoordinator(viewer.id));
   const visibility = await findEmployeeTeamVisibility(viewer.id);
   if (!visibility?.teamWfhVisible) return null;
-  return filterVisibleStaff(await findUsersForCoordinator(visibility.coordinatorId));
+  return filterVisibleStaff(await findTeamForVisibility(visibility));
 }
 
 export async function getEmployeeTeamWfhDayDetail(viewer: SessionUser, date: string) {
@@ -97,7 +103,7 @@ export async function getEmployeeTeamWfhDayDetail(viewer: SessionUser, date: str
   if (date < minimumDate || date > maximumDate) return null;
   const visibility = await findEmployeeTeamVisibility(viewer.id);
   if (!visibility?.teamWfhVisible) return null;
-  const users = await filterVisibleStaff(await findUsersForCoordinator(visibility.coordinatorId));
+  const users = await filterVisibleStaff(await findTeamForVisibility(visibility));
   const [entries, identities, absenceSectionsByDate, excludedEmpIds, holidays] = await Promise.all([
     findWorkFromHomeDaysByUserIds(users.map((user) => user.id), date, date),
     resolveUserIdentities(users),
@@ -184,9 +190,12 @@ export async function getTeamCalendarForViewer(viewer: SessionUser, year: number
   if (viewer.role !== "employee") return null;
   const teamVisibility = await findEmployeeTeamVisibility(viewer.id);
   if (!teamVisibility?.teamWfhVisible) return null;
-  const employees = await filterVisibleStaff(await findUsersForCoordinator(teamVisibility.coordinatorId));
   const range = getMonthRange(year, month);
-  const holidays = await getHolidayDates(range.start, range.end);
+  // Holidays do not depend on the team, so load them together with it.
+  const [employees, holidays] = await Promise.all([
+    findTeamForVisibility(teamVisibility).then((team) => filterVisibleStaff(team)),
+    getHolidayDates(range.start, range.end),
+  ]);
   const calendar = getCalendarDays(year, month, holidays);
   const { minimumDate, maximumDate } = getEmployeeTeamVisibleRange();
   const start = range.start > minimumDate ? range.start : minimumDate;

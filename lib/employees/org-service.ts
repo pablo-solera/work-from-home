@@ -165,12 +165,17 @@ export async function findCoordinatorUser(user: { oracleEmpId: number | null }) 
   return coordinator ?? null;
 }
 
+/** Team lookup for callers that already know the coordinator's Oracle id, so the coordinator row is not read again. */
+export async function findUsersForCoordinatorEmpId(coordinatorEmpId: number) {
+  const snapshot = await getOrganizationSnapshot();
+  const teamEmpIds = snapshot.teamByCoordinatorEmpId.get(coordinatorEmpId) ?? new Set<number>();
+  return findUsersByOracleEmpIds([...teamEmpIds]);
+}
+
 export async function findUsersForCoordinator(coordinatorId: string) {
   const coordinator = await findUserById(coordinatorId);
   if (!coordinator?.oracleEmpId) return [];
-  const snapshot = await getOrganizationSnapshot();
-  const teamEmpIds = snapshot.teamByCoordinatorEmpId.get(coordinator.oracleEmpId) ?? new Set<number>();
-  return findUsersByOracleEmpIds([...teamEmpIds]);
+  return findUsersForCoordinatorEmpId(coordinator.oracleEmpId);
 }
 
 export const findEmployeeTeamVisibility = cache(async (employeeId: string) => {
@@ -178,7 +183,7 @@ export const findEmployeeTeamVisibility = cache(async (employeeId: string) => {
   if (!employee) return null;
   const coordinator = await findCoordinatorUser(employee);
   if (!coordinator) return null;
-  return { coordinatorId: coordinator.id, teamWfhVisible: coordinator.teamWfhVisible };
+  return { coordinatorId: coordinator.id, coordinatorOracleEmpId: coordinator.oracleEmpId, teamWfhVisible: coordinator.teamWfhVisible };
 });
 
 export async function findEmployeeByCoordinatorId(employeeId: string, coordinatorId: string, coordinator?: Awaited<ReturnType<typeof findUserById>>) {

@@ -68,7 +68,7 @@ describe("request action components", () => {
     expect(acceptedForm.get("id")).toBe("request-1");
     expect(acceptedForm.get("status")).toBe("accepted");
     expect(acceptedForm.get("comment")).toBe("De acuerdo");
-    expect(refresh).toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
 
     rerender(<RequestDecisionForm adminView requestId="request-2" />);
     fireEvent.click(screen.getByRole("button", { name: "Rechazar" }));

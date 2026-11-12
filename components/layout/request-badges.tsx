@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isRecentLocalMutation } from "@/lib/local-mutation";
 import { useRequestNotifications } from "./request-notification-provider";
 
 type RequestBadgeSummary = {
@@ -44,7 +45,7 @@ export function RequestBadges(initialSummary: RequestBadgeSummary) {
       summaryRef.current = next;
       setSummary(next);
 
-      if (refreshPage && changed && pathname === "/admin/requests" && !refreshScheduledRef.current) {
+      if (refreshPage && changed && pathname === "/admin/requests" && !refreshScheduledRef.current && !isRecentLocalMutation()) {
         refreshScheduledRef.current = true;
         window.setTimeout(() => {
           refreshScheduledRef.current = false;
