@@ -31,7 +31,7 @@ export function useModalDismiss<T extends HTMLElement>(onClose: () => void) {
 
     openDialogs.push(dialog);
     document.body.classList.add("overflow-hidden");
-    dialog.focus();
+    dialog.focus({ preventScroll: true });
 
     function handleKeyDown(event: KeyboardEvent) {
       if (openDialogs[openDialogs.length - 1] !== dialog) return;

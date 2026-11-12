@@ -28,7 +28,7 @@
   --wfh-focus: #0369a1;
 }
 
-html { scrollbar-color: #d4d4d8 transparent; scrollbar-width: thin; }
+html { scrollbar-color: #d4d4d8 transparent; scrollbar-width: thin; scrollbar-gutter: stable; }
 body { background: var(--wfh-canvas); color: var(--wfh-ink); }
 :focus-visible { outline: 2px solid var(--wfh-focus); outline-offset: 2px; }
 ::selection { background: #bae6fd; color: #082f49; }

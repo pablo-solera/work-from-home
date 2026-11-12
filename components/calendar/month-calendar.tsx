@@ -1,17 +1,16 @@
 "use client";
 
 import { useMemo, useOptimistic, useState, useTransition } from "react";
-import dynamic from "next/dynamic";
 import { toggleWorkFromHomeDayAction } from "@/app/(dashboard)/calendar/actions";
 import { useErrorModal } from "@/components/common/error-modal-provider";
 import { Button } from "@/components/common/button";
 import { formatDateKeyForDisplay, getMadridTodayDateKey, getWeekRange, type CalendarCell } from "@/lib/calendar/dates";
 import { DayCell, isDateLockedForMode, type RequestMode } from "./day-cell";
+import { RemovalReviewModal } from "./removal-review-modal";
 import { ReplicateControls } from "./replicate-controls";
+import { RequestReviewModal } from "./request-review-modal";
 import { CalendarGrid, CalendarPanel, EmptyCalendarCell, PERSONAL_LEGEND } from "./calendar-shell";
 
-const LazyRequestReviewModal = dynamic(() => import("./request-review-modal").then((module) => module.RequestReviewModal));
-const LazyRemovalReviewModal = dynamic(() => import("./removal-review-modal").then((module) => module.RemovalReviewModal));
 const EMPTY_SELECTION: string[] = [];
 
 export type MonthCalendarProps = {
@@ -205,7 +204,7 @@ export function MonthCalendar({
           />
         ) : <EmptyCalendarCell index={index} key={`empty-${index}`} />)}
       </CalendarGrid>
-        {canRequest && reviewOpen ? mode === "removal" ? <LazyRemovalReviewModal dates={requestDates} onClose={resetRequest} /> : <LazyRequestReviewModal dates={requestDates} kind={mode === "additional" ? "additional" : "substitution"} replacedDate={replacementSource} onClose={resetRequest} /> : null}
+        {canRequest && reviewOpen ? mode === "removal" ? <RemovalReviewModal dates={requestDates} onClose={resetRequest} /> : <RequestReviewModal dates={requestDates} kind={mode === "additional" ? "additional" : "substitution"} replacedDate={replacementSource} onClose={resetRequest} /> : null}
     </CalendarPanel>
   );
 }

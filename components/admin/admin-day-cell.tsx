@@ -3,6 +3,7 @@ import type { AdminCalendarDay } from "./admin-calendar";
 
 type AdminDayCellProps = {
   day: AdminCalendarDay;
+  onPrefetch?: (day: AdminCalendarDay) => void;
   onSelect: (day: AdminCalendarDay) => void;
 };
 
@@ -20,7 +21,7 @@ function Stat({ count, dot, label, tone }: { count: number; dot: string; label: 
   );
 }
 
-export function AdminDayCell({ day, onSelect }: AdminDayCellProps) {
+export function AdminDayCell({ day, onPrefetch, onSelect }: AdminDayCellProps) {
   const isOutOfRange = day.isOutOfRange ?? false;
   const canOpenDetails = canOpenDayDetails(day);
   const isDisabledDay = day.isWeekend || day.isHoliday;
@@ -33,6 +34,8 @@ export function AdminDayCell({ day, onSelect }: AdminDayCellProps) {
       aria-haspopup={canOpenDetails ? "dialog" : undefined}
       disabled={!canOpenDetails}
       onClick={() => onSelect(day)}
+      onFocus={() => onPrefetch?.(day)}
+      onPointerEnter={() => onPrefetch?.(day)}
       type="button"
     >
       <div className="flex h-full flex-col justify-between gap-2 sm:gap-4">

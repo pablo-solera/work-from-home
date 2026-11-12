@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { ChevronLeft, ChevronRight, Search, Users } from "lucide-react";
@@ -9,10 +8,10 @@ import { Badge, type BadgeTone } from "@/components/common/badge";
 import { Button, buttonClasses } from "@/components/common/button";
 import { EmptyState } from "@/components/common/empty-state";
 import { fieldClasses } from "@/components/common/form-classes";
+import { UserFormModal } from "./user-form-modal";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import type { UserRole } from "@/lib/auth/session";
 
-const UserFormModal = dynamic(() => import("./user-form-modal").then((module) => module.UserFormModal));
 
 export type UserCoordinatorOption = {
   email: string;
