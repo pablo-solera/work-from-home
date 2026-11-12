@@ -12,7 +12,6 @@
     "sync:users": "bun run scripts/sync-users-timertask.ts",
     "sync:users:apply": "bun run scripts/sync-users-timertask.ts --apply",
     "generate:wfh-import": "bun run scripts/generate-wfh-import.ts",
-    "check:azure": "bun run scripts/check-azure-openai.ts",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:component": "vitest run tests/component",
@@ -25,8 +24,6 @@
     "docker:setup-db": "bun run scripts/apply-migrations.ts"
   },
   "dependencies": {
-    "@ai-sdk/azure": "^4.0.71",
-    "ai": "^7.0.102",
     "drizzle-orm": "^0.45.2",
     "jsonwebtoken": "^9.0.3",
     "ldapts": "^9.0.0",

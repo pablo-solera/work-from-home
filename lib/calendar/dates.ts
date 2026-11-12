@@ -1,7 +1,7 @@
 import { getMadridTodayDateKey, getTodayDateKey, getWeekdayFromDateKey, isWeekendDateKey, toDateKey } from "./date-utils";
 import { getHolidayName } from "./holidays";
 
-export { addDateKey, formatDateKeyForDisplay, getMadridTodayDateKey, getTodayDateKey, getWeekRange, getWeekdayFromDateKey, isDateInWeek, isValidDateKey, isWeekendDateKey, toDateKey } from "./date-utils";
+export { formatDateKeyForDisplay, getMadridTodayDateKey, getTodayDateKey, getWeekRange, getWeekdayFromDateKey, isDateInWeek, isValidDateKey, isWeekendDateKey, toDateKey } from "./date-utils";
 export { getCompanyHolidayName, getHolidayName, getMadridHolidayName, getSpanishNationalHolidayName, isHoliday, isSpanishNationalHoliday } from "./holidays";
 
 export type CalendarDay = { date: string; dayNumber: number; holidayName: string | null; isHoliday: boolean; isToday: boolean; isWeekend: boolean };

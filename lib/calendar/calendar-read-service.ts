@@ -100,11 +100,6 @@ export async function getCalendarDayDetail(viewer: SessionUser, date: string) {
   if (!isValidDateKey(date) || viewer.role === "employee") return null;
   const users = await getCalendarUsersForViewer(viewer);
   if (!users) return null;
-  return getCalendarDayDetailForUsers(users, date);
-}
-
-export async function getCalendarDayDetailForUsers(users: Awaited<ReturnType<typeof findAllUsers>>, date: string) {
-  if (!isValidDateKey(date)) return null;
   const [entries, absenceSectionsByDate, identities, excludedEmpIds, holidays] = await Promise.all([
     findWorkFromHomeDaysByUserIds(users.map((user) => user.id), date, date),
     getAbsenceSectionsByDate(date, date, users),
