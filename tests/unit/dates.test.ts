@@ -88,4 +88,9 @@ describe("calendar dates", () => {
     expect(calendar.cells.some((cell) => cell?.date === "2026-08-04")).toBe(true);
     expect(calendar.monthName).toContain("agosto");
   });
+
+  it("marks TimerTask-provided dates as generic disabled holidays", () => {
+    const calendar = getCalendarDays(2026, 4, new Set(["2026-04-02"]));
+    expect(calendar.cells.find((cell) => cell?.date === "2026-04-02")).toMatchObject({ holidayName: "Festivo", isHoliday: true });
+  });
 });

@@ -2,14 +2,15 @@ import type { SessionUser } from "@/lib/auth/session";
 import { findUserById } from "@/lib/users/user-repository";
 import { createWorkFromHomeDay, deleteWorkFromHomeDay, findUserWorkFromHomeDays, replaceWorkFromHomeDays } from "./calendar-repository";
 import { assertCanEditWorkFromHomeDays, getMinimumEditableDate } from "./calendar-authorization";
-import { getCalendarDays, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isHoliday, isValidDateKey, isWeekendDateKey } from "./dates";
+import { getCalendarDays, getMonthRange, getMonthsUntilYearEnd, getWeekdayFromDateKey, isValidDateKey, isWeekendDateKey } from "./dates";
+import { getHolidayDates } from "./holiday-service";
 
 type ReplicateWorkFromHomeScope = "next" | "untilYearEnd";
 
 export async function setWorkFromHomeDay(userId: string, date: string, enabled: boolean, enforceAllowance = true) {
   if (!isValidDateKey(date)) throw new Error("Invalid date");
   if (isWeekendDateKey(date)) throw new Error("Weekend dates cannot be selected");
-  if (isHoliday(date)) throw new Error("Holidays cannot be selected");
+  if ((await getHolidayDates(date, date)).has(date)) throw new Error("Holidays cannot be selected");
   if (enabled) {
     await createWorkFromHomeDay(userId, date, enforceAllowance);
     return;
@@ -51,12 +52,13 @@ export async function replicateWorkFromHomeDays(actor: SessionUser, input: { mon
       { year: input.year, month: input.month },
       ...(input.scope === "next" ? [{ year: input.year, month: input.month + 1 }] : getMonthsUntilYearEnd(input.year, input.month)),
     ];
-    const values = targetMonths.flatMap(({ year, month }) => getCalendarDays(year, month).cells.flatMap((cell) => {
+    const lastMonth = targetMonths[targetMonths.length - 1];
+    const targetRange = getMonthRange(lastMonth.year, lastMonth.month);
+    const holidays = effectiveStart <= targetRange.end ? await getHolidayDates(effectiveStart, targetRange.end) : new Set<string>();
+    const values = targetMonths.flatMap(({ year, month }) => getCalendarDays(year, month, holidays).cells.flatMap((cell) => {
       if (!cell || cell.date < effectiveStart || cell.isWeekend || cell.isHoliday || !sourceWeekdays.has(getWeekdayFromDateKey(cell.date))) return [];
       return [{ userId: input.targetUserId, date: cell.date }];
     }));
-    const lastMonth = targetMonths[targetMonths.length - 1];
-    const targetRange = getMonthRange(lastMonth.year, lastMonth.month);
     if (effectiveStart <= targetRange.end) await replaceWorkFromHomeDays(input.targetUserId, effectiveStart, targetRange.end, values, true, actor);
     return { ok: true as const };
   } catch (error) {

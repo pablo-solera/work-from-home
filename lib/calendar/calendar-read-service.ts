@@ -8,6 +8,7 @@ import { getPendingRequestedDates } from "@/lib/requests/request-list-service";
 import { findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds } from "./calendar-repository";
 import { buildDaySummaries, buildSectionsByDate } from "./calendar-transform";
 import { getCalendarDays, getCurrentCalendarMonth, getMadridTodayDateKey, getMonthRange, getNextMonth, getWeekRange, isValidDateKey } from "./dates";
+import { getHolidayDates } from "./holiday-service";
 
 const UNKNOWN_IDENTITY = { name: "Usuario", email: null } as const;
 
@@ -20,10 +21,11 @@ function getEmployeeTeamVisibleRange() {
 async function buildUserCalendar(userId: string, year: number, month: number, knownUser?: Awaited<ReturnType<typeof findUserById>>) {
   const range = getMonthRange(year, month);
   const dataRange = { start: getWeekRange(range.start).start, end: getWeekRange(range.end).end };
-  const [entries, pendingDates, user] = await Promise.all([
+  const [entries, pendingDates, user, holidays] = await Promise.all([
     findUserWorkFromHomeDays(userId, dataRange.start, dataRange.end),
     getPendingRequestedDates(userId, range.start, range.end),
     knownUser ? Promise.resolve(knownUser) : findUserById(userId),
+    getHolidayDates(range.start, range.end),
   ]);
   const selectedDates = new Set(entries.filter((entry) => entry.date >= range.start && entry.date <= range.end).map((entry) => entry.date));
   const weeklyCounts: Record<string, number> = {};
@@ -33,7 +35,7 @@ async function buildUserCalendar(userId: string, year: number, month: number, kn
   }
 
   return {
-    ...getCalendarDays(year, month),
+    ...getCalendarDays(year, month, holidays),
     selectedDates: Array.from(selectedDates),
     pendingDates,
     weeklyAllowance: user?.wfhDaysAllowance ?? 0,
@@ -47,8 +49,8 @@ export function getUserCalendar(userId: string, year: number, month: number) {
 
 export async function getAdminCalendarOverview(year: number, month: number) {
   const range = getMonthRange(year, month);
-  const [entries, allUsers] = await Promise.all([findAllWorkFromHomeDays(range.start, range.end), findAllUsers()]);
-  const calendar = getCalendarDays(year, month);
+  const [entries, allUsers, holidays] = await Promise.all([findAllWorkFromHomeDays(range.start, range.end), findAllUsers(), getHolidayDates(range.start, range.end)]);
+  const calendar = getCalendarDays(year, month, holidays);
   const [absenceSectionsByDate, users, identities, excludedEmpIds] = await Promise.all([
     getAbsenceSectionsByDate(range.start, range.end, allUsers),
     filterVisibleStaff(allUsers),
@@ -81,13 +83,14 @@ export async function getEmployeeTeamWfhDayDetail(viewer: SessionUser, date: str
   const visibility = await findEmployeeTeamVisibility(viewer.id);
   if (!visibility?.teamWfhVisible) return null;
   const users = await filterVisibleStaff(await findUsersForCoordinator(visibility.coordinatorId));
-  const [entries, identities, absenceSectionsByDate, excludedEmpIds] = await Promise.all([
+  const [entries, identities, absenceSectionsByDate, excludedEmpIds, holidays] = await Promise.all([
     findWorkFromHomeDaysByUserIds(users.map((user) => user.id), date, date),
     resolveUserIdentities(users),
     getAbsenceSectionsByDate(date, date, users),
     findExcludedEmpIds(),
+    getHolidayDates(date, date),
   ]);
-  const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)));
+  const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)), holidays);
   const dayCalendar = { ...calendar, cells: calendar.cells.filter((cell) => cell?.date === date) };
   const sections = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, dayCalendar, excludedEmpIds)[date] ?? createEmptySections();
   return { ...sections, bajas: [] };
@@ -102,13 +105,14 @@ export async function getCalendarDayDetail(viewer: SessionUser, date: string) {
 
 export async function getCalendarDayDetailForUsers(users: Awaited<ReturnType<typeof findAllUsers>>, date: string) {
   if (!isValidDateKey(date)) return null;
-  const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)));
-  const [entries, absenceSectionsByDate, identities, excludedEmpIds] = await Promise.all([
+  const [entries, absenceSectionsByDate, identities, excludedEmpIds, holidays] = await Promise.all([
     findWorkFromHomeDaysByUserIds(users.map((user) => user.id), date, date),
     getAbsenceSectionsByDate(date, date, users),
     resolveUserIdentities(users),
     findExcludedEmpIds(),
+    getHolidayDates(date, date),
   ]);
+  const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)), holidays);
   const dayCalendar = { ...calendar, cells: calendar.cells.filter((cell) => cell?.date === date) };
   const sectionsByDate = buildSectionsByDate(entries, users, identities, absenceSectionsByDate, dayCalendar, excludedEmpIds);
   return sectionsByDate[date] ?? createEmptySections();
@@ -136,13 +140,14 @@ export async function getCoordinatorCalendarOverview(coordinatorId: string, year
   const employees = await filterVisibleStaff(allEmployees);
   const visibleEmployees = employeeId ? employees.filter((employee) => employee.id === employeeId) : employees;
   const range = getMonthRange(year, month);
-  const calendar = getCalendarDays(year, month);
-  const [entries, identities, absenceSectionsByDate, excludedEmpIds] = await Promise.all([
+  const [entries, identities, absenceSectionsByDate, excludedEmpIds, holidays] = await Promise.all([
     findWorkFromHomeDaysByUserIds(visibleEmployees.map((employee) => employee.id), range.start, range.end),
     resolveUserIdentities(employees),
     getAbsenceSectionsByDate(range.start, range.end, employees),
     findExcludedEmpIds(),
+    getHolidayDates(range.start, range.end),
   ]);
+  const calendar = getCalendarDays(year, month, holidays);
   const sectionsByDate = buildSectionsByDate(entries, visibleEmployees, identities, absenceSectionsByDate, calendar, excludedEmpIds);
   const employeeList = employees.map((employee) => {
     const identity = identities.get(employee.id) ?? UNKNOWN_IDENTITY;
@@ -167,7 +172,8 @@ export async function getTeamCalendarForViewer(viewer: SessionUser, year: number
   if (!teamVisibility?.teamWfhVisible) return null;
   const employees = await filterVisibleStaff(await findUsersForCoordinator(teamVisibility.coordinatorId));
   const range = getMonthRange(year, month);
-  const calendar = getCalendarDays(year, month);
+  const holidays = await getHolidayDates(range.start, range.end);
+  const calendar = getCalendarDays(year, month, holidays);
   const { minimumDate, maximumDate } = getEmployeeTeamVisibleRange();
   const start = range.start > minimumDate ? range.start : minimumDate;
   const end = range.end < maximumDate ? range.end : maximumDate;

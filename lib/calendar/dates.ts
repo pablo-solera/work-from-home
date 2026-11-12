@@ -63,7 +63,7 @@ export function getMonthsUntilYearEnd(year: number, month: number): CalendarMont
   return month >= 12 ? [] : Array.from({ length: 12 - month }, (_, index) => ({ year, month: month + index + 1 }));
 }
 
-export function getCalendarDays(year: number, month: number) {
+export function getCalendarDays(year: number, month: number, timerTaskHolidays?: ReadonlySet<string>) {
   const firstDay = new Date(Date.UTC(year, month - 1, 1));
   const lastDay = new Date(Date.UTC(year, month, 0));
   const firstWeekday = firstDay.getUTCDay() === 0 ? 6 : firstDay.getUTCDay() - 1;
@@ -71,7 +71,7 @@ export function getCalendarDays(year: number, month: number) {
   const today = getTodayDateKey();
   for (let day = 1; day <= lastDay.getUTCDate(); day += 1) {
     const date = toDateKey(new Date(Date.UTC(year, month - 1, day)));
-    const holidayName = getHolidayName(date);
+    const holidayName = timerTaskHolidays ? (timerTaskHolidays.has(date) ? "Festivo" : null) : getHolidayName(date);
     cells.push({ date, dayNumber: day, holidayName, isHoliday: holidayName !== null, isToday: date === today, isWeekend: isWeekendDateKey(date) });
   }
   return { cells, monthName: firstDay.toLocaleDateString("es-ES", { month: "long", year: "numeric" }) };

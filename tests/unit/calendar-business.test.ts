@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   findUserById: vi.fn(),
   findEmployeeByCoordinatorId: vi.fn(),
   createWorkFromHomeDay: vi.fn(),
   deleteWorkFromHomeDay: vi.fn(),
+  getHolidayDates: vi.fn(async (start: string, end: string) => new Set(["2026-04-02", "2026-05-15", "2026-12-24", "2026-12-31"].filter((date) => date >= start && date <= end))),
 }));
 
 vi.mock("@/lib/users/user-repository", () => ({ findUserById: mocks.findUserById, findAllUsers: vi.fn(), findUserWorkFromHomeDays: vi.fn(), findAllWorkFromHomeDays: vi.fn(), findWorkFromHomeDaysByUserIds: vi.fn() }));
@@ -13,11 +14,23 @@ vi.mock("@/lib/employees/identity-service", () => ({ resolveUserIdentities: vi.f
 vi.mock("@/lib/employees/staff-service", () => ({ filterVisibleStaff: vi.fn() }));
 vi.mock("@/lib/absences/absence-service", () => ({ createEmptySections: vi.fn(), getAbsenceSectionsByDate: vi.fn() }));
 vi.mock("@/lib/requests/request-service", () => ({ getPendingRequestedDates: vi.fn() }));
+vi.mock("@/lib/calendar/holiday-service", () => ({ getHolidayDates: mocks.getHolidayDates }));
 vi.mock("@/lib/calendar/calendar-repository", () => ({ createWorkFromHomeDay: mocks.createWorkFromHomeDay, deleteWorkFromHomeDay: mocks.deleteWorkFromHomeDay, findAllWorkFromHomeDays: vi.fn(), findUserWorkFromHomeDays: vi.fn(), findWorkFromHomeDaysByUserIds: vi.fn(), replaceWorkFromHomeDays: vi.fn() }));
 
 import { assertCanEditWorkFromHomeDays, getMinimumEditableDate, setWorkFromHomeDay } from "@/lib/calendar/calendar-service";
 
 describe("calendar business rules", () => {
+  beforeEach(() => {
+    mocks.createWorkFromHomeDay.mockReset();
+    mocks.getHolidayDates.mockReset().mockImplementation(async (start: string, end: string) => new Set(["2026-04-02", "2026-05-15", "2026-12-24", "2026-12-31"].filter((date) => date >= start && date <= end)));
+  });
+
+  it("blocks a TimerTask holiday even if it is not in the static fallback calendar", async () => {
+    mocks.getHolidayDates.mockResolvedValue(new Set(["2026-04-02"]));
+    await expect(setWorkFromHomeDay("user-1", "2026-04-02", true)).rejects.toThrow("Holiday");
+    expect(mocks.createWorkFromHomeDay).not.toHaveBeenCalled();
+  });
+
   it("allows only admins to edit dates before today", () => {
     expect(getMinimumEditableDate("admin")).toBeUndefined();
     expect(getMinimumEditableDate("coordinator")).toMatch(/^\d{4}-\d{2}-\d{2}$/);

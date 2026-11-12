@@ -1,6 +1,7 @@
 import type { SessionUser } from "@/lib/auth/session";
 import { getAbsenceSectionsByDateStrict } from "@/lib/absences/absence-service";
-import { getHolidayName, getMadridTodayDateKey, isDateInWeek, isSubstitutionLocked, isValidDateKey, isWeekendDateKey } from "@/lib/calendar/dates";
+import { getMadridTodayDateKey, isDateInWeek, isSubstitutionLocked, isValidDateKey, isWeekendDateKey } from "@/lib/calendar/dates";
+import { getHolidayDates } from "@/lib/calendar/holiday-service";
 import { findCoordinatorUser } from "@/lib/employees/org-service";
 import type { RequestFormState, RequestKind } from "./request-types";
 import { requestRange } from "./request-shared";
@@ -8,9 +9,9 @@ import { deleteWorkFromHomeDays, findPendingRequestDates as findPendingRequestDa
 
 type RequestInput = { kind: RequestKind; requestedDates: string[]; replacedDates: string[]; comment: string | null };
 
-function validateDates(dates: string[]) {
+function validateDates(dates: string[], holidays: ReadonlySet<string>) {
   const today = getMadridTodayDateKey();
-  if (dates.length === 0 || dates.some((date) => !isValidDateKey(date) || date < today || isWeekendDateKey(date) || getHolidayName(date))) {
+  if (dates.length === 0 || dates.some((date) => !isValidDateKey(date) || date < today || isWeekendDateKey(date) || holidays.has(date))) {
     throw new Error("Solo se pueden solicitar días laborables que no sean festivos.");
   }
   if (new Set(dates).size !== dates.length) throw new Error("No puedes repetir una fecha en la misma solicitud.");
@@ -18,13 +19,17 @@ function validateDates(dates: string[]) {
 
 export async function createWfhRequest(user: SessionUser, input: RequestInput): Promise<RequestFormState> {
   try {
-    validateDates(input.requestedDates);
+    const allDates = [...input.requestedDates, ...input.replacedDates].filter(isValidDateKey).toSorted();
+    const today = getMadridTodayDateKey();
+    if (allDates.length === 0 || allDates.some((date) => date < today || isWeekendDateKey(date))) throw new Error("Solo se pueden solicitar días laborables futuros que no sean festivos.");
+    const holidays = allDates.length > 0 ? await getHolidayDates(allDates[0], allDates.at(-1)!) : new Set<string>();
+    validateDates(input.requestedDates, holidays);
     if ([...input.requestedDates, ...input.replacedDates].some((date) => isSubstitutionLocked(date))) throw new Error("Fuera de plazo: después de las 10:15 no se puede seleccionar el día de hoy.");
     if (input.kind === "additional" && !input.comment?.trim()) throw new Error("Debes indicar un comentario para solicitar días adicionales.");
 
     if (input.kind === "substitution") {
       if (input.replacedDates.length !== input.requestedDates.length) throw new Error("Debes indicar una fecha a sustituir por cada fecha solicitada.");
-      validateDates(input.replacedDates);
+      validateDates(input.replacedDates, holidays);
       if (input.requestedDates.some((date, index) => !isDateInWeek(date, input.replacedDates[index]))) throw new Error("El día de sustitución debe pertenecer a la misma semana que el día original.");
       if (input.replacedDates.some((date, index) => date === input.requestedDates[index])) throw new Error("La fecha nueva debe ser distinta de la fecha sustituida.");
     }
