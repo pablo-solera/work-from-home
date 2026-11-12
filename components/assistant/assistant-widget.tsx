@@ -26,7 +26,8 @@ export function AssistantWidget() {
 
   useEffect(() => {
     if (!nearBottomRef.current) return;
-    messagesRef.current?.scrollTo({ behavior: "smooth", top: messagesRef.current.scrollHeight });
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    messagesRef.current?.scrollTo({ behavior: reduceMotion ? "instant" : "smooth", top: messagesRef.current.scrollHeight });
   }, [messages]);
 
   function handleMessagesScroll() {
@@ -91,9 +92,9 @@ export function AssistantWidget() {
             <div><p className="text-sm font-semibold">Asistente WFH</p><p className="text-xs text-zinc-300">Consulta tu equipo</p></div>
             <button aria-label="Cerrar asistente" className="cursor-pointer text-xl text-zinc-300 hover:text-white" onClick={() => setOpen(false)} type="button">×</button>
           </header>
-          <div className="flex-1 space-y-3 overflow-y-auto p-4" aria-live="polite" onScroll={handleMessagesScroll} ref={messagesRef}>
+          <div aria-busy={loading} aria-label="Conversación con el asistente" className="flex-1 space-y-3 overflow-y-auto p-4" onScroll={handleMessagesScroll} ref={messagesRef} role="log" aria-relevant="additions text">
             {messages.length === 0 ? <p className="text-sm text-zinc-500">Pregunta, por ejemplo: «¿Cuánta gente estará en la oficina el viernes?»</p> : null}
-            {messages.map((message, index) => <p className={`max-w-[90%] rounded-xl px-3 py-2 text-sm ${message.role === "user" ? "ml-auto bg-zinc-950 text-white" : "bg-zinc-100 text-zinc-800"}`} key={`${index}-${message.role}`}>{message.content || <TypingIndicator />}</p>)}
+            {messages.map((message, index) => <p className={`max-w-[90%] rounded-xl px-3 py-2 text-sm ${message.role === "user" ? "ml-auto bg-zinc-950 text-white" : "bg-zinc-100 text-zinc-800"}`} key={`${index}-${message.role}-${message.content.slice(0, 16)}`}>{message.content || <TypingIndicator />}</p>)}
           </div>
           <form className="flex gap-2 border-t border-zinc-200 p-3" onSubmit={submit}>
             <input aria-label="Pregunta al asistente" autoComplete="off" name="question" className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2.5 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 sm:text-sm" disabled={loading} onChange={(event) => setInput(event.target.value)} placeholder="Escribe una pregunta…" value={input} />

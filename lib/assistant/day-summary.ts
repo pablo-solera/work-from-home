@@ -1,10 +1,10 @@
 import type { SessionUser } from "@/lib/auth/session";
 import { getCalendarDayDetailForUsers } from "@/lib/calendar/calendar-read-service";
-import { getCalendarDays } from "@/lib/calendar/dates";
 import { getDashboardCalendarOverview } from "@/lib/calendar/dashboard-calendar-service";
 import { getAssistantVisibleUsers } from "./assistant-scope";
 import { formatAssistantDate } from "./assistant-format";
 import { validateAssistantDate, validateAssistantRange } from "./assistant-policy";
+import { getHolidayDates } from "@/lib/calendar/holiday-service";
 
 type AssistantStatus = "en oficina" | "teletrabajo" | "ausente";
 
@@ -16,17 +16,16 @@ export async function getAssistantDaySummary(actor: SessionUser, date: string) {
   return buildAssistantDaySummary(date, sections);
 }
 
-function buildAssistantDaySummary(date: string, sections: Awaited<ReturnType<typeof getCalendarDayDetailForUsers>>) {
+async function buildAssistantDaySummary(date: string, sections: Awaited<ReturnType<typeof getCalendarDayDetailForUsers>>) {
   if (!sections) return { error: "No tienes permiso para consultar ese día." };
-  const calendar = getCalendarDays(Number(date.slice(0, 4)), Number(date.slice(5, 7)));
-  const cell = calendar.cells.find((entry) => entry?.date === date);
+  const holiday = (await getHolidayDates(date, date)).has(date) ? "Festivo" : null;
   return {
     date,
     label: formatAssistantDate(date),
     officeCount: sections.enOficina.length,
     remoteCount: sections.teletrabajo.length,
     absenceCount: [sections.vacaciones, sections.ausencias, sections.bajas, sections.viajes, sections.permisos, sections.excedencia, sections.mudanza].reduce((count, entries) => count + entries.length, 0),
-    holiday: cell?.holidayName ?? null,
+    holiday,
     peopleInOffice: sections.enOficina.map((entry) => entry.userName),
     peopleRemote: sections.teletrabajo.map((entry) => entry.userName),
   };
@@ -42,7 +41,7 @@ export async function getAssistantDayOverview(actor: SessionUser, date: string, 
   if ("error" in valid) return valid;
   const sections = await loadAssistantDaySections(actor, date);
   if (!sections) return { error: "No tienes permiso para consultar ese día." };
-  const summary = buildAssistantDaySummary(date, sections);
+  const summary = await buildAssistantDaySummary(date, sections);
   if (!status) return summary;
   const entries = status === "en oficina" ? sections.enOficina : status === "teletrabajo" ? sections.teletrabajo : [...sections.vacaciones, ...sections.ausencias, ...sections.viajes, ...sections.permisos, ...sections.excedencia, ...sections.mudanza];
   return { ...summary, status, people: entries.map((entry) => entry.userName) };

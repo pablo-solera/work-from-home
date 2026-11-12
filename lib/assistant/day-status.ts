@@ -1,6 +1,7 @@
 import type { SessionUser } from "@/lib/auth/session";
 import { getAbsenceSectionsByDate } from "@/lib/absences/absence-service";
-import { getHolidayName, getMadridTodayDateKey, isValidDateKey, isWeekendDateKey } from "@/lib/calendar/dates";
+import { getMadridTodayDateKey, isValidDateKey, isWeekendDateKey } from "@/lib/calendar/dates";
+import { getHolidayDates } from "@/lib/calendar/holiday-service";
 import { findWorkFromHomeDaysByUserIds } from "@/lib/calendar/calendar-repository";
 import { addDateKey } from "@/lib/calendar/dates";
 import { getVisibleAssistantEmployeeRecords } from "./employee-lookup";
@@ -21,9 +22,8 @@ export async function getEmployeeDayStatus(actor: SessionUser, employeeId: strin
   const employee = (await getVisibleAssistantEmployeeRecords(actor)).find((match) => match.id === employeeId);
   if (!employee) return { error: "Ese empleado no está dentro de tu ámbito de consulta." };
 
+  if ((await getHolidayDates(date, date)).has(date)) return { employee, date, label: formatAssistantDate(date), status: "festivo" as const, detail: "Festivo" };
   if (isWeekendDateKey(date)) return { employee, date, label: formatAssistantDate(date), status: "fin de semana" as const };
-  const holiday = getHolidayName(date);
-  if (holiday) return { employee, date, label: formatAssistantDate(date), status: "festivo" as const, detail: holiday };
 
   const users = [{ id: employee.id, oracleEmpId: employee.oracleEmpId, fallbackName: employee.name, fallbackEmail: employee.email }];
   const [wfhDays, absences] = await Promise.all([
@@ -45,21 +45,21 @@ export async function getEmployeeRangeStatus(actor: SessionUser, employeeId: str
   if (!employee) return { error: "Ese empleado no está dentro de tu ámbito de consulta." };
 
   const users = [{ id: employee.id, oracleEmpId: employee.oracleEmpId, fallbackName: employee.name, fallbackEmail: employee.email }];
-  const [wfhDays, absences] = await Promise.all([
+  const [wfhDays, absences, holidays] = await Promise.all([
     findWorkFromHomeDaysByUserIds([employee.id], from, to),
     getAbsenceSectionsByDate(from, to, users),
+    getHolidayDates(from, to),
   ]);
   const wfhDates = new Set(wfhDays.map((entry) => entry.date));
   const statuses = [];
 
   for (let date = from; date <= to; date = addDateKey(date, 1)) {
-    if (isWeekendDateKey(date)) {
-      statuses.push({ date, label: formatAssistantDate(date), status: "fin de semana" as const });
+    if (holidays.has(date)) {
+      statuses.push({ date, label: formatAssistantDate(date), status: "festivo" as const, detail: "Festivo" });
       continue;
     }
-    const holiday = getHolidayName(date);
-    if (holiday) {
-      statuses.push({ date, label: formatAssistantDate(date), status: "festivo" as const, detail: holiday });
+    if (isWeekendDateKey(date)) {
+      statuses.push({ date, label: formatAssistantDate(date), status: "fin de semana" as const });
       continue;
     }
     const sections = absences[date];
