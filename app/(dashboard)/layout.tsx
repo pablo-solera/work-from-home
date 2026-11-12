@@ -6,6 +6,7 @@ import { requireAuthorizedUser } from "@/lib/auth/guards";
 import { getUserById } from "@/lib/users/user-service";
 import { findEmployeeTeamVisibility } from "@/lib/employees/org-service";
 import { getRequestNotificationSummary } from "@/lib/requests/request-service";
+import { AssistantWidget } from "@/components/assistant/assistant-widget";
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireAuthorizedUser();
@@ -22,6 +23,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           <a className="sr-only z-50 rounded-lg bg-white px-4 py-3 font-medium text-zinc-950 shadow-lg focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700" href="#main-content">Saltar al contenido principal</a>
           <AppHeader canCover={user.role !== "admin" && (dbUser?.canEditAllWfh ?? false)} canViewTeam={teamVisibility?.teamWfhVisible ?? false} notificationSummary={notificationSummary} user={user} />
           <main className="mx-auto w-full max-w-6xl px-6 py-8 focus:outline-none" id="main-content" tabIndex={-1}>{children}</main>
+          {user.role !== "employee" ? <AssistantWidget /> : null}
         </div>
       </RequestNotificationProvider></ErrorModalProvider>
     </ToastProvider>
