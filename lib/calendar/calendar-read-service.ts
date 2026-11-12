@@ -3,6 +3,7 @@ import { createEmptySections, getAbsenceSectionsByDate } from "@/lib/absences/ab
 import { resolveUserIdentities } from "@/lib/employees/identity-service";
 import { filterVisibleStaff } from "@/lib/employees/staff-service";
 import { findEmployeeByCoordinatorId, findEmployeeTeamVisibility, findExcludedEmpIds, findUsersForCoordinator } from "@/lib/employees/org-service";
+import { getTestAccountEmpIds } from "@/lib/employees/test-accounts";
 import { findAllUsers, findUserById } from "@/lib/users/user-repository";
 import { getPendingRequestedDates } from "@/lib/requests/request-list-service";
 import { findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds } from "./calendar-repository";
@@ -11,6 +12,15 @@ import { getCalendarDays, getCurrentCalendarMonth, getMadridTodayDateKey, getMon
 import { getHolidayDates } from "./holiday-service";
 
 const UNKNOWN_IDENTITY = { name: "Usuario", email: null } as const;
+
+function excludeTestAccounts<T extends { oracleEmpId: number | null }>(users: T[]) {
+  const testEmpIds = getTestAccountEmpIds();
+  return testEmpIds.size === 0 ? users : users.filter((user) => user.oracleEmpId === null || !testEmpIds.has(user.oracleEmpId));
+}
+
+async function filterGlobalVisibleStaff<T extends { oracleEmpId: number | null }>(users: T[]) {
+  return excludeTestAccounts(await filterVisibleStaff(users));
+}
 
 function getEmployeeTeamVisibleRange() {
   const current = getCurrentCalendarMonth();
@@ -53,7 +63,7 @@ export async function getAdminCalendarOverview(year: number, month: number) {
   const calendar = getCalendarDays(year, month, holidays);
   const [absenceSectionsByDate, users, identities, excludedEmpIds] = await Promise.all([
     getAbsenceSectionsByDate(range.start, range.end, allUsers),
-    filterVisibleStaff(allUsers),
+    filterGlobalVisibleStaff(allUsers),
     resolveUserIdentities(allUsers),
     findExcludedEmpIds(),
   ]);
@@ -67,9 +77,9 @@ export async function getAdminCalendarOverview(year: number, month: number) {
 }
 
 async function getCalendarUsersForViewer(viewer: SessionUser) {
-  if (viewer.role === "admin") return filterVisibleStaff(await findAllUsers());
+  if (viewer.role === "admin") return filterGlobalVisibleStaff(await findAllUsers());
   const currentUser = await findUserById(viewer.id);
-  if (currentUser?.canEditAllWfh) return filterVisibleStaff(await findAllUsers());
+  if (currentUser?.canEditAllWfh) return filterGlobalVisibleStaff(await findAllUsers());
   if (viewer.role === "coordinator") return filterVisibleStaff(await findUsersForCoordinator(viewer.id));
   const visibility = await findEmployeeTeamVisibility(viewer.id);
   if (!visibility?.teamWfhVisible) return null;
@@ -115,7 +125,7 @@ export async function getCalendarDayDetail(viewer: SessionUser, date: string) {
 
 export async function getAdminCalendarUsers() {
   const allUsers = await findAllUsers();
-  const [users, identities] = await Promise.all([filterVisibleStaff(allUsers), resolveUserIdentities(allUsers)]);
+  const [users, identities] = await Promise.all([filterGlobalVisibleStaff(allUsers), resolveUserIdentities(allUsers)]);
   return users.map((user) => {
     const identity = identities.get(user.id) ?? UNKNOWN_IDENTITY;
     return { id: user.id, name: identity.name, email: identity.email ?? "" };
