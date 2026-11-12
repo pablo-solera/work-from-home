@@ -72,6 +72,7 @@ describe("request action components", () => {
 
     rerender(<RequestDecisionForm adminView requestId="request-2" />);
     fireEvent.click(screen.getByRole("button", { name: "Rechazar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sí, rechazar" }));
     await waitFor(() => expect(actions.decideAdmin).toHaveBeenCalled());
     const rejectedForm = actions.decideAdmin.mock.calls[0][0] as FormData;
     expect(rejectedForm.get("id")).toBe("request-2");

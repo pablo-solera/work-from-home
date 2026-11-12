@@ -1,8 +1,9 @@
 "use client";
 
+import { X } from "lucide-react";
 import { createContext, useContext, useId, useMemo } from "react";
-import { CloseIcon } from "@/components/icons/close-icon";
 import { useModalDismiss } from "@/lib/hooks/use-modal-dismiss";
+import { Button } from "./button";
 
 type DialogContextValue = { onDismiss: () => void; titleId: string };
 const DialogContext = createContext<DialogContextValue | null>(null);
@@ -19,35 +20,46 @@ function DialogRoot({ children, onDismiss }: { children: React.ReactNode; onDism
   function handleBackdropClick(event: React.MouseEvent<HTMLDivElement>) {
     if (event.target === event.currentTarget) onDismiss();
   }
-  function handleBackdropKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      onDismiss();
-    }
-  }
   return (
     <DialogContext.Provider value={contextValue}>
-      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-zinc-950/50 px-4 py-6" onClick={handleBackdropClick} onKeyDown={handleBackdropKeyDown}>
+      <div className="wfh-overlay fixed inset-0 z-50 flex items-end justify-center overflow-y-auto overscroll-contain bg-zinc-950/50 sm:items-center sm:px-4 sm:py-6" onClick={handleBackdropClick}>
         {children}
       </div>
     </DialogContext.Provider>
   );
 }
 
-function DialogPanel({ children, className = "max-w-lg" }: { children: React.ReactNode; className?: string }) {
+type DialogPanelProps = {
+  children: React.ReactNode;
+  className?: string;
+  /** Use `false` to structure the panel yourself with Dialog.Header, Dialog.Body and Dialog.Footer. */
+  padded?: boolean;
+};
+
+function DialogPanel({ children, className = "max-w-lg", padded = true }: DialogPanelProps) {
   const { onDismiss, titleId } = useDialogContext();
   const panelRef = useModalDismiss<HTMLElement>(onDismiss);
+  const layout = padded ? "overflow-y-auto overscroll-contain p-5 sm:p-6" : "overflow-hidden";
 
-  return <section aria-labelledby={titleId} aria-modal="true" className={`max-h-[calc(100dvh-3rem)] w-full overflow-y-auto overscroll-contain rounded-2xl bg-white p-6 shadow-xl ${className}`} onClick={(event) => event.stopPropagation()} ref={panelRef} role="dialog" tabIndex={-1}>{children}</section>;
+  return (
+    <section aria-labelledby={titleId} aria-modal="true" className={`wfh-dialog flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-white shadow-dialog focus-visible:outline-none sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl ${layout} ${className}`} onClick={(event) => event.stopPropagation()} ref={panelRef} role="dialog" tabIndex={-1}>
+      {children}
+    </section>
+  );
 }
 
 function DialogTitle({ children }: { children: React.ReactNode }) {
   const { titleId } = useDialogContext();
-  return <h2 className="mt-1 text-xl font-semibold text-zinc-950" id={titleId}>{children}</h2>;
+  return <h2 className="text-xl font-semibold text-zinc-950" id={titleId}>{children}</h2>;
 }
 
-function DialogClose({ onClick }: { onClick: () => void }) {
-  return <button aria-label="Cerrar" className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950" onClick={onClick} type="button"><CloseIcon className="size-5" /></button>;
+function DialogClose({ onClick }: { onClick?: () => void }) {
+  const { onDismiss } = useDialogContext();
+  return <Button aria-label="Cerrar" className="-mr-2 -mt-1.5 rounded-full" onClick={onClick ?? onDismiss} size="icon" variant="ghost"><X aria-hidden="true" className="size-5" /></Button>;
+}
+
+function DialogHeader({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`flex shrink-0 items-start justify-between gap-4 ${className}`}>{children}<DialogClose /></div>;
 }
 
 function DialogBody({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -62,6 +74,7 @@ export const Dialog = Object.assign(DialogRoot, {
   Actions: DialogActions,
   Body: DialogBody,
   Close: DialogClose,
+  Header: DialogHeader,
   Panel: DialogPanel,
   Title: DialogTitle,
 });
