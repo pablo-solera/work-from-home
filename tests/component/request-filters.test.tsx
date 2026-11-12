@@ -35,7 +35,8 @@ describe("RequestFilters", () => {
 
   it("keeps an explicit admin all-status filter in the URL", () => {
     render(<RequestFilters date="all" status="pending" defaultStatus="pending" />);
-    fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "all" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Estado:/ }));
+    fireEvent.click(screen.getByRole("option", { name: "Todas" }));
     expect(push).toHaveBeenCalledWith("/admin/requests?status=all");
   });
 
@@ -43,7 +44,8 @@ describe("RequestFilters", () => {
     pathname = "/requests";
     params = new URLSearchParams("status=accepted");
     render(<RequestFilters date="all" status="accepted" />);
-    fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "all" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Estado:/ }));
+    fireEvent.click(screen.getByRole("option", { name: "Todas" }));
     expect(push).toHaveBeenCalledWith("/requests");
   });
 
