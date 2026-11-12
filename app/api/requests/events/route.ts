@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const authorizedUser = await getAuthorizedUser();
-  if (!authorizedUser) return new Response("No autorizado", { status: 403 });
+  if (!authorizedUser) return new Response("No autorizado", { status: 401 });
   let cleanup = () => undefined;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {

@@ -16,7 +16,7 @@ function decodeCursor(value: string | undefined): RequestCursor | undefined {
 }
 
 function encodeCursor(request: { createdAt: Date; id: string }) {
-  const createdAt = new Date(Math.floor(request.createdAt.getTime())).toISOString();
+  const createdAt = request.createdAt.toISOString();
   return Buffer.from(JSON.stringify({ createdAt, id: request.id })).toString("base64url");
 }
 
