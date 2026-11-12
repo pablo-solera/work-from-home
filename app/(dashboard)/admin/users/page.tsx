@@ -1,4 +1,6 @@
+import { SyncUsersButton } from "@/components/admin/sync-users-button";
 import { UsersTable } from "@/components/admin/users-table";
+import { PageHeader } from "@/components/common/page-header";
 import { requireAdmin } from "@/lib/auth/guards";
 import { getAdminUsersPage } from "@/lib/users/admin-users-service";
 
@@ -14,16 +16,16 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
   const { page, totalPages, totalUsers, users } = await getAdminUsersPage(queryParam, requestedPage);
 
   return (
-    <section className="space-y-8">
-      <div>
-        <p className="text-sm font-medium text-zinc-500">Dashboard admin</p>
-        <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Gestión de usuarios</h1>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-           La identidad, los roles y la jerarquía se gestionan en TimerTask. Aquí administras opciones de teletrabajo.
-        </p>
+    <section className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <PageHeader>
+          <PageHeader.Title>Gestión de usuarios</PageHeader.Title>
+          <PageHeader.Description>La identidad, los roles y la jerarquía se gestionan en TimerTask. Aquí administras opciones de teletrabajo.</PageHeader.Description>
+        </PageHeader>
+        <SyncUsersButton />
       </div>
 
-        <UsersTable currentUserId={admin.id} page={page} query={queryParam} totalPages={totalPages} totalUsers={totalUsers} users={users} />
+      <UsersTable currentUserId={admin.id} page={page} query={queryParam} totalPages={totalPages} totalUsers={totalUsers} users={users} />
     </section>
   );
 }

@@ -2,12 +2,8 @@ function PageHeaderRoot({ children }: { children: React.ReactNode }) {
   return <div>{children}</div>;
 }
 
-function PageHeaderEyebrow({ children }: { children: React.ReactNode }) {
-  return <p className="text-sm font-medium text-zinc-500">{children}</p>;
-}
-
 function PageHeaderTitle({ children }: { children: React.ReactNode }) {
-  return <h1 className="mt-1 text-3xl font-semibold text-zinc-950">{children}</h1>;
+  return <h1 className="text-2xl font-semibold tracking-tight text-balance text-zinc-950 sm:text-3xl">{children}</h1>;
 }
 
 function PageHeaderDescription({ children }: { children: React.ReactNode }) {
@@ -16,6 +12,5 @@ function PageHeaderDescription({ children }: { children: React.ReactNode }) {
 
 export const PageHeader = Object.assign(PageHeaderRoot, {
   Description: PageHeaderDescription,
-  Eyebrow: PageHeaderEyebrow,
   Title: PageHeaderTitle,
 });

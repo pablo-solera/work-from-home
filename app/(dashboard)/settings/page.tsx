@@ -9,9 +9,9 @@ export default async function SettingsPage() {
 
   return (
     <section className="space-y-6">
-      <PageHeader><PageHeader.Eyebrow>Configuración</PageHeader.Eyebrow><PageHeader.Title>Preferencias del equipo</PageHeader.Title></PageHeader>
+      <PageHeader><PageHeader.Title>Configuración</PageHeader.Title><PageHeader.Description>Preferencias de tu equipo.</PageHeader.Description></PageHeader>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-panel">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-2xl space-y-2">
             <h2 className="text-lg font-semibold text-zinc-950">Visibilidad del teletrabajo del equipo</h2>

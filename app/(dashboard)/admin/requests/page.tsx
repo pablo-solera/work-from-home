@@ -1,4 +1,5 @@
 import { AdminRequestList, AdminSubstitutionNotificationList } from "@/components/requests/request-list";
+import { PageHeader } from "@/components/common/page-header";
 import { RequestFilters } from "@/components/requests/request-filters";
 import { RequestViewTabs } from "@/components/requests/request-view-tabs";
 import { requireAdmin } from "@/lib/auth/guards";
@@ -22,11 +23,10 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
 
   return (
     <section className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-zinc-500">Administración</p>
-        <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Solicitudes</h1>
-        <p className="mt-2 text-sm text-zinc-600">{view === "additional" ? "Aprueba o rechaza las solicitudes pendientes de los empleados." : "Revisa las sustituciones notificadas por los coordinadores."}</p>
-      </div>
+      <PageHeader>
+        <PageHeader.Title>Solicitudes</PageHeader.Title>
+        <PageHeader.Description>{view === "additional" ? "Aprueba o rechaza las solicitudes pendientes de los empleados." : "Revisa las sustituciones notificadas por los coordinadores."}</PageHeader.Description>
+      </PageHeader>
       <RequestViewTabs ariaLabel="Tipo de solicitudes" tabs={[
         { active: view === "additional", count: notificationSummary.actionableRequestCount, href: additionalHref, label: "Días adicionales" },
         { active: view === "substitutions", count: notificationSummary.informationalRequestCount, href: substitutionsHref, label: "Sustituciones" },

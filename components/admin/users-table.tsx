@@ -4,11 +4,13 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { ChevronLeftIcon } from "@/components/icons/chevron-left-icon";
-import { ChevronRightIcon } from "@/components/icons/chevron-right-icon";
+import { ChevronLeft, ChevronRight, Search, Users } from "lucide-react";
+import { Badge, type BadgeTone } from "@/components/common/badge";
+import { Button, buttonClasses } from "@/components/common/button";
+import { EmptyState } from "@/components/common/empty-state";
+import { fieldClasses } from "@/components/common/form-classes";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import type { UserRole } from "@/lib/auth/session";
-import { SyncUsersButton } from "./sync-users-button";
 
 const UserFormModal = dynamic(() => import("./user-form-modal").then((module) => module.UserFormModal));
 
@@ -50,10 +52,10 @@ const roleLabels: Record<ManagedUser["role"], string> = {
   employee: "Empleado",
 };
 
-const roleBadgeClasses: Record<ManagedUser["role"], string> = {
-  admin: "bg-zinc-950 text-white",
-  coordinator: "bg-blue-50 text-blue-700",
-  employee: "bg-zinc-100 text-zinc-700",
+const roleTones: Record<ManagedUser["role"], BadgeTone> = {
+  admin: "dark",
+  coordinator: "info",
+  employee: "neutral",
 };
 
 export function UsersTable({ currentUserId, page, query, totalPages, totalUsers, users }: UsersTableProps) {
@@ -84,26 +86,20 @@ export function UsersTable({ currentUserId, page, query, totalPages, totalUsers,
   }, [debouncedSearch, pathname, query, router]);
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-zinc-950">Usuarios</h2>
-         <p className="mt-1 text-sm text-zinc-600">Los roles y coordinadores vienen de TimerTask. Aquí administras únicamente opciones de teletrabajo.</p>
-        </div>
-
-        <SyncUsersButton />
-      </div>
-
-      <form aria-busy={isPending} className="mt-5 max-w-md" onSubmit={(event) => event.preventDefault()}>
-        <label className="block flex-1 space-y-2">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-panel sm:p-6">
+      <form aria-busy={isPending} className="max-w-md" onSubmit={(event) => event.preventDefault()}>
+        <label className="block space-y-2">
           <span className="text-sm font-medium text-zinc-700">Buscar</span>
-            <input id="admin-user-search" name="query" autoComplete="off" className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base focus:border-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 sm:text-sm" onChange={(event) => setSearch({ value: event.target.value, query })} placeholder="Nombre, email, rol o coordinador…" type="search" value={searchValue} />
+          <span className="relative block">
+            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+            <input id="admin-user-search" name="query" autoComplete="off" className={`${fieldClasses} pl-9`} onChange={(event) => setSearch({ value: event.target.value, query })} placeholder="Nombre, email, rol o coordinador…" type="search" value={searchValue} />
+          </span>
         </label>
       </form>
 
       <div className="mt-6 overflow-x-auto">
         <table className="w-full min-w-[64rem] text-left text-sm">
-          <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500">
+          <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-600">
             <tr>
               <th className="py-3 pr-4 font-semibold">WD</th>
               <th className="py-3 pr-4 font-semibold">Usuario</th>
@@ -121,47 +117,45 @@ export function UsersTable({ currentUserId, page, query, totalPages, totalUsers,
 
               return (
                 <tr key={user.id}>
-                  <td className="py-4 pr-4 text-zinc-700">{user.wdNumber ?? <span className="text-zinc-400">—</span>}</td>
+                  <td className="py-4 pr-4 tabular-nums text-zinc-700">{user.wdNumber ?? <span className="text-zinc-500">—</span>}</td>
                   <td className="py-4 pr-4">
                     <div className="font-medium text-zinc-950">{user.name}</div>
-                    <div className="text-xs text-zinc-500">{user.email}</div>
+                    <div className="text-xs text-zinc-600">{user.email}</div>
                     {isCurrentUser ? <div className="mt-1 text-xs font-medium text-emerald-700">Tu cuenta</div> : null}
                   </td>
                   <td className="py-4 pr-4">
-                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${roleBadgeClasses[user.role]}`}>{roleLabels[user.role]}</span>
+                    <Badge tone={roleTones[user.role]}>{roleLabels[user.role]}</Badge>
                   </td>
                   <td className="py-4 pr-4 text-zinc-700">
                     {user.coordinator ? (
                       <div>
                         <div>{user.coordinator.name}</div>
-                        <div className="text-xs text-zinc-500">{user.coordinator.email}</div>
+                        <div className="text-xs text-zinc-600">{user.coordinator.email}</div>
                       </div>
                     ) : (
-                      <span className="text-zinc-400">Sin coordinador</span>
+                      <span className="text-zinc-500">Sin coordinador</span>
                     )}
                   </td>
                   <td className="py-4 pr-4">
                     {user.hasWfh === null ? (
-                      <span className="text-zinc-400">—</span>
+                      <span className="text-zinc-500">—</span>
                     ) : (
-                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${user.hasWfh ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-600"}`}>
-                        {user.hasWfh ? "Sí" : "No"}
-                      </span>
+                      <Badge tone={user.hasWfh ? "remote" : "neutral"}>{user.hasWfh ? "Sí" : "No"}</Badge>
                     )}
                   </td>
-                  <td className="py-4 pr-4 text-zinc-700">{user.wfhDaysAllowance ?? <span className="text-zinc-400">—</span>}</td>
+                  <td className="py-4 pr-4 tabular-nums text-zinc-700">{user.wfhDaysAllowance ?? <span className="text-zinc-500">—</span>}</td>
                   <td className="py-4 pr-4">
                     {user.canEditAllWfh ? (
-                      <span className="inline-flex rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">Cobertura</span>
+                      <Badge tone="pending">Cobertura</Badge>
                     ) : (
-                      <span className="text-zinc-400">—</span>
+                      <span className="text-zinc-500">—</span>
                     )}
                   </td>
                   <td className="py-4 text-right">
                     <div className="flex flex-wrap justify-end gap-2">
-                      <button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => setModal({ type: "edit", user })} type="button">
+                      <Button aria-label={`Editar ${user.name}`} onClick={() => setModal({ type: "edit", user })} size="sm" variant="secondary">
                         Editar
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -171,7 +165,7 @@ export function UsersTable({ currentUserId, page, query, totalPages, totalUsers,
         </table>
       </div>
 
-      {totalUsers === 0 ? <p className="mt-6 rounded-xl bg-zinc-50 p-4 text-sm text-zinc-600">No hay usuarios que coincidan con la búsqueda.</p> : null}
+      {totalUsers === 0 ? <EmptyState description="Prueba con otro nombre, email, rol o coordinador." icon={Users} title="No hay usuarios que coincidan con la búsqueda" /> : null}
 
       {totalUsers > 0 ? (
         <div className="mt-6 flex flex-col gap-3 border-t border-zinc-100 pt-4 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
@@ -180,27 +174,27 @@ export function UsersTable({ currentUserId, page, query, totalPages, totalUsers,
           </p>
           {totalPages > 1 ? (
             <div className="flex items-center gap-3">
-                <Link
-                  aria-label="Página anterior"
-                  className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-zinc-300 p-1.5 font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  href={pageHref(Math.max(1, page - 1))}
-                  aria-disabled={page === 1}
-                  tabIndex={page === 1 ? -1 : undefined}
-                >
-                  <ChevronLeftIcon className="size-5" />
-                </Link>
-                <span>
-                  Página {page} de {totalPages}
-                </span>
-                <Link
-                  aria-label="Página siguiente"
-                  className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-zinc-300 p-1.5 font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  href={pageHref(Math.min(totalPages, page + 1))}
-                  aria-disabled={page === totalPages}
-                  tabIndex={page === totalPages ? -1 : undefined}
-                >
-                  <ChevronRightIcon className="size-5" />
-                </Link>
+              <Link
+                aria-disabled={page === 1}
+                aria-label="Página anterior"
+                className={`${buttonClasses("secondary", "icon")} ${page === 1 ? "pointer-events-none opacity-50" : ""}`}
+                href={pageHref(Math.max(1, page - 1))}
+                tabIndex={page === 1 ? -1 : undefined}
+              >
+                <ChevronLeft aria-hidden="true" className="size-5" />
+              </Link>
+              <span className="tabular-nums">
+                Página {page} de {totalPages}
+              </span>
+              <Link
+                aria-disabled={page === totalPages}
+                aria-label="Página siguiente"
+                className={`${buttonClasses("secondary", "icon")} ${page === totalPages ? "pointer-events-none opacity-50" : ""}`}
+                href={pageHref(Math.min(totalPages, page + 1))}
+                tabIndex={page === totalPages ? -1 : undefined}
+              >
+                <ChevronRight aria-hidden="true" className="size-5" />
+              </Link>
             </div>
           ) : null}
         </div>

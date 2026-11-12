@@ -1,6 +1,8 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/common/button";
+import { fieldClasses } from "@/components/common/form-classes";
 
 type RequestFiltersProps = {
   date: "all" | "month" | "week";
@@ -32,7 +34,7 @@ export function RequestFilters({ date, status, defaultStatus = "all" }: RequestF
       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <label className="block text-sm font-medium text-zinc-700">
           Fecha solicitada
-          <select id="request-date-filter" name="date" className="mt-1 w-full cursor-pointer rounded-lg border border-zinc-300 bg-white px-3 py-2 font-normal" onChange={(event) => updateFilter("date", event.target.value)} value={date}>
+          <select id="request-date-filter" name="date" className={`${fieldClasses} mt-1 cursor-pointer font-normal`} onChange={(event) => updateFilter("date", event.target.value)} value={date}>
             <option value="all">Todas</option>
             <option value="month">Este mes</option>
             <option value="week">Esta semana</option>
@@ -40,7 +42,7 @@ export function RequestFilters({ date, status, defaultStatus = "all" }: RequestF
         </label>
         <label className="block text-sm font-medium text-zinc-700">
           Estado
-          <select id="request-status-filter" name="status" className="mt-1 w-full cursor-pointer rounded-lg border border-zinc-300 bg-white px-3 py-2 font-normal" onChange={(event) => updateFilter("status", event.target.value)} value={status}>
+          <select id="request-status-filter" name="status" className={`${fieldClasses} mt-1 cursor-pointer font-normal`} onChange={(event) => updateFilter("status", event.target.value)} value={status}>
             <option value="all">Todas</option>
             <option value="pending">Pendiente</option>
             <option value="accepted">Aceptado</option>
@@ -48,7 +50,7 @@ export function RequestFilters({ date, status, defaultStatus = "all" }: RequestF
             <option value="cancelled">Cancelado</option>
           </select>
         </label>
-        {hasFilters ? <button className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100" onClick={() => { const params = new URLSearchParams(searchParams.toString()); params.delete("date"); params.delete("status"); const query = params.toString(); router.push(query ? `${pathname}?${query}` : pathname); }} type="button">Limpiar filtros</button> : <span />}
+        {hasFilters ? <Button onClick={() => { const params = new URLSearchParams(searchParams.toString()); params.delete("date"); params.delete("status"); const query = params.toString(); router.push(query ? `${pathname}?${query}` : pathname); }} variant="secondary">Limpiar filtros</Button> : <span />}
       </div>
     </div>
   );
