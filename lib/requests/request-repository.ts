@@ -143,19 +143,27 @@ export function findPendingRequestedDatesInRange(userId: string, start: string, 
     ));
 }
 
-export function findNotificationSummary(userId: string, role: "admin" | "coordinator") {
-  return getDb()
-    .select({
-      actionableRequestCount: role === "admin"
-        ? sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'additional' and ${wfhChangeRequests.status} = 'pending')`
-        : sql<number>`0`,
-      informationalRequestCount: role === "coordinator"
-        ? sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'additional' and ${wfhChangeRequests.status} = 'pending') + count(*) filter (where (${wfhChangeRequests.kind} = 'substitution' or ${wfhChangeRequests.kind} = 'removal') and ${wfhChangeRequests.coordinatorNotifiedAt} is not null and ${wfhChangeRequests.coordinatorAcknowledgedAt} is null)`
-        : sql<number>`count(*) filter (where ${wfhChangeRequests.kind} = 'substitution' and ${wfhChangeRequests.adminNotifiedAt} is not null and ${wfhChangeRequests.adminAcknowledgedAt} is null)`,
-      revision: sql<string | null>`max(greatest(${wfhChangeRequests.createdAt}, coalesce(${wfhChangeRequests.decidedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorNotifiedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.coordinatorAcknowledgedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.adminNotifiedAt}, ${wfhChangeRequests.createdAt}), coalesce(${wfhChangeRequests.adminAcknowledgedAt}, ${wfhChangeRequests.createdAt}), coalesce((select max(d.cancelled_at) from wfh_change_request_dates d where d.request_id = ${wfhChangeRequests.id}), ${wfhChangeRequests.createdAt})))`,
-    })
-    .from(wfhChangeRequests)
-    .where(role === "admin" ? sql`${wfhChangeRequests.kind} = 'additional' OR (${wfhChangeRequests.kind} = 'substitution' AND ${wfhChangeRequests.adminNotifiedAt} IS NOT NULL)` : and(eq(wfhChangeRequests.coordinatorId, userId), ne(wfhChangeRequests.requesterId, userId)));
+type NotificationSummaryRow = { actionableRequestCount: string | number; informationalRequestCount: string | number; revision: string | null };
+
+/**
+ * Each counter reads only the rows it counts (partial indexes) and the revision is the newest updated_at
+ * or date cancellation, so the cost no longer grows with the whole request history.
+ */
+export async function findNotificationSummary(userId: string, role: "admin" | "coordinator"): Promise<NotificationSummaryRow[]> {
+  const revision = sql`to_char(greatest((select max(updated_at) from wfh_change_requests), (select max(cancelled_at) from wfh_change_request_dates)) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US')`;
+  const result = role === "admin"
+    ? await getDb().execute<NotificationSummaryRow>(sql`
+        select
+          (select count(*) from wfh_change_requests where kind = 'additional' and status = 'pending') as "actionableRequestCount",
+          (select count(*) from wfh_change_requests where kind = 'substitution' and admin_notified_at is not null and admin_acknowledged_at is null) as "informationalRequestCount",
+          ${revision} as "revision"`)
+    : await getDb().execute<NotificationSummaryRow>(sql`
+        select
+          0 as "actionableRequestCount",
+          (select count(*) from wfh_change_requests where coordinator_id = ${userId} and requester_id <> ${userId} and kind = 'additional' and status = 'pending')
+            + (select count(*) from wfh_change_requests where coordinator_id = ${userId} and requester_id <> ${userId} and kind in ('substitution', 'removal') and coordinator_notified_at is not null and coordinator_acknowledged_at is null) as "informationalRequestCount",
+          ${revision} as "revision"`);
+  return [...result];
 }
 
 export function findCoordinatorRequestsPage(coordinatorId: string, filters: RequestFilters, cursor: RequestCursor | undefined, limit: number) {

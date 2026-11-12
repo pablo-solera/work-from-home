@@ -70,6 +70,7 @@ export const wfhChangeRequests = pgTable("wfh_change_requests", {
   coordinatorAcknowledgedAt: timestamp("coordinator_acknowledged_at", { withTimezone: true }),
   adminNotifiedAt: timestamp("admin_notified_at", { withTimezone: true }),
   adminAcknowledgedAt: timestamp("admin_acknowledged_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   index("wfh_change_requests_requester_status_idx").on(table.requesterId, table.status),
   index("wfh_change_requests_requester_status_created_idx").on(table.requesterId, table.status, table.createdAt, table.id),
@@ -81,6 +82,10 @@ export const wfhChangeRequests = pgTable("wfh_change_requests", {
   index("wfh_change_requests_coordinator_notification_idx").on(table.coordinatorId, table.coordinatorNotifiedAt, table.coordinatorAcknowledgedAt),
   index("wfh_change_requests_admin_notification_idx").on(table.adminNotifiedAt, table.adminAcknowledgedAt),
   index("wfh_change_requests_admin_substitution_feed_idx").on(table.createdAt, table.id).where(sql`${table.kind} = 'substitution' AND ${table.adminNotifiedAt} IS NOT NULL`),
+  index("wfh_change_requests_updated_at_idx").on(table.updatedAt.desc()),
+  index("wfh_change_requests_pending_additional_idx").on(table.coordinatorId).where(sql`${table.kind} = 'additional' AND ${table.status} = 'pending'`),
+  index("wfh_change_requests_admin_unread_substitution_idx").on(table.adminNotifiedAt).where(sql`${table.kind} = 'substitution' AND ${table.adminNotifiedAt} IS NOT NULL AND ${table.adminAcknowledgedAt} IS NULL`),
+  index("wfh_change_requests_coordinator_unread_idx").on(table.coordinatorId).where(sql`${table.kind} IN ('substitution', 'removal') AND ${table.coordinatorNotifiedAt} IS NOT NULL AND ${table.coordinatorAcknowledgedAt} IS NULL`),
 ]);
 
 export const wfhChangeRequestDates = pgTable(
