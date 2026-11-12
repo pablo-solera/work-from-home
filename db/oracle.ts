@@ -1,4 +1,5 @@
 import oracledb from "oracledb";
+import { PERF_ENABLED, perfLog, perfSql } from "@/lib/perf";
 
 const ALLOWED_SCHEMAS = new Set([
   "TIMERTASK_ES",
@@ -111,8 +112,10 @@ async function createOraclePool() {
  * Connections are always released back to the pool.
  */
 export async function queryOracle<T>(sql: string, binds: oracledb.BindParameters = {}): Promise<T[]> {
+  const startedAt = PERF_ENABLED ? performance.now() : 0;
   const oraclePool = await getOraclePool();
   const connection = await oraclePool.getConnection();
+  const acquiredAt = PERF_ENABLED ? performance.now() : 0;
 
   try {
     connection.callTimeout = 5000;
@@ -120,6 +123,7 @@ export async function queryOracle<T>(sql: string, binds: oracledb.BindParameters
       outFormat: oracledb.OUT_FORMAT_OBJECT,
     });
 
+    if (PERF_ENABLED) perfLog("oracle", perfSql(sql), performance.now() - startedAt, `rows=${result.rows?.length ?? 0} wait=${(acquiredAt - startedAt).toFixed(0)}ms`);
     return result.rows ?? [];
   } finally {
     await connection.close();

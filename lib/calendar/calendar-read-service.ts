@@ -9,6 +9,7 @@ import { getPendingRequestedDates } from "@/lib/requests/request-list-service";
 import { findAllWorkFromHomeDays, findUserWorkFromHomeDays, findWorkFromHomeDaysByUserIds } from "./calendar-repository";
 import { buildDaySummaries, buildSectionsByDate } from "./calendar-transform";
 import { getCalendarDays, getCurrentCalendarMonth, getMadridTodayDateKey, getMonthRange, getNextMonth, getWeekRange, isValidDateKey } from "./dates";
+import { measure } from "@/lib/perf";
 import { getHolidayDates } from "./holiday-service";
 
 const UNKNOWN_IDENTITY = { name: "Usuario", email: null } as const;
@@ -57,7 +58,11 @@ export function getUserCalendar(userId: string, year: number, month: number) {
   return buildUserCalendar(userId, year, month);
 }
 
-export async function getAdminCalendarOverview(year: number, month: number) {
+export function getAdminCalendarOverview(year: number, month: number) {
+  return measure("getAdminCalendarOverview", () => loadAdminCalendarOverview(year, month));
+}
+
+async function loadAdminCalendarOverview(year: number, month: number) {
   const range = getMonthRange(year, month);
   const [entries, allUsers, holidays] = await Promise.all([findAllWorkFromHomeDays(range.start, range.end), findAllUsers(), getHolidayDates(range.start, range.end)]);
   const calendar = getCalendarDays(year, month, holidays);
@@ -106,7 +111,11 @@ export async function getEmployeeTeamWfhDayDetail(viewer: SessionUser, date: str
   return { ...sections, bajas: [] };
 }
 
-export async function getCalendarDayDetail(viewer: SessionUser, date: string) {
+export function getCalendarDayDetail(viewer: SessionUser, date: string) {
+  return measure(`getCalendarDayDetail ${date}`, () => loadCalendarDayDetail(viewer, date));
+}
+
+async function loadCalendarDayDetail(viewer: SessionUser, date: string) {
   if (!isValidDateKey(date) || viewer.role === "employee") return null;
   const users = await getCalendarUsersForViewer(viewer);
   if (!users) return null;
