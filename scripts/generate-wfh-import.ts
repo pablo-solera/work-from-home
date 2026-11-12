@@ -3,10 +3,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { findEmployeesByIds } from "@/lib/employees/employee-repository";
 import { findUsersWithOracleEmpId } from "@/lib/users/user-repository";
+import { generateSql, type ImportRow } from "./wfh-import-sql";
 
-type ImportRow = { empId: number; dates: string[]; sourceRow: number };
-
-const DEFAULT_INPUT = "C:\\Users\\Pablo.Avila\\Downloads\\Teletrabajo 2026 22072026.xlsx";
+const DEFAULT_INPUT = "C:\\Users\\Pablo.Avila\\Downloads\\Teletrabajo 2026_11112026.xlsx";
 const DEFAULT_OUTPUT = path.resolve("import-wfh.sql");
 const YEAR = 2026;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -39,10 +38,6 @@ function dateHeader(value: unknown): string | null {
 function marked(value: unknown) {
   const text = cellText(value).toLowerCase();
   return text === "1" || text === "x" || text === "si" || text === "sí" || text === "yes" || text === "true";
-}
-
-function sqlString(value: string) {
-  return `'${value.replaceAll("'", "''")}'`;
 }
 
 function parseArgs() {
@@ -147,57 +142,6 @@ async function readWorkbook(input: string): Promise<{ rows: ImportRow[]; headers
   }
 
   return { rows: [...byEmp.values()].toSorted((a, b) => a.empId - b.empId), headers: candidate.dateColumns.map(({ date }) => date), sheet: candidate.sheet.name };
-}
-
-function generateSql(rows: ImportRow[], sheet: string, input: string) {
-  const users = rows.map(({ empId }) => `  (${empId})`).join(",\n");
-  const dates = rows.flatMap(({ empId, dates }) => dates.map((date) => `  (${empId}, ${sqlString(date)})`)).join(",\n");
-
-  return `-- Generado desde ${path.basename(input)}; hoja ${sheet}; fuente no versionada.
--- Ejecutar con: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f import-wfh.sql
--- Este SQL es autoritativo para los días de 2026 de los emp_id incluidos.
-BEGIN;
-
-CREATE TEMP TABLE wfh_import_employees (oracle_emp_id integer PRIMARY KEY) ON COMMIT DROP;
-INSERT INTO wfh_import_employees (oracle_emp_id) VALUES
-${users};
-
-CREATE TEMP TABLE wfh_import_days (oracle_emp_id integer NOT NULL, wfh_date date NOT NULL, PRIMARY KEY (oracle_emp_id, wfh_date)) ON COMMIT DROP;
-  ${dates ? `INSERT INTO wfh_import_days (oracle_emp_id, wfh_date) VALUES\n${dates};` : "-- El Excel no contiene días marcados."}
-
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM wfh_import_employees e LEFT JOIN users u ON u.oracle_emp_id = e.oracle_emp_id WHERE u.id IS NULL) THEN
-    RAISE NOTICE 'Se omiten oracle_emp_id del Excel que no existen en users.';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM wfh_change_request_dates d
-    JOIN wfh_change_requests r ON r.id = d.request_id
-    JOIN wfh_import_employees e ON e.oracle_emp_id = (SELECT u.oracle_emp_id FROM users u WHERE u.id = r.requester_id)
-    WHERE r.status IN ('pending', 'accepted')
-      AND d.cancelled_at IS NULL
-      AND d.requested_date BETWEEN DATE '2026-01-01' AND DATE '2026-12-31'
-      AND NOT EXISTS (SELECT 1 FROM wfh_import_days i WHERE i.oracle_emp_id = e.oracle_emp_id AND i.wfh_date = d.requested_date)
-  ) THEN
-    RAISE EXCEPTION 'Importación detenida: existen solicitudes pendientes o aceptadas que contradicen el Excel.';
-  END IF;
-END $$;
-
-DELETE FROM work_from_home_days w
-USING users u, wfh_import_employees e
-WHERE w.user_id = u.id
-  AND u.oracle_emp_id = e.oracle_emp_id
-  AND w.date BETWEEN DATE '2026-01-01' AND DATE '2026-12-31';
-
-INSERT INTO work_from_home_days (user_id, date)
-SELECT u.id, i.wfh_date
-FROM users u
-JOIN wfh_import_days i ON i.oracle_emp_id = u.oracle_emp_id;
-
-COMMIT;
-`;
 }
 
 const { input, output } = parseArgs();
