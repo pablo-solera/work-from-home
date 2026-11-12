@@ -1,68 +1,57 @@
 @import "tailwindcss";
 
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@theme {
+  /* Colors TimerTask associates with each day type (TIMERTASK_ES.TTIPOS_DIA.TDIA_COLOR). */
+  --color-tdia-vacaciones: #ff3333;
+  --color-tdia-ausencias: #ff99cc;
+  --color-tdia-viajes: #8fc95f;
+  --color-tdia-bajas: #66cccc;
+  --color-tdia-permisos: #1f89ff;
+  --color-tdia-excedencia: #b261f0;
+  --color-tdia-mudanza: #ff3399;
+  --color-tdia-festivo: #999999;
+
+  --shadow-panel: 0 1px 2px rgb(9 9 11 / 4%), 0 4px 16px rgb(9 9 11 / 4%);
+  --shadow-dialog: 0 4px 12px rgb(9 9 11 / 8%), 0 24px 48px rgb(9 9 11 / 18%);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 :root {
   color-scheme: light;
   --wfh-canvas: #fafafa;
   --wfh-ink: #09090b;
   --wfh-focus: #0369a1;
-  --wfh-primary: #09090b;
-  --wfh-danger: #b91c1c;
-  --wfh-success: #047857;
 }
 
-body {
-  background: var(--wfh-canvas);
-  color: var(--wfh-ink);
-}
+html { scrollbar-color: #d4d4d8 transparent; scrollbar-width: thin; }
+body { background: var(--wfh-canvas); color: var(--wfh-ink); }
+:focus-visible { outline: 2px solid var(--wfh-focus); outline-offset: 2px; }
+::selection { background: #bae6fd; color: #082f49; }
+::placeholder { color: #71717a; opacity: 1; }
+input, select, textarea { caret-color: var(--wfh-focus); }
+table, .tabular { font-variant-numeric: tabular-nums; }
 
-:focus-visible {
-  outline: 2px solid var(--wfh-focus);
-  outline-offset: 2px;
-}
+@keyframes wfh-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wfh-dialog-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes wfh-sheet-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@keyframes wfh-toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
-::selection {
-  background: #bae6fd;
-  color: #082f49;
-}
-
-.wfh-button-primary,
-.wfh-button-danger,
-.wfh-button-success {
-  min-height: 2.75rem;
-  border-radius: 0.5rem;
-  padding: 0.625rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-
-.wfh-button-primary {
-  background-color: var(--wfh-primary);
-  color: white;
-}
-
-.wfh-button-primary:hover:not(:disabled) { background-color: #27272a; }
-.wfh-button-danger { background-color: var(--wfh-danger); color: white; }
-.wfh-button-danger:hover:not(:disabled) { background-color: #991b1b; }
-.wfh-button-success { background-color: var(--wfh-success); color: white; }
-.wfh-button-success:hover:not(:disabled) { background-color: #065f46; }
-
-.wfh-button-primary:focus-visible,
-.wfh-button-danger:focus-visible,
-.wfh-button-success:focus-visible {
-  outline: 2px solid var(--wfh-focus);
-  outline-offset: 2px;
-}
-
-.wfh-button-primary:disabled,
-.wfh-button-danger:disabled,
-.wfh-button-success:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
+.wfh-overlay { animation: wfh-overlay-in 160ms ease-out; backdrop-filter: blur(2px); }
+.wfh-dialog { animation: wfh-sheet-in 220ms var(--ease-out-expo); }
+@media (min-width: 640px) { .wfh-dialog { animation-name: wfh-dialog-in; animation-duration: 180ms; } }
+.wfh-toast { animation: wfh-toast-in 180ms var(--ease-out-expo); }
+.wfh-popover { animation: wfh-toast-in 140ms var(--ease-out-expo); }
 
 @media (prefers-reduced-motion: reduce) {
-  .wfh-button-primary,
-  .wfh-button-danger,
-  .wfh-button-success { transition: none; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
