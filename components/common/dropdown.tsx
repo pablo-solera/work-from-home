@@ -26,6 +26,7 @@ export function Dropdown({ "aria-label": ariaLabel, className = "", onChange, op
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listId = useId();
   const current = options.find((option) => option.value === value);
+  const longestLabel = useMemo(() => options.reduce((longest, option) => (option.label.length > longest.length ? option.label : longest), placeholder), [options, placeholder]);
   const visible = useMemo(() => {
     const q = normalize(query.trim());
     return q ? options.filter((option) => normalize(`${option.label} ${option.hint ?? ""}`).includes(q)) : options;
@@ -86,12 +87,10 @@ export function Dropdown({ "aria-label": ariaLabel, className = "", onChange, op
         title={current?.label}
         type="button"
       >
-        {/* Every label is rendered invisibly so the trigger keeps a stable width. */}
+        {/* The longest label is rendered invisibly so the trigger keeps a stable width. */}
         <span className="grid min-w-0 flex-1">
           <span className={`col-start-1 row-start-1 truncate ${current ? "" : "text-zinc-500"}`}>{current?.label ?? placeholder}</span>
-          {options.map((option) => (
-            <span aria-hidden="true" className="invisible col-start-1 row-start-1 h-0 overflow-hidden whitespace-nowrap" key={option.value}>{option.label}</span>
-          ))}
+          <span aria-hidden="true" className="invisible col-start-1 row-start-1 h-0 overflow-hidden whitespace-nowrap">{longestLabel}</span>
         </span>
         <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-zinc-500 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>

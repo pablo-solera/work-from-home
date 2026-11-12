@@ -19,12 +19,15 @@ RUN bun run build
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 
+# UV_THREADPOOL_SIZE: thick-mode Oracle calls run on the libuv threadpool (4 threads by default), so it must
+# cover the Oracle pool size (poolMax 20) plus a few threads for DNS and file access.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 \
     DEPLOYMENT_VERSION=${DEPLOYMENT_VERSION} \
     ORACLE_CLIENT_LIB_DIR=/opt/oracle/instantclient \
-    LD_LIBRARY_PATH=/opt/oracle/instantclient
+    LD_LIBRARY_PATH=/opt/oracle/instantclient \
+    UV_THREADPOOL_SIZE=24
 
 # Oracle Instant Client Basic Light + its runtime dependency (libaio).
 ARG INSTANTCLIENT_ZIP=instantclient-basiclite-linux.x64-21.13.0.0.0dbru.zip

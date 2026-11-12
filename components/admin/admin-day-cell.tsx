@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import { formatDateKeyForDisplay } from "@/lib/calendar/dates";
 import type { AdminCalendarDay } from "./admin-calendar";
 
@@ -6,6 +9,8 @@ type AdminDayCellProps = {
   onPrefetch?: (day: AdminCalendarDay) => void;
   onSelect: (day: AdminCalendarDay) => void;
 };
+
+const PREFETCH_INTENT_MS = 150;
 
 export function canOpenDayDetails(day: AdminCalendarDay) {
   return !(day.isOutOfRange ?? false) && (day.remoteCount > 0 || day.absenceCount > 0 || day.officeCount > 0);
@@ -25,6 +30,20 @@ export function AdminDayCell({ day, onPrefetch, onSelect }: AdminDayCellProps) {
   const isOutOfRange = day.isOutOfRange ?? false;
   const canOpenDetails = canOpenDayDetails(day);
   const isDisabledDay = day.isWeekend || day.isHoliday;
+  const intentTimer = useRef<number | null>(null);
+
+  function cancelIntent() {
+    if (intentTimer.current !== null) window.clearTimeout(intentTimer.current);
+    intentTimer.current = null;
+  }
+
+  // Only prefetch when the pointer rests on the cell, not while sweeping across the month.
+  function startIntent() {
+    cancelIntent();
+    intentTimer.current = window.setTimeout(() => onPrefetch?.(day), PREFETCH_INTENT_MS);
+  }
+
+  useEffect(() => cancelIntent, []);
 
   return (
     <button
@@ -34,8 +53,10 @@ export function AdminDayCell({ day, onPrefetch, onSelect }: AdminDayCellProps) {
       aria-haspopup={canOpenDetails ? "dialog" : undefined}
       disabled={!canOpenDetails}
       onClick={() => onSelect(day)}
-      onFocus={() => onPrefetch?.(day)}
-      onPointerEnter={() => onPrefetch?.(day)}
+      onBlur={cancelIntent}
+      onFocus={startIntent}
+      onPointerEnter={startIntent}
+      onPointerLeave={cancelIntent}
       type="button"
     >
       <div className="flex h-full flex-col justify-between gap-2 sm:gap-4">

@@ -66,6 +66,16 @@ describe("AdminDayModal", () => {
     expect(onPreviousDay).toHaveBeenCalledTimes(1);
   });
 
+  it("caps long sections at 50 rows until the rest is requested", () => {
+    const detail = createEmptySections();
+    detail.teletrabajo = Array.from({ length: 62 }, (_, index) => person(`t${index}`, `Persona ${index}`, `persona${index}@example.com`));
+    renderModal({ detail });
+    const region = screen.getByRole("region", { name: "Teletrabajo" });
+    expect(within(region).getAllByRole("listitem")).toHaveLength(50);
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar las 12 restantes" }));
+    expect(within(region).getAllByRole("listitem")).toHaveLength(62);
+  });
+
   it("disables unavailable navigation and shows an empty day", () => {
     renderModal({ detail: createEmptySections() });
     expect(screen.getByRole("button", { name: "Día anterior" })).toBeDisabled();

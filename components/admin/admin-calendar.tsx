@@ -79,7 +79,7 @@ export function AdminCalendar({
             ...(daySummariesByDate[cell.date] ?? { absenceCount: 0, officeCount: 0, remoteCount: 0 }),
           };
 
-          return <AdminDayCell day={day} key={cell.date} onPrefetch={(openable) => loadDetail(openable.date)} onSelect={selectDay} />;
+          return <AdminDayCell day={day} key={cell.date} onPrefetch={(openable) => { if (inflight.current.size === 0) loadDetail(openable.date); }} onSelect={selectDay} />;
         })}
       </CalendarGrid>
 
