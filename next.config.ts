@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  deploymentId: process.env.DEPLOYMENT_VERSION,
+  // The ARG is empty outside CI builds; treat that as "not set".
+  deploymentId: process.env.DEPLOYMENT_VERSION || undefined,
   // oracledb ships native binaries; keep it external so Next.js does not bundle
   // it and it is loaded from node_modules at runtime (thick mode for Oracle 11g).
   serverExternalPackages: ["oracledb"],
