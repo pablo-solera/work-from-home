@@ -1,13 +1,17 @@
-FROM oven/bun:1.3 AS deps
+FROM oven/bun:1.4.2 AS deps
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
-FROM oven/bun:1.3 AS builder
+FROM oven/bun:1.4.2 AS builder
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1 
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# next.config.ts reads DEPLOYMENT_VERSION as the Next.js deploymentId, so it must be set while building.
+ARG DEPLOYMENT_VERSION
+ENV DEPLOYMENT_VERSION=${DEPLOYMENT_VERSION}
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -18,6 +22,9 @@ RUN bun run build
 # is not supported on musl.
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
+
+# DEPLOYMENT_VERSION must match the value used at build time. Declare the ARG before the ENV that reads it.
+ARG DEPLOYMENT_VERSION
 
 # UV_THREADPOOL_SIZE: thick-mode Oracle calls run on the libuv threadpool (4 threads by default), so it must
 # cover the Oracle pool size (poolMax 20) plus a few threads for DNS and file access.
@@ -33,9 +40,8 @@ ENV NODE_ENV=production \
 ARG INSTANTCLIENT_ZIP=instantclient-basiclite-linux.x64-21.13.0.0.0dbru.zip
 ARG INSTANTCLIENT_URL=https://download.oracle.com/otn_software/linux/instantclient/2113000/${INSTANTCLIENT_ZIP}
 ARG INSTANTCLIENT_SHA256
-ARG DEPLOYMENT_VERSION
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl unzip libaio1t64 \
+    && apt-get install -y --no-install-recommends ca-certificates curl unzip libaio1 \
     && mkdir -p /opt/oracle \
     && curl -fsSL -o /tmp/instantclient.zip "${INSTANTCLIENT_URL}" \
     && if [ -n "${INSTANTCLIENT_SHA256}" ]; then echo "${INSTANTCLIENT_SHA256}  /tmp/instantclient.zip" | sha256sum -c -; else echo "Oracle Instant Client archive checksum not configured; skipping optional verification"; fi \

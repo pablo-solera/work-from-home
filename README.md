@@ -4,6 +4,9 @@ Next.js app for managing work-from-home days.
 
 ## Local Development
 
+The project uses Bun 1.4.2 everywhere (local, CI and the Docker image). `bun.lock` is
+written in the Bun 1.4 lockfile format, which older Bun versions cannot read.
+
 ```bash
 bun install
 bun run dev
