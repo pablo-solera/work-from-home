@@ -5,6 +5,12 @@ import { AdminDayModal } from "@/components/admin/admin-day-modal";
 import type { AdminCalendarDay } from "@/components/admin/admin-calendar";
 import { createEmptySections } from "@/lib/absences/absence-service";
 
+const avatarRenders = vi.hoisted(() => vi.fn());
+vi.mock("@/components/common/generated-avatar", () => ({
+  GeneratedAvatar: ({ name }: { name: string }) => { avatarRenders(name); return null; },
+  getUserInitials: (name: string) => name,
+}));
+
 const day: AdminCalendarDay = { absenceCount: 1, date: "2030-08-05", dayNumber: 5, holidayName: null, isHoliday: false, isToday: false, isWeekend: false, officeCount: 2, remoteCount: 1 };
 const person = (id: string, name: string, email: string) => ({ userEmail: email, userId: id, userName: name });
 
@@ -64,6 +70,17 @@ describe("AdminDayModal", () => {
     fireEvent.keyDown(document, { key: "ArrowLeft" });
     expect(onNextDay).toHaveBeenCalledTimes(1);
     expect(onPreviousDay).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not re-render the rows when typing leaves the effective query unchanged", () => {
+    renderModal();
+    fireEvent.change(screen.getByLabelText("Buscar persona"), { target: { value: "a" } });
+    const rendersAfterSearch = avatarRenders.mock.calls.length;
+
+    fireEvent.change(screen.getByLabelText("Buscar persona"), { target: { value: "a " } });
+    fireEvent.change(screen.getByLabelText("Buscar persona"), { target: { value: " a" } });
+
+    expect(avatarRenders.mock.calls.length).toBe(rendersAfterSearch);
   });
 
   it("caps long sections at 50 rows until the rest is requested", () => {

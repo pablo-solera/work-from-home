@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useRef } from "react";
 import { formatDateKeyForDisplay } from "@/lib/calendar/dates";
 import type { AdminCalendarDay } from "./admin-calendar";
 
@@ -9,8 +6,6 @@ type AdminDayCellProps = {
   onPrefetch?: (day: AdminCalendarDay) => void;
   onSelect: (day: AdminCalendarDay) => void;
 };
-
-const PREFETCH_INTENT_MS = 150;
 
 export function canOpenDayDetails(day: AdminCalendarDay) {
   return !(day.isOutOfRange ?? false) && (day.remoteCount > 0 || day.absenceCount > 0 || day.officeCount > 0);
@@ -30,21 +25,6 @@ export function AdminDayCell({ day, onPrefetch, onSelect }: AdminDayCellProps) {
   const isOutOfRange = day.isOutOfRange ?? false;
   const canOpenDetails = canOpenDayDetails(day);
   const isDisabledDay = day.isWeekend || day.isHoliday;
-  const intentTimer = useRef<number | null>(null);
-
-  function cancelIntent() {
-    if (intentTimer.current !== null) window.clearTimeout(intentTimer.current);
-    intentTimer.current = null;
-  }
-
-  // Only prefetch when the pointer rests on the cell, not while sweeping across the month.
-  function startIntent() {
-    cancelIntent();
-    intentTimer.current = window.setTimeout(() => onPrefetch?.(day), PREFETCH_INTENT_MS);
-  }
-
-  useEffect(() => cancelIntent, []);
-
   return (
     <button
       className={`min-h-20 rounded-xl border p-1.5 text-left transition-colors sm:min-h-32 sm:p-3 ${isDisabledDay ? "border-zinc-200 bg-zinc-50" : "border-zinc-200 bg-white"} ${canOpenDetails ? "cursor-pointer hover:border-zinc-400 hover:bg-zinc-50" : "cursor-default"} ${day.isToday ? "ring-2 ring-zinc-950/20" : ""}`}
@@ -53,10 +33,10 @@ export function AdminDayCell({ day, onPrefetch, onSelect }: AdminDayCellProps) {
       aria-haspopup={canOpenDetails ? "dialog" : undefined}
       disabled={!canOpenDetails}
       onClick={() => onSelect(day)}
-      onBlur={cancelIntent}
-      onFocus={startIntent}
-      onPointerEnter={startIntent}
-      onPointerLeave={cancelIntent}
+      // Start loading when the press begins, a beat before the click completes. Hovering or tabbing across the
+      // month must not load anything, so there is deliberately no pointerenter/focus handler.
+      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onPrefetch?.(day); }}
+      onPointerDown={() => onPrefetch?.(day)}
       type="button"
     >
       <div className="flex h-full flex-col justify-between gap-2 sm:gap-4">
