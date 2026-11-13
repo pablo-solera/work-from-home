@@ -14,8 +14,8 @@ const TEST_ACCOUNT_CONFIG = [
 ] as const satisfies readonly [string, UserRole][];
 
 export function getTestAccounts(): TestAccount[] | null {
+  // TEST_ACCOUNTS_ENABLED is the only switch: the accounts work in any environment, production included.
   if (process.env.TEST_ACCOUNTS_ENABLED !== "true") return null;
-  if (process.env.NODE_ENV === "production" && process.env.ALLOW_TEST_ACCOUNTS_IN_PRODUCTION !== "true") return null;
 
   const accounts = TEST_ACCOUNT_CONFIG.map(([variable, role]) => {
     const value = process.env[variable]?.trim();

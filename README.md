@@ -43,8 +43,9 @@ against an existing database.
 The application authenticates employees through Active Directory and, when
 explicitly enabled, the three test users configured by `TEST_ACCOUNTS_*`. Their
 shared test password is read from `TEST_ACCOUNTS_PASSWORD`; no local password or
-password hash is stored in PostgreSQL. Set `TEST_ACCOUNTS_ENABLED=false` to
-disable them.
+password hash is stored in PostgreSQL. `TEST_ACCOUNTS_ENABLED=true` is the only
+switch and it applies in any environment, production included (use a strong
+`TEST_ACCOUNTS_PASSWORD`); set it to `false` to disable them.
 
 Email notifications for additional WFH requests use the internal SMTP relay.
 Enable them in production with `MAIL_ENABLED=true` and configure `APP_BASE_URL`
