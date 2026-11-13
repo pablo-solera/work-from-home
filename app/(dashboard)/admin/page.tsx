@@ -1,3 +1,4 @@
+import { CalendarDays, ChevronRight, Users } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarDetailLayout, CalendarOverviewLayout } from "@/components/calendar/calendar-page-layout";
@@ -17,14 +18,22 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const selectedUserId = params?.employeeId ?? "all";
   const overviewNavigation = getCalendarNavigation("/admin", year, month);
   const adminLinks = (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Link className="cursor-pointer rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-400" href="/calendar">
-        <h2 className="font-semibold text-zinc-950">Mi calendario</h2>
-        <p className="mt-2 text-sm text-zinc-600">Marca tus propios días de teletrabajo.</p>
+    <div className="grid gap-3 md:grid-cols-2">
+      <Link className="group flex items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-panel transition-colors hover:border-zinc-400" href="/calendar">
+        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-100 text-zinc-700 transition-colors group-hover:bg-zinc-950 group-hover:text-white"><CalendarDays className="size-5" /></span>
+        <span className="min-w-0 flex-1">
+          <h2 className="font-semibold text-zinc-950">Mi calendario</h2>
+          <p className="mt-0.5 text-sm text-zinc-600">Marca tus propios días de teletrabajo.</p>
+        </span>
+        <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-zinc-500" />
       </Link>
-      <Link className="cursor-pointer rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-zinc-400" href="/admin/users">
-        <h2 className="font-semibold text-zinc-950">Gestión de usuarios</h2>
-        <p className="mt-2 text-sm text-zinc-600">Administra los permisos de teletrabajo del personal.</p>
+      <Link className="group flex items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-panel transition-colors hover:border-zinc-400" href="/admin/users">
+        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-100 text-zinc-700 transition-colors group-hover:bg-zinc-950 group-hover:text-white"><Users className="size-5" /></span>
+        <span className="min-w-0 flex-1">
+          <h2 className="font-semibold text-zinc-950">Gestión de usuarios</h2>
+          <p className="mt-0.5 text-sm text-zinc-600">Administra los permisos de teletrabajo del personal.</p>
+        </span>
+        <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-zinc-500" />
       </Link>
     </div>
   );
@@ -38,7 +47,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     if (userCalendar) {
       const navigation = getCalendarNavigation("/admin", year, month, selectedUserId);
       const selectableUsers = userCalendar.people.filter((user) => user.id !== admin.id);
-      return <CalendarDetailLayout basePath="/admin" calendar={userCalendar.calendar} employees={selectableUsers} enforceWeeklyAllowance={false} eyebrow="Dashboard admin" headerContent={adminLinks} minimumEditableDate={undefined} month={month} navigation={navigation} selectedEmployeeId={selectedUserId} spacing="8" targetUserId={userCalendar.person.id} title={`Teletrabajo de ${userCalendar.person.name}`} year={year} />;
+      return <CalendarDetailLayout basePath="/admin" calendar={userCalendar.calendar} employees={selectableUsers} enforceWeeklyAllowance={false} headerContent={adminLinks} minimumEditableDate={undefined} month={month} navigation={navigation} selectedEmployeeId={selectedUserId} spacing="8" targetUserId={userCalendar.person.id} title={`Teletrabajo de ${userCalendar.person.name}`} year={year} />;
     }
   }
 
@@ -47,5 +56,5 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const selectableUsers = overview.people.filter((user) => user.id !== admin.id);
 
-  return <CalendarOverviewLayout basePath="/admin" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} employees={selectableUsers} eyebrow="Dashboard admin" headerContent={adminLinks} month={month} monthName={overview.monthName} navigation={overviewNavigation} spacing="8" title="Vista global de teletrabajo" year={year} />;
+  return <CalendarOverviewLayout basePath="/admin" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} employees={selectableUsers} headerContent={adminLinks} month={month} monthName={overview.monthName} navigation={overviewNavigation} spacing="8" title="Vista global de teletrabajo" year={year} />;
 }

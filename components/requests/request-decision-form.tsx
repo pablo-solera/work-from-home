@@ -1,19 +1,24 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { decideWfhRequestAction } from "@/app/(dashboard)/requests/actions";
 import { decideAdminWfhRequestAction } from "@/app/(dashboard)/admin/requests/actions";
 import { ActionFeedback } from "@/components/common/action-feedback";
+import { Button } from "@/components/common/button";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { fieldClasses } from "@/components/common/form-classes";
+import { markLocalMutation } from "@/lib/local-mutation";
 
 export function RequestDecisionForm({ requestId, adminView = false }: { requestId: string; adminView?: boolean }) {
-  const router = useRouter();
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [confirmingReject, setConfirmingReject] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function decide(status: "accepted" | "rejected") {
     setError(null);
+    setConfirmingReject(false);
+    markLocalMutation();
     startTransition(async () => {
       try {
         const formData = new FormData();
@@ -26,7 +31,7 @@ export function RequestDecisionForm({ requestId, adminView = false }: { requestI
           setError(message);
           return;
         }
-        router.refresh();
+        // The server action revalidates the affected pages, so no router.refresh() is needed.
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : "No se pudo resolver la solicitud.";
         setError(message);
@@ -36,12 +41,22 @@ export function RequestDecisionForm({ requestId, adminView = false }: { requestI
 
   return (
     <div className="mt-4 space-y-3 border-t border-zinc-100 pt-4">
-        <label className="block"><span className="sr-only">Comentario opcional</span><input autoComplete="off" name="comment" className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 sm:text-sm" disabled={pending} onChange={(event) => setComment(event.target.value)} placeholder="Comentario opcional…" value={comment} /></label>
+      <label className="block"><span className="sr-only">Comentario opcional</span><input autoComplete="off" name="comment" className={fieldClasses} disabled={pending} onChange={(event) => setComment(event.target.value)} placeholder="Comentario opcional…" value={comment} /></label>
       <ActionFeedback error={error} />
       <div className="flex gap-2">
-        <button className="cursor-pointer rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} onClick={() => decide("accepted")} type="button">{pending ? "Procesando…" : "Aceptar"}</button>
-        <button className="cursor-pointer rounded-lg bg-red-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} onClick={() => { if (window.confirm("¿Rechazar esta solicitud?")) decide("rejected"); }} type="button">{pending ? "Procesando…" : "Rechazar"}</button>
+        <Button disabled={pending} onClick={() => decide("accepted")} variant="success">{pending ? "Procesando…" : "Aceptar"}</Button>
+        <Button disabled={pending} onClick={() => setConfirmingReject(true)} variant="danger">{pending ? "Procesando…" : "Rechazar"}</Button>
       </div>
+      {confirmingReject ? (
+        <ConfirmDialog
+          confirmLabel="Sí, rechazar"
+          description="El solicitante verá el rechazo y el comentario que hayas escrito."
+          onClose={() => setConfirmingReject(false)}
+          onConfirm={() => decide("rejected")}
+          title="¿Rechazar esta solicitud?"
+          tone="danger"
+        />
+      ) : null}
     </div>
   );
 }

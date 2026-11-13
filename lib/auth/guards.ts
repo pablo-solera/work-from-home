@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import type { SessionUser } from "./session";
 import { getUserById } from "@/lib/users/user-service";
 import { resolveUserRole } from "@/lib/employees/org-service";
-import { getCurrentUser } from "./session";
+import { readSession } from "./session";
+import { isSessionRevoked } from "./session-repository";
 import { cache } from "react";
 
 export async function requireAdmin() {
@@ -35,12 +36,12 @@ export async function requireAuthorizedUser(): Promise<SessionUser> {
 
 /** Revalidates the signed role without redirecting, for JSON route handlers. */
 export const getAuthorizedUser = cache(async (): Promise<SessionUser | null> => {
-  const user = await getCurrentUser();
-  if (!user) return null;
+  const session = await readSession();
+  if (!session) return null;
 
-  const dbUser = await getUserById(user.id);
+  // The revocation check and the user lookup only depend on the signed token, so run them together.
+  const [revoked, dbUser] = await Promise.all([isSessionRevoked(session.jti), getUserById(session.user.id)]);
+  if (revoked || !dbUser) return null;
 
-  if (!dbUser) return null;
-
-  return { ...user, role: await resolveUserRole(dbUser) };
+  return { ...session.user, role: await resolveUserRole(dbUser) };
 });

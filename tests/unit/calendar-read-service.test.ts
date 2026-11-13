@@ -17,14 +17,17 @@ const mocks = vi.hoisted(() => ({
   findUsersForCoordinator: vi.fn(),
   findAllWorkFromHomeDays: vi.fn(),
   findWorkFromHomeDaysByUserIds: vi.fn(),
+  findEmployeeTeamVisibility: vi.fn(),
+  findUsersForCoordinatorEmpId: vi.fn(),
 }));
 
 vi.mock("@/lib/users/user-repository", () => ({ findAllUsers: mocks.findAllUsers, findUserById: mocks.findUserById }));
 vi.mock("@/lib/employees/org-service", () => ({
   findEmployeeByCoordinatorId: vi.fn(),
-  findEmployeeTeamVisibility: vi.fn(),
+  findEmployeeTeamVisibility: mocks.findEmployeeTeamVisibility,
   findExcludedEmpIds: vi.fn(async () => new Set<number>()),
   findUsersForCoordinator: mocks.findUsersForCoordinator,
+  findUsersForCoordinatorEmpId: mocks.findUsersForCoordinatorEmpId,
 }));
 vi.mock("@/lib/employees/identity-service", () => ({ resolveUserIdentities: vi.fn(async () => identities) }));
 vi.mock("@/lib/employees/staff-service", () => ({ filterVisibleStaff: vi.fn(async (list: unknown[]) => list) }));
@@ -45,6 +48,7 @@ import {
   getAdminCalendarUsers,
   getCalendarDayDetail,
   getCoordinatorCalendarOverview,
+  getEmployeeTeamWfhDayDetail,
 } from "@/lib/calendar/calendar-read-service";
 
 const date = "2030-08-05";
@@ -59,6 +63,7 @@ function setTestAccounts(enabled: boolean) {
 
 describe("calendar read service and test accounts", () => {
   beforeEach(() => {
+    mocks.findUsersForCoordinator.mockClear();
     mocks.findAllUsers.mockResolvedValue(users);
     mocks.findUserById.mockResolvedValue({ id: "viewer", canEditAllWfh: false });
     mocks.findUsersForCoordinator.mockResolvedValue([users[2]]);
@@ -94,6 +99,21 @@ describe("calendar read service and test accounts", () => {
     const overview = await getCoordinatorCalendarOverview("test-coordinator", 2030, 8);
     expect(overview.employees.map((employee) => employee.id)).toEqual(["test-employee"]);
     expect(overview.daySummariesByDate[date]).toMatchObject({ remoteCount: 1 });
+  });
+
+  it("reads the employee's team through the coordinator's Oracle id without reading the coordinator again", async () => {
+    setTestAccounts(false);
+    mocks.findEmployeeTeamVisibility.mockResolvedValue({ coordinatorId: "coord", coordinatorOracleEmpId: 3510, teamWfhVisible: true });
+    mocks.findUsersForCoordinatorEmpId.mockResolvedValue([users[0]]);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-08-01T10:00:00Z"));
+
+    const detail = await getEmployeeTeamWfhDayDetail({ id: "emp", role: "employee" } as never, date);
+
+    expect(mocks.findUsersForCoordinatorEmpId).toHaveBeenCalledWith(3510);
+    expect(mocks.findUsersForCoordinator).not.toHaveBeenCalled();
+    expect(detail?.bajas).toEqual([]);
+    vi.useRealTimers();
   });
 
   it("does not filter anything when test accounts are disabled", async () => {

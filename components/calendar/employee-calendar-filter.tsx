@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Dropdown } from "@/components/common/dropdown";
 import { createCalendarHref } from "@/lib/calendar/links";
 
 type EmployeeCalendarFilterProps = {
@@ -16,23 +17,18 @@ type EmployeeCalendarFilterProps = {
 export function EmployeeCalendarFilter({ allLabel = "Todos", basePath, employees, label = "Empleado", month, selectedEmployeeId, year }: EmployeeCalendarFilterProps) {
   const router = useRouter();
 
+  const options = [{ label: allLabel, value: "all" }, ...employees.map((employee) => ({ hint: employee.email, label: employee.name, value: employee.id }))];
+
   return (
-    <label className="block max-w-sm space-y-2">
-      <span className="text-sm font-medium text-zinc-700">{label}</span>
-      <select
-        autoComplete="off"
-        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-base focus-visible:border-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700"
-        name="employee"
-        onChange={(event) => router.push(createCalendarHref(basePath, { employeeId: event.target.value, month, year }))}
+    <div className="max-w-sm space-y-2">
+      <span className="block text-sm font-medium text-zinc-700">{label}</span>
+      <Dropdown
+        aria-label={label}
+        onChange={(employeeId) => router.push(createCalendarHref(basePath, { employeeId, month, year }))}
+        options={options}
+        searchable={employees.length > 6}
         value={selectedEmployeeId}
-      >
-        <option value="all">{allLabel}</option>
-        {employees.map((employee) => (
-          <option key={employee.id} value={employee.id}>
-            {employee.name} · {employee.email}
-          </option>
-        ))}
-      </select>
-    </label>
+      />
+    </div>
   );
 }

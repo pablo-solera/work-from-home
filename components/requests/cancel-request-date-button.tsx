@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { cancelWfhRequestDateAction } from "@/app/(dashboard)/requests/actions";
 import { ActionFeedback } from "@/components/common/action-feedback";
+import { markLocalMutation } from "@/lib/local-mutation";
 
 export function CancelRequestDateButton({ requestId, dateId, dateLabel }: { requestId: string; dateId: string; dateLabel: string }) {
   const [confirming, setConfirming] = useState(false);
@@ -11,6 +12,7 @@ export function CancelRequestDateButton({ requestId, dateId, dateLabel }: { requ
 
   function cancel() {
     setError(null);
+    markLocalMutation();
     startTransition(async () => {
       try {
         const formData = new FormData();

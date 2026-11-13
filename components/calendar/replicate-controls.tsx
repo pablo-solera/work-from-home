@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { replicateWorkFromHomeDaysAction } from "@/app/(dashboard)/calendar/actions";
+import { Button } from "@/components/common/button";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { useErrorModal } from "@/components/common/error-modal-provider";
 
 type ReplicateControlsProps = {
@@ -11,21 +13,12 @@ type ReplicateControlsProps = {
   year: number;
 };
 
-function ReplicateButton({ disabled, label, pending }: { disabled: boolean; label: string; pending: boolean }) {
-  return (
-    <button
-      className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-      disabled={disabled || pending}
-      type="submit"
-    >
-      {pending ? "Replicando…" : label}
-    </button>
-  );
-}
+type ReplicateScope = "next" | "untilYearEnd";
 
 export function ReplicateControls({ month, selectedCount, targetUserId, year }: ReplicateControlsProps) {
   const { showError } = useErrorModal();
   const [pending, setPending] = useState(false);
+  const [scope, setScope] = useState<ReplicateScope | null>(null);
   const disabledBySelection = selectedCount === 0;
   const nextMonthDisabled = disabledBySelection || month === 12;
   const yearEndDisabled = disabledBySelection;
@@ -35,14 +28,17 @@ export function ReplicateControls({ month, selectedCount, targetUserId, year }: 
       ? "Hasta fin de año sustituirá el patrón del mes actual. No hay un mes siguiente dentro del año."
       : "Se sustituirán los días del mes actual y de los meses afectados por este patrón semanal.";
 
-  async function confirmReplication(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!window.confirm("Se sustituirán los días de teletrabajo del mes actual y de los meses afectados por el patrón semanal seleccionado. ¿Continuar?")) {
-      return;
-    }
+  async function replicate() {
+    if (!scope) return;
+    const formData = new FormData();
+    formData.set("targetUserId", targetUserId);
+    formData.set("year", String(year));
+    formData.set("month", String(month));
+    formData.set("scope", scope);
+    setScope(null);
     setPending(true);
     try {
-      const result = await replicateWorkFromHomeDaysAction(new FormData(event.currentTarget));
+      const result = await replicateWorkFromHomeDaysAction(formData);
       if (!result.ok) showError(result.error);
     } catch {
       showError("No se pudo replicar el patrón. Inténtalo de nuevo.");
@@ -56,21 +52,18 @@ export function ReplicateControls({ month, selectedCount, targetUserId, year }: 
       <p className="text-sm font-medium text-zinc-950">Replicar patrón de teletrabajo</p>
       <p className="mt-1 text-xs text-zinc-600">{helperText}</p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <form onSubmit={confirmReplication}>
-          <input name="targetUserId" type="hidden" value={targetUserId} />
-          <input name="year" type="hidden" value={year} />
-          <input name="month" type="hidden" value={month} />
-          <input name="scope" type="hidden" value="next" />
-          <ReplicateButton disabled={nextMonthDisabled} label="Replicar al mes siguiente" pending={pending} />
-        </form>
-        <form onSubmit={confirmReplication}>
-          <input name="targetUserId" type="hidden" value={targetUserId} />
-          <input name="year" type="hidden" value={year} />
-          <input name="month" type="hidden" value={month} />
-          <input name="scope" type="hidden" value="untilYearEnd" />
-          <ReplicateButton disabled={yearEndDisabled} label="Replicar hasta fin de año" pending={pending} />
-        </form>
+        <Button disabled={nextMonthDisabled || pending} onClick={() => setScope("next")} variant="secondary">{pending ? "Replicando…" : "Replicar al mes siguiente"}</Button>
+        <Button disabled={yearEndDisabled || pending} onClick={() => setScope("untilYearEnd")} variant="secondary">{pending ? "Replicando…" : "Replicar hasta fin de año"}</Button>
       </div>
+      {scope ? (
+        <ConfirmDialog
+          confirmLabel="Replicar"
+          description="Se sustituirán los días de teletrabajo del mes actual y de los meses afectados por el patrón semanal seleccionado."
+          onClose={() => setScope(null)}
+          onConfirm={replicate}
+          title="¿Replicar el patrón?"
+        />
+      ) : null}
     </div>
   );
 }

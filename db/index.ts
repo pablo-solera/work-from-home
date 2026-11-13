@@ -1,5 +1,6 @@
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { PERF_ENABLED, perfLog, perfSql } from "@/lib/perf";
 import * as schema from "./schema";
 
 type DatabaseState = {
@@ -40,7 +41,7 @@ export function getDb() {
     return state.db;
   }
 
-  state.db = drizzle(getPostgresClient(), { schema });
+  state.db = drizzle(getPostgresClient(), { logger: PERF_ENABLED ? { logQuery: (query) => perfLog("pg", perfSql(query)) } : undefined, schema });
 
   return state.db;
 }

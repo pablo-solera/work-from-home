@@ -1,11 +1,11 @@
 import type { UserRole } from "@/lib/auth/session";
-import { TtlCache } from "@/lib/cache/ttl-cache";
+import { SwrValue } from "@/lib/cache/swr-cache";
 import { findOrganizationRows, getExcludedGroupIds } from "@/lib/employees/org-repository";
 import { findTestAccountByEmpId, getTestAccounts } from "@/lib/employees/test-accounts";
 import { findUserById, findUsersByOracleEmpIds } from "@/lib/users/user-repository";
 import { cache } from "react";
 
-const DEFAULT_TTL_SECONDS = 60;
+const DEFAULT_TTL_SECONDS = 300;
 const COORDINATOR_GROUP_ID = 1017;
 const ADMIN_GROUP_ID = 1024;
 
@@ -19,11 +19,8 @@ type OrganizationSnapshot = {
 };
 
 declare global {
-  var __wfhOrganizationSnapshot: TtlCache<string, OrganizationSnapshot> | undefined;
+  var __wfhOrganizationSnapshotCache: SwrValue<OrganizationSnapshot> | undefined;
 }
-
-const organizationCache = globalThis.__wfhOrganizationSnapshot ?? new TtlCache<string, OrganizationSnapshot>();
-globalThis.__wfhOrganizationSnapshot = organizationCache;
 
 function configuredGroupId(name: string, fallback: number) {
   const value = Number(process.env[name] ?? fallback);
@@ -97,20 +94,27 @@ function findTestAccountRows(adminGroupId: number, coordinatorGroupId: number) {
   };
 }
 
-export async function getOrganizationSnapshot() {
-  return organizationCache.get("snapshot", async () => {
-    try {
-      const rows = await findOrganizationRows(
-        configuredGroupId("ORACLE_ADMIN_GROUP_ID", ADMIN_GROUP_ID),
-        configuredGroupId("ORACLE_COORDINATOR_GROUP_ID", COORDINATOR_GROUP_ID),
-      );
-      return new Map([["snapshot", buildSnapshot(rows)]]);
-    } catch (error) {
-      if (!getTestAccounts()) throw error;
-      console.error("Oracle organization unavailable; using test account organization.", error);
-      return new Map([["snapshot", buildSnapshot({ roles: [], hierarchy: [] })]]);
-    }
-  }, () => getTtlMs());
+async function loadOrganizationSnapshot(previous: OrganizationSnapshot | undefined) {
+  try {
+    const rows = await findOrganizationRows(
+      configuredGroupId("ORACLE_ADMIN_GROUP_ID", ADMIN_GROUP_ID),
+      configuredGroupId("ORACLE_COORDINATOR_GROUP_ID", COORDINATOR_GROUP_ID),
+    );
+    return buildSnapshot(rows);
+  } catch (error) {
+    // A previous snapshot is always better than the test-account fallback: let the cache keep it.
+    if (previous || !getTestAccounts()) throw error;
+    console.error("Oracle organization unavailable; using test account organization.", error);
+    return buildSnapshot({ roles: [], hierarchy: [] });
+  }
+}
+
+const organizationCache = globalThis.__wfhOrganizationSnapshotCache ?? new SwrValue<OrganizationSnapshot>(loadOrganizationSnapshot, getTtlMs);
+globalThis.__wfhOrganizationSnapshotCache = organizationCache;
+
+/** Serves the last snapshot while a refresh runs in the background, so requests never wait on Oracle after the first load. */
+export function getOrganizationSnapshot() {
+  return organizationCache.get();
 }
 
 export async function resolveUserRole(user: { oracleEmpId: number | null }): Promise<UserRole> {
@@ -161,12 +165,17 @@ export async function findCoordinatorUser(user: { oracleEmpId: number | null }) 
   return coordinator ?? null;
 }
 
+/** Team lookup for callers that already know the coordinator's Oracle id, so the coordinator row is not read again. */
+export async function findUsersForCoordinatorEmpId(coordinatorEmpId: number) {
+  const snapshot = await getOrganizationSnapshot();
+  const teamEmpIds = snapshot.teamByCoordinatorEmpId.get(coordinatorEmpId) ?? new Set<number>();
+  return findUsersByOracleEmpIds([...teamEmpIds]);
+}
+
 export async function findUsersForCoordinator(coordinatorId: string) {
   const coordinator = await findUserById(coordinatorId);
   if (!coordinator?.oracleEmpId) return [];
-  const snapshot = await getOrganizationSnapshot();
-  const teamEmpIds = snapshot.teamByCoordinatorEmpId.get(coordinator.oracleEmpId) ?? new Set<number>();
-  return findUsersByOracleEmpIds([...teamEmpIds]);
+  return findUsersForCoordinatorEmpId(coordinator.oracleEmpId);
 }
 
 export const findEmployeeTeamVisibility = cache(async (employeeId: string) => {
@@ -174,7 +183,7 @@ export const findEmployeeTeamVisibility = cache(async (employeeId: string) => {
   if (!employee) return null;
   const coordinator = await findCoordinatorUser(employee);
   if (!coordinator) return null;
-  return { coordinatorId: coordinator.id, teamWfhVisible: coordinator.teamWfhVisible };
+  return { coordinatorId: coordinator.id, coordinatorOracleEmpId: coordinator.oracleEmpId, teamWfhVisible: coordinator.teamWfhVisible };
 });
 
 export async function findEmployeeByCoordinatorId(employeeId: string, coordinatorId: string, coordinator?: Awaited<ReturnType<typeof findUserById>>) {

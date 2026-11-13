@@ -35,7 +35,7 @@ export function createSessionToken(user: SessionUser) {
   return jwt.sign({ ...user, jti: crypto.randomUUID() }, getSessionSecret(), { expiresIn: "1d" });
 }
 
-export function verifySessionToken(token: string): SessionUser | null {
+function decodeSessionToken(token: string): { jti: string; user: SessionUser } | null {
   try {
     const payload = jwt.verify(token, getSessionSecret(), { algorithms: ["HS256"] });
 
@@ -55,28 +55,28 @@ export function verifySessionToken(token: string): SessionUser | null {
     if (typeof payload.jti !== "string") return null;
 
     return {
-      id: payload.id,
-      name: payload.name,
-      email: payload.email,
-      role: payload.role,
+      jti: payload.jti,
+      user: { id: payload.id, name: payload.name, email: payload.email, role: payload.role },
     };
   } catch {
     return null;
   }
 }
 
-export async function getCurrentUser() {
+export function verifySessionToken(token: string): SessionUser | null {
+  return decodeSessionToken(token)?.user ?? null;
+}
+
+/** Verifies the session cookie signature once, without checking revocation. */
+export async function readSession() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  return token ? decodeSessionToken(token) : null;
+}
 
-  if (!token) {
-    return null;
-  }
-
-  const user = verifySessionToken(token);
-  if (!user) return null;
-  const payload = jwt.verify(token, getSessionSecret(), { algorithms: ["HS256"] });
-  if (typeof payload === "string" || typeof payload.jti !== "string") return null;
-  return await isSessionRevoked(payload.jti) ? null : user;
+export async function getCurrentUser() {
+  const session = await readSession();
+  if (!session) return null;
+  return await isSessionRevoked(session.jti) ? null : session.user;
 }
 
 export async function setSessionCookie(user: SessionUser) {

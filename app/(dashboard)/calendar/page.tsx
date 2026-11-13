@@ -20,7 +20,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
 
   return (
     <section className="space-y-6">
-      <PageHeader><PageHeader.Eyebrow>Mi calendario</PageHeader.Eyebrow><PageHeader.Title>Días de teletrabajo</PageHeader.Title></PageHeader>
+      <PageHeader><PageHeader.Title>Mi calendario</PageHeader.Title><PageHeader.Description>Tus días de teletrabajo, solicitudes de cambio y festivos del mes.</PageHeader.Description></PageHeader>
         <CalendarComponent
         cells={calendar.cells}
         currentMonthHref={navigation.currentMonthHref}

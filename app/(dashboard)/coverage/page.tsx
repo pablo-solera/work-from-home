@@ -28,12 +28,12 @@ export default async function CoveragePage({ searchParams }: CoveragePageProps) 
 
     if (userCalendar) {
       const navigation = getCalendarNavigation("/coverage", year, month, selectedUserId);
-      return <CalendarDetailLayout basePath="/coverage" calendar={userCalendar.calendar} employees={userCalendar.people} enforceWeeklyAllowance={false} eyebrow="Cobertura" minimumEditableDate={getMinimumEditableDate(user.role)} month={month} navigation={navigation} selectedEmployeeId={selectedUserId} targetUserId={userCalendar.person.id} title={`Teletrabajo de ${userCalendar.person.name}`} year={year} />;
+      return <CalendarDetailLayout basePath="/coverage" calendar={userCalendar.calendar} employees={userCalendar.people} enforceWeeklyAllowance={false} minimumEditableDate={getMinimumEditableDate(user.role)} month={month} navigation={navigation} selectedEmployeeId={selectedUserId} targetUserId={userCalendar.person.id} title={`Teletrabajo de ${userCalendar.person.name}`} year={year} />;
     }
   }
 
   const overview = await getDashboardCalendarOverview("coverage", user, year, month);
   if (!overview) return <section aria-labelledby="coverage-empty-title" className="rounded-xl border border-zinc-200 bg-white p-6"><h1 className="text-xl font-semibold text-zinc-950" id="coverage-empty-title">No hay personas disponibles</h1><p className="mt-2 text-sm text-zinc-600">No se encontraron empleados para mostrar en este calendario.</p></section>;
 
-  return <CalendarOverviewLayout basePath="/coverage" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} description="Edita días de teletrabajo en situaciones de cobertura, sin acceder a la gestión de usuarios." employees={overview.people} eyebrow="Cobertura" month={month} monthName={overview.monthName} navigation={overviewNavigation} title="Vista global de teletrabajo" year={year} />;
+  return <CalendarOverviewLayout basePath="/coverage" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} description="Edita días de teletrabajo en situaciones de cobertura, sin acceder a la gestión de usuarios." employees={overview.people} month={month} monthName={overview.monthName} navigation={overviewNavigation} title="Vista global de teletrabajo" year={year} />;
 }

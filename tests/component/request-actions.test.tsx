@@ -68,10 +68,11 @@ describe("request action components", () => {
     expect(acceptedForm.get("id")).toBe("request-1");
     expect(acceptedForm.get("status")).toBe("accepted");
     expect(acceptedForm.get("comment")).toBe("De acuerdo");
-    expect(refresh).toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
 
     rerender(<RequestDecisionForm adminView requestId="request-2" />);
     fireEvent.click(screen.getByRole("button", { name: "Rechazar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sí, rechazar" }));
     await waitFor(() => expect(actions.decideAdmin).toHaveBeenCalled());
     const rejectedForm = actions.decideAdmin.mock.calls[0][0] as FormData;
     expect(rejectedForm.get("id")).toBe("request-2");

@@ -1,5 +1,6 @@
 "use client";
 
+import { Inbox } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { formatDateKeyForDisplay, getMadridTodayDateKey } from "@/lib/calendar/dates";
 import { MarkSubstitutionReadButton } from "@/components/requests/mark-substitution-read-button";
@@ -7,16 +8,18 @@ import { RequestDecisionForm } from "@/components/requests/request-decision-form
 import { CancelRequestDateButton } from "@/components/requests/cancel-request-date-button";
 import { RequestCardSkeleton } from "@/components/common/request-skeleton";
 import { ActionFeedback } from "@/components/common/action-feedback";
+import { Badge, type BadgeTone } from "@/components/common/badge";
+import { EmptyState } from "@/components/common/empty-state";
 import { MarkAdminSubstitutionReadButton } from "@/components/requests/mark-admin-substitution-read-button";
 import type { RequestFilters, RequestPage } from "@/lib/requests/request-types";
 
 const statusLabels = { accepted: "Aceptado", pending: "Pendiente", rejected: "Rechazado", cancelled: "Cancelado" } as const;
-const statusStyles = {
-  accepted: "bg-emerald-100 text-emerald-800",
-  pending: "bg-amber-100 text-amber-800",
-  rejected: "bg-red-100 text-red-800",
-  cancelled: "bg-zinc-100 text-zinc-700",
-} as const;
+const statusTones: Record<keyof typeof statusLabels, BadgeTone> = {
+  accepted: "success",
+  pending: "pending",
+  rejected: "danger",
+  cancelled: "neutral",
+};
 const kindLabels = { additional: "Días adicionales", substitution: "Sustitución", removal: "Anulación de días" } as const;
 
 type RequestListItem = {
@@ -79,7 +82,7 @@ function RequestList({ initialPage, coordinatorView = false, ownView = false, re
   }, [adminNotificationView, adminView, error, filters.date, filters.status, nextCursor, ownView, retryCount]);
 
   if (requests.length === 0) {
-    return <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-600">{filtered ? "No hay solicitudes que coincidan con los filtros seleccionados." : "No hay solicitudes."}</p>;
+    return <div className="rounded-xl border border-dashed border-zinc-300"><EmptyState icon={Inbox} title={filtered ? "No hay solicitudes que coincidan con los filtros seleccionados." : "No hay solicitudes."} /></div>;
   }
 
   return (
@@ -88,30 +91,30 @@ function RequestList({ initialPage, coordinatorView = false, ownView = false, re
         <article className={`rounded-xl border bg-white p-5 ${(coordinatorView && ((request.kind === "additional" && request.status === "pending") || (request.coordinatorNotifiedAt && !request.coordinatorAcknowledgedAt))) || (adminNotificationView && request.adminNotifiedAt && !request.adminAcknowledgedAt) ? "border-sky-300 bg-sky-50/40" : "border-zinc-200"}`} key={request.id}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              {coordinatorView || adminView || adminNotificationView ? <p className="font-semibold text-zinc-950">{request.requesterName} <span className="font-normal text-zinc-500">({request.requesterEmail})</span></p> : null}
+              {coordinatorView || adminView || adminNotificationView ? <p className="font-semibold text-zinc-950">{request.requesterName} <span className="font-normal text-zinc-600">({request.requesterEmail})</span></p> : null}
               <p className="mt-1 text-sm text-zinc-700">{kindLabels[request.kind]}</p>
               <div className="mt-1 space-y-1 text-sm text-zinc-600">
                 {request.dates.map((date) => {
                   const dateLabel = request.kind === "substitution" && date.replacedDate ? `${formatDateKeyForDisplay(date.replacedDate)} → ${formatDateKeyForDisplay(date.requestedDate)}` : formatDateKeyForDisplay(date.requestedDate);
                    const canCancel = requesterView && request.kind === "additional" && request.status === "pending" && !date.cancelledAt && date.requestedDate > getMadridTodayDateKey();
 
-                  return <div className="flex flex-wrap items-center justify-between gap-2" key={date.id}><span className={date.cancelledAt ? "line-through text-zinc-400" : undefined}>{dateLabel}{date.cancelledAt ? " · Cancelado" : ""}</span>{canCancel ? <CancelRequestDateButton dateId={date.id} dateLabel={formatDateKeyForDisplay(date.requestedDate)} requestId={request.id} /> : null}</div>;
+                  return <div className="flex flex-wrap items-center justify-between gap-2" key={date.id}><span className={date.cancelledAt ? "line-through text-zinc-500" : undefined}>{dateLabel}{date.cancelledAt ? " · Cancelado" : ""}</span>{canCancel ? <CancelRequestDateButton dateId={date.id} dateLabel={formatDateKeyForDisplay(date.requestedDate)} requestId={request.id} /> : null}</div>;
                 })}
               </div>
             </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusStyles[request.status]}`}>{(request.kind === "substitution" || request.kind === "removal") && request.status === "accepted" ? "Aplicada" : statusLabels[request.status]}</span>
+            <Badge tone={statusTones[request.status]}>{(request.kind === "substitution" || request.kind === "removal") && request.status === "accepted" ? "Aplicada" : statusLabels[request.status]}</Badge>
           </div>
           {request.requesterComment ? <p className="mt-3 text-sm text-zinc-600">Comentario: {request.requesterComment}</p> : null}
           {request.decisionComment ? <p className="mt-2 text-sm text-zinc-600">Respuesta: {request.decisionComment}</p> : null}
-          {coordinatorView && request.coordinatorNotifiedAt && !request.coordinatorAcknowledgedAt ? <div className="mt-3 flex items-center justify-between gap-3"><span className="rounded-full bg-sky-100 px-2 py-1 text-xs font-semibold text-sky-800">Nueva</span><MarkSubstitutionReadButton requestId={request.id} /></div> : null}
-          {adminNotificationView && request.adminNotifiedAt && !request.adminAcknowledgedAt ? <div className="mt-3 flex items-center justify-between gap-3"><span className="rounded-full bg-sky-100 px-2 py-1 text-xs font-semibold text-sky-800">Nueva</span><MarkAdminSubstitutionReadButton requestId={request.id} /></div> : null}
+          {coordinatorView && request.coordinatorNotifiedAt && !request.coordinatorAcknowledgedAt ? <div className="mt-3 flex items-center justify-between gap-3"><Badge tone="info">Nueva</Badge><MarkSubstitutionReadButton requestId={request.id} /></div> : null}
+          {adminNotificationView && request.adminNotifiedAt && !request.adminAcknowledgedAt ? <div className="mt-3 flex items-center justify-between gap-3"><Badge tone="info">Nueva</Badge><MarkAdminSubstitutionReadButton requestId={request.id} /></div> : null}
           {!adminNotificationView && ((adminView && request.kind === "additional" && request.status === "pending") || (coordinatorView && request.kind === "substitution" && request.status === "pending")) ? (
             <RequestDecisionForm adminView={adminView} requestId={request.id} />
           ) : null}
         </article>
       ))}
       {loading ? <div aria-label="Cargando más solicitudes" className="space-y-3" role="status"><RequestCardSkeleton coordinatorView={coordinatorView} /><RequestCardSkeleton coordinatorView={coordinatorView} /></div> : null}
-      <div aria-live="polite" className="py-3 text-center text-sm text-zinc-500" ref={sentinelRef}>
+      <div aria-live="polite" className="py-3 text-center text-sm text-zinc-600" ref={sentinelRef}>
         {error ? <button className="cursor-pointer font-medium text-zinc-950 underline" onClick={() => { setError(null); setRetryCount((count) => count + 1); }} type="button">Reintentar</button> : nextCursor ? "" : "No hay más solicitudes."}
         {error ? <ActionFeedback error={error} /> : null}
       </div>

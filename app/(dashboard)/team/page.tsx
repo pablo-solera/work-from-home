@@ -25,7 +25,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
     if (!overview) {
       redirect("/calendar");
     }
-    return <CalendarOverviewLayout basePath="/team" cells={overview.cells} dayDetailEndpoint="/api/calendar/team/day" daySummariesByDate={overview.daySummariesByDate} employees={[]} eyebrow="Mi equipo" month={month} monthName={overview.monthName} navigation={overviewNavigation} showFilter={false} title="Teletrabajo del equipo" year={year} />;
+    return <CalendarOverviewLayout basePath="/team" cells={overview.cells} dayDetailEndpoint="/api/calendar/team/day" daySummariesByDate={overview.daySummariesByDate} employees={[]} month={month} monthName={overview.monthName} navigation={overviewNavigation} showFilter={false} title="Teletrabajo del equipo" year={year} />;
   }
 
   if (selectedEmployeeId !== "all") {
@@ -33,12 +33,12 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
 
     if (employeeCalendar) {
       const navigation = getCalendarNavigation("/team", year, month, selectedEmployeeId);
-      return <CalendarDetailLayout basePath="/team" calendar={employeeCalendar.calendar} employees={employeeCalendar.people} enforceWeeklyAllowance={true} eyebrow="Mi equipo" filterLabel="Empleado" minimumEditableDate={getMinimumEditableDate(user.role)} month={month} navigation={navigation} selectedEmployeeId={selectedEmployeeId} targetUserId={employeeCalendar.person.id} title={`Teletrabajo de ${employeeCalendar.person.name}`} year={year} />;
+      return <CalendarDetailLayout basePath="/team" calendar={employeeCalendar.calendar} employees={employeeCalendar.people} enforceWeeklyAllowance={true} filterLabel="Empleado" minimumEditableDate={getMinimumEditableDate(user.role)} month={month} navigation={navigation} selectedEmployeeId={selectedEmployeeId} targetUserId={employeeCalendar.person.id} title={`Teletrabajo de ${employeeCalendar.person.name}`} year={year} />;
     }
   }
 
   const overview = await getDashboardCalendarOverview("team", user, year, month);
   if (!overview) return <section aria-labelledby="team-empty-title" className="rounded-xl border border-zinc-200 bg-white p-6"><h1 className="text-xl font-semibold text-zinc-950" id="team-empty-title">No hay personas disponibles</h1><p className="mt-2 text-sm text-zinc-600">No se encontraron integrantes para mostrar en este calendario.</p></section>;
 
-  return <CalendarOverviewLayout basePath="/team" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} employees={overview.people} eyebrow="Mi equipo" filterLabel="Empleado" month={month} monthName={overview.monthName} navigation={overviewNavigation} title="Teletrabajo del equipo" year={year} />;
+  return <CalendarOverviewLayout basePath="/team" cells={overview.cells} daySummariesByDate={overview.daySummariesByDate} employees={overview.people} filterLabel="Empleado" month={month} monthName={overview.monthName} navigation={overviewNavigation} title="Teletrabajo del equipo" year={year} />;
 }

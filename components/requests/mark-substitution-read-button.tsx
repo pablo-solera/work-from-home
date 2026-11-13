@@ -1,17 +1,17 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { markSubstitutionAsReadAction } from "@/app/(dashboard)/requests/actions";
 import { ActionFeedback } from "@/components/common/action-feedback";
+import { markLocalMutation } from "@/lib/local-mutation";
 
 export function MarkSubstitutionReadButton({ requestId }: { requestId: string }) {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function markAsRead() {
     setError(null);
+    markLocalMutation();
     startTransition(async () => {
       try {
         const formData = new FormData();
@@ -22,7 +22,6 @@ export function MarkSubstitutionReadButton({ requestId }: { requestId: string })
           setError(message);
           return;
         }
-        router.refresh();
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : "No se pudo marcar la sustitución como leída.";
         setError(message);

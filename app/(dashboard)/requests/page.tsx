@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { PageHeader } from "@/components/common/page-header";
 import { RequestFilters } from "@/components/requests/request-filters";
 import { CoordinatorOwnRequestList, CoordinatorRequestList, RequesterRequestList } from "@/components/requests/request-list";
 import { RequestViewTabs } from "@/components/requests/request-view-tabs";
@@ -30,11 +31,10 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
 
     return (
       <section className="space-y-6">
-        <div>
-          <p className="text-sm font-medium text-zinc-500">Gestión</p>
-          <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Solicitudes de teletrabajo</h1>
-          <p className="mt-2 text-sm text-zinc-600">Revisa y decide las solicitudes de tu equipo.</p>
-         </div>
+        <PageHeader>
+          <PageHeader.Title>Solicitudes de teletrabajo</PageHeader.Title>
+          <PageHeader.Description>Revisa y decide las solicitudes de tu equipo.</PageHeader.Description>
+        </PageHeader>
           <RequestViewTabs ariaLabel="Ámbito de solicitudes" tabs={[
             { active: view === "team", count: notificationSummary?.informationalRequestCount, href: teamHref, label: "Solicitudes del equipo" },
             { active: view === "own", href: ownHref, label: "Mis solicitudes" },
@@ -48,11 +48,10 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
   const requests = await getRequestsForRequester(user.id, filters);
   return (
     <section className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-zinc-500">Teletrabajo</p>
-        <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Mis solicitudes</h1>
-        <p className="mt-2 text-sm text-zinc-600">Consulta el estado de tus solicitudes. Puedes crear nuevas solicitudes desde tu calendario.</p>
-      </div>
+      <PageHeader>
+        <PageHeader.Title>Mis solicitudes</PageHeader.Title>
+        <PageHeader.Description>Consulta el estado de tus solicitudes. Puedes crear nuevas solicitudes desde tu calendario.</PageHeader.Description>
+      </PageHeader>
       <RequestFilters {...filters} />
        <RequesterRequestList filtered={filters.date !== "all" || filters.status !== "all"} initialPage={requests} filters={filters} />
     </section>

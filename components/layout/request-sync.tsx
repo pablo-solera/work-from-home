@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { isRecentLocalMutation } from "@/lib/local-mutation";
 import { useRequestNotifications } from "./request-notification-provider";
 
 const SYNC_PATHS = new Set(["/calendar", "/requests", "/team"]);
@@ -21,6 +22,8 @@ export function RequestSync() {
   useEffect(() => {
     const scheduleRefresh = () => {
       if (!SYNC_PATHS.has(pathnameRef.current)) return;
+      // The server action that caused this event already revalidated the page.
+      if (isRecentLocalMutation()) return;
       if (document.visibilityState !== "visible") {
         refreshPending.current = true;
         return;
